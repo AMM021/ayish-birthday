@@ -17,7 +17,7 @@ export default {
   async enter() {
     const group = world.getGroup('end');
     world.sky.visible = true;
-    world.setFog(PALETTE.deepIndigo, 0.01);
+    world.setAtmosphere('day');
     world.clearBounds();
     world.setControls({ move: false, look: false });
     world.setPlayer(new THREE.Vector3(0, 1.6, 0), 0, 0.18);

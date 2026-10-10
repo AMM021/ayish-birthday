@@ -77,7 +77,7 @@ canvas { display: block; }
   align-content: center;
   gap: 1.4rem;
   text-align: center;
-  color: var(--lavender);
+  color: var(--warmPurple);
 }
 .passcode h1 {
   margin: 0;
@@ -86,17 +86,17 @@ canvas { display: block; }
   line-height: 1.4;
   white-space: pre-line;
   min-height: 2.8em;
-  text-shadow: 0 0 24px rgba(var(--deepIndigo-rgb), 0.8);
+  text-shadow: 0 0 22px rgba(var(--moonlight-rgb), 0.95), 0 0 6px rgba(var(--moonlight-rgb), 0.8);
 }
 .passcode .hint { margin: 0; font-style: italic; opacity: 0.8; min-height: 1.4em; }
 .passcode .boxes { display: flex; gap: 0.8rem; justify-content: center; }
 .passcode .boxes input {
   width: 3.2rem;
   height: 4rem;
-  border: 1px solid var(--lavender);
+  border: 1px solid var(--wisteria);
   border-radius: 10px;
-  background: rgba(var(--deepIndigo-rgb), 0.55);
-  color: var(--gold);
+  background: rgba(var(--moonlight-rgb), 0.7);
+  color: var(--warmPurple);
   font: 400 2rem 'Lora', Georgia, serif;
   text-align: center;
   caret-color: var(--gold);
@@ -104,7 +104,7 @@ canvas { display: block; }
   transition: box-shadow 200ms ease, border-color 200ms ease;
 }
 .passcode .boxes input:focus { box-shadow: 0 0 18px var(--lavender); border-color: var(--gold); }
-.passcode .wrong { margin: 0; min-height: 1.4em; color: var(--softPink); }
+.passcode .wrong { margin: 0; min-height: 1.4em; color: var(--vermillion); }
 .passcode.shake .boxes { animation: shake 400ms ease; }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -121,8 +121,8 @@ canvas { display: block; }
   transform: translateX(-50%);
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  background: rgba(var(--deepIndigo-rgb), 0.45);
-  color: var(--lavender);
+  background: rgba(var(--warmPurple-rgb), 0.55);
+  color: var(--moonlight);
   font-family: 'Lora', Georgia, serif;
   font-size: 0.95rem;
   letter-spacing: 0.03em;
@@ -161,4 +161,45 @@ canvas { display: block; }
 
 @media (prefers-reduced-motion: reduce) {
   #loading { animation: none; }
+}
+
+/* H · O · M · E fragments (top-left) */
+.fragments {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 0.45rem;
+  opacity: 0;
+  transition: opacity 600ms ease;
+  pointer-events: none;
+  z-index: 12;
+}
+.fragments.show { opacity: 1; }
+.fragment-tile {
+  width: 2.1rem;
+  height: 2.1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.6rem;
+  font: 600 1.05rem/1 'Lora', Georgia, serif;
+  color: rgba(var(--warmPurple-rgb), 0.35);
+  background: rgba(var(--moonlight-rgb), 0.35);
+  border: 1px dashed rgba(var(--warmPurple-rgb), 0.3);
+  transition: color 500ms ease, background 500ms ease, box-shadow 500ms ease, border-color 500ms ease;
+}
+.fragment-tile.have {
+  color: var(--warmPurple);
+  background: rgba(var(--moonlight-rgb), 0.85);
+  border: 1px solid rgba(var(--gold-rgb), 0.9);
+  box-shadow: 0 0 14px rgba(var(--gold-rgb), 0.55);
+}
+.fragment-tile.new { animation: fragment-pop 1.4s ease; }
+@keyframes fragment-pop {
+  0% { transform: scale(0.4); box-shadow: 0 0 0 rgba(var(--gold-rgb), 0); }
+  40% { transform: scale(1.35); box-shadow: 0 0 34px rgba(var(--gold-rgb), 0.95); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fragment-tile.new { animation: none; }
 }

@@ -10,6 +10,7 @@ import * as save from './core/save.js';
 import * as world from './world/world.js';
 import * as starfield from './objects/starfield.js';
 import * as nebula from './objects/nebula.js';
+import * as skydome from './objects/skydome.js';
 import * as orbModule from './objects/orb.js';
 import * as machine from './state/machine.js';
 import * as dialogue from './ui/dialogue.js';
@@ -39,7 +40,9 @@ function resumeTarget() {
   if (!p.unlocked) return 'PASSCODE';
   if (p.seenReveal) return 'END';
   if (p.reachedFinal) return 'FINAL';
-  return 'HUB';
+  // Mid-journey: restart the level she was on (levels only go forward).
+  if (p.roomsDone.length === 0) return 'HUB';
+  return save.currentLevel() ?? 'FINAL';
 }
 
 async function boot() {
@@ -63,11 +66,15 @@ async function boot() {
   save.load();
 
   // Persistent sky.
+  const dome = skydome.create();
   const stars = starfield.create();
   const clouds = nebula.create();
+  world.registerSky({ dome, stars, nebula: clouds });
   world.sky.add(clouds.group, stars.group, stars.extras);
+  world.setAtmosphere('day');
   composer.onPixelRatio((r) => stars.setPixelRatio(r));
   world.onUpdate((dt) => {
+    dome.update(dt);
     stars.update(dt);
     clouds.update(dt);
   });

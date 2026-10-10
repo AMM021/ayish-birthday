@@ -10,7 +10,7 @@ function getVeil() {
     veil.className = 'transition-veil';
     Object.assign(veil.style, {
       position: 'fixed', inset: '0', pointerEvents: 'none', opacity: '0',
-      background: PALETTE.deepIndigo, zIndex: '50', transition: 'opacity 0ms linear'
+      background: PALETTE.lilacHaze, zIndex: '50', transition: 'opacity 0ms linear'
     });
     document.body.appendChild(veil);
   }
@@ -28,7 +28,7 @@ function to(opacity, ms) {
   return wait(ms);
 }
 
-export async function fadeOut(ms = 400, color = PALETTE.deepIndigo) {
+export async function fadeOut(ms = 400, color = PALETTE.lilacHaze) {
   getVeil().style.background = color;
   await to(1, ms);
 }

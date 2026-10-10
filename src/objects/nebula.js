@@ -89,6 +89,10 @@ export function create() {
   });
   return {
     group,
+    setOpacity(o) {
+      for (const m of mats) m.uniforms.uOpacity.value = 0.25 * o;
+      group.visible = o > 0.001;
+    },
     update(dt) {
       if (REDUCED_MOTION) return;
       for (const m of mats) m.uniforms.uTime.value += dt * 0.004;

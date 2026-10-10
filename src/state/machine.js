@@ -5,6 +5,7 @@ import * as clock from '../core/clock.js';
 import * as hints from '../core/hints.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as overlay from '../ui/overlay.js';
+import * as fragments from '../ui/fragments.js';
 
 export let current = null;
 export let currentName = null;
@@ -28,6 +29,7 @@ export async function go(name, { fadeOut = 400, hold = 200, fadeIn = 600 } = {})
     dialogue.clear();
     if (overlay.isOpen()) overlay.close();
     hints.reset();
+    fragments.hide(); // rooms that show the H·O·M·E tiles turn them back on
     if (current) await current.exit(name);
     const mod = (await STATES[name]()).default;
     current = mod;

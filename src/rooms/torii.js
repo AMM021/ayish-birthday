@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE } from '../core/config.js';
 import * as world from '../world/world.js';
+import * as physics from '../world/physics.js';
 import * as save from '../core/save.js';
 import * as audio from '../core/audio.js';
 import * as hints from '../core/hints.js';
@@ -9,12 +10,14 @@ import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as toriiObj from '../objects/torii.js';
 import * as portalObj from '../objects/portal.js';
+import * as treeObj from '../objects/tree.js';
 import { orb } from '../objects/orb.js';
+import * as fragments from '../ui/fragments.js';
 import { TEXT } from '../ui/text.js';
 
-// TORII — pattern memory (tutorial). Nine gates in a loose arc; three
-// rounds of three gates each. Watch the sequence, then fly through the
-// same gates in order.
+// TORII — pattern memory (tutorial). Nine gates in a loose arc on a soft
+// meadow island; three rounds of three gates each. Watch the sequence,
+// then walk through the same gates in order.
 
 const GATES = 9;
 const ROUNDS = 3;
@@ -49,27 +52,62 @@ function makeRounds() {
   return r;
 }
 
+const ISLAND_R = 30;
+let solid = [];
+
 function build() {
-  const baseMat = new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple });
-  const baseGeo = new THREE.CylinderGeometry(3.2, 2.6, 0.6, 24);
+  solid = [];
+  const ground = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 1, 1, 72), new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist }));
+  ground.position.y = -0.5;
+  const under = new THREE.Mesh(
+    new THREE.ConeGeometry(ISLAND_R - 1, 14, 56, 1, true),
+    new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, side: THREE.DoubleSide })
+  );
+  under.rotation.x = Math.PI;
+  under.position.y = -8;
+  group.add(ground, under);
+  solid.push(ground);
+
+  const padMat = new THREE.MeshLambertMaterial({ color: PALETTE.moonlight, transparent: true, opacity: 0.75 });
+  const padGeo = new THREE.CircleGeometry(2.6, 32);
   gates = [];
   for (let i = 0; i < GATES; i++) {
     const a = THREE.MathUtils.degToRad(-72 + (144 * i) / (GATES - 1));
-    const r = 20 + (i % 3) * 2.5 - 2.5;
-    const y = Math.sin(i * 1.7) * 1.6;
-    const pos = new THREE.Vector3(Math.sin(a) * r, y, -Math.cos(a) * r);
+    const r = 15 + (i % 3) * 2.5 - 2.5;
+    const pos = new THREE.Vector3(Math.sin(a) * r, 0, -Math.cos(a) * r);
     const g = toriiObj.create();
     g.group.position.copy(pos);
-    g.group.lookAt(0, y, 0);
-    const base = new THREE.Mesh(baseGeo, baseMat);
-    base.position.set(0, -0.3, 0);
-    g.group.add(base);
+    g.group.lookAt(0, 0, 0);
+    const pad = new THREE.Mesh(padGeo, padMat);
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.y = 0.01;
+    g.group.add(pad);
+    // the pillars are solid; the opening is free
+    for (const x of [-1.7, 1.7]) {
+      const post = physics.solidBox(0.45, 4.2, 0.45);
+      post.position.set(x, 2.1, 0);
+      g.group.add(post);
+      solid.push(post);
+    }
     group.add(g.group);
     gates.push({ gate: g, cool: 0, center: pos.clone().add(new THREE.Vector3(0, 1.6, 0)) });
   }
+  // blossom trees behind the arc
+  for (let i = 0; i < 10; i++) {
+    const a = THREE.MathUtils.degToRad(-110 + i * 24 + (i % 2) * 6);
+    const r = 24 + (i % 3) * 1.5;
+    const t = treeObj.create({ height: 3 + (i % 3) * 0.6, tint: i % 4 === 3 ? 'lavender' : 'softPink', seed: 0.21 + i * 0.07 });
+    t.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r);
+    group.add(t);
+    solid.push(t.userData.collider);
+  }
+  const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), ISLAND_R - 1.5);
+  group.add(edge);
+  solid.push(edge);
+
   portal = portalObj.create();
-  portal.group.position.set(0, 2.2, 10);
-  portal.group.lookAt(0, 2.2, 0);
+  portal.group.position.set(0, 1.9, 10);
+  portal.group.lookAt(0, 1.9, 0);
   portal.group.visible = false;
   group.add(portal.group);
 }
@@ -105,7 +143,7 @@ function updatePlayback(dt) {
   if (!play.lit) {
     play.lit = true;
     g.gate.setLit(true);
-    orb.goTo(tmp.copy(g.center).add(new THREE.Vector3(0, 4, 0)), 22);
+    orb.goTo(tmp.copy(g.center).add(new THREE.Vector3(0, 3.6, 0)), 16);
     audio.chime([660 + play.i * 110]);
   }
   if (play.t >= LIT_MS && g.gate.lit) g.gate.setLit(false);
@@ -152,14 +190,14 @@ function complete() {
   portal.enable();
   audio.chimeUp();
   dialogue.say(orb.anchor, TEXT.torii.complete, { mode: 'story' });
-  save.setRoomDone('torii');
+  fragments.grant('torii');
 }
 
 async function leave() {
   leaving = true;
   world.setControls({ move: false });
   await transitions.portalFlash(PALETTE.lavender, 500);
-  machine.go('HUB');
+  machine.go(save.nextState('torii'));
 }
 
 export default {
@@ -178,9 +216,11 @@ export default {
     pulseFirst = false;
     build();
     world.sky.visible = true;
-    world.setFog(PALETTE.deepIndigo, 0.014);
-    world.setBounds(new THREE.Vector3(0, 0, 0));
-    world.setPlayer(new THREE.Vector3(0, 2.2, 6), 0, -0.05);
+    world.setAtmosphere('day');
+    world.setBounds(new THREE.Vector3(0, 0, 0), ISLAND_R + 4);
+    world.setColliders(solid);
+    world.setPlayer(new THREE.Vector3(0, 1.6, 4), 0, -0.05);
+    fragments.show();
     world.setControls({ move: true, look: true });
     orb.setVisible(true);
     orb.setColor(PALETTE.lavender);

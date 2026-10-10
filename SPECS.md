@@ -2,6 +2,48 @@
 
 Detailed implementation specs. Grep by `##` heading.
 
+## v2 redesign (2026-10-10) — read first; overrides older sections
+
+- **Player:** walking (see PROJECT.md → Locked Decisions). `world.js` drives
+  a capsule (radius `PLAYER_RADIUS` 0.3, eye `EYE_HEIGHT` 1.6) with gravity
+  `GRAVITY` 22, walk `MOVE_SPEED` 4.2, Shift `RUN_MULT` 1.7, damping
+  `MOVE_DAMP` 0.82 (frame-rate independent), 0.2-unit sub-steps, and a tiny
+  head bob that is off with reduced motion. Movement uses yaw only.
+  `player.eye` is the physical position; `camera.position` = eye + bob.
+  While `canMove` is false, rooms may animate the camera and eye follows it.
+- **Colliders:** each room calls `world.setColliders([...meshes])` with its
+  solid pieces (floors, walls, posts, invisible `physics.ringWall` /
+  `physics.solidBox`). Portals, petals and glows are never colliders.
+  `world.clearBounds()` also clears colliders.
+- **Atmosphere:** `world.setAtmosphere(name, overrides)` / `lerpAtmosphere`
+  with presets `day`, `twilight`, `garden`, `indoor` in `config.ATMOSPHERES`
+  (sky dome colours, clouds, stars/nebula opacity, fog, light levels).
+  Fades use `lilacHaze`.
+- **Portal:** the disc blends normally (deep purple → lavender swirl) so it
+  never saturates to white on the light sky; motes are gold.
+- **Flow:** `save.nextState(room)` / `save.currentLevel()`; each level's
+  portal → next level → FINAL. HUB = the void island (intro, beat 5 near the
+  portal, one portal to TORII).
+- **Fragments:** `ui/fragments.js` (`show`, `hide`, `collect`, `grant(id)`).
+  `grant` saves the level, pops its tile and queues the TEXT.md
+  "FRAGMENTS" line (E: two bubbles). The machine hides the tiles on every
+  transition; levels and FINAL show them.
+- **TORII:** gates stand on a meadow island (r 30), with solid pillars and blossom trees.
+- **COMPILE:** `ui/issuecard.js` is now the editor. At the desk the editor
+  opens, with movement and look off. Blanks are the issue-card lines 2–5; the question
+  is typed in the panel; Enter checks. The terminal accepts `npm run dev`
+  (spaces collapsed). The bloom runs 4.5 s: `day`→`garden`, ground
+  lilacMist→meadow, 700 instanced flowers ripple out, 16 trees grow, and the
+  cottage rises far away. The 60 s hint fills `_` with the answer's first letter.
+- **STARS:** heart flat at `SCALE` 6, stars at y 1.35, horizontal hit test,
+  outline on the water, lake `dusk`, `twilight` atmosphere, camera rise on
+  complete (8 s; instant with reduced motion).
+- **PETALS:** see PROJECT.md. The light radius goes 3.0 → 2.1 and its speed 2.6 → 3.6
+  (walking is 4.2). Gusts arrive every ~5–8 s from 12 % of the path on. `OUT_LIMIT` is 3 s;
+  her time outside the light recovers at 2× while she is inside it.
+- **Older sections below** that describe free flight, the hub gates, door 5,
+  lantern hunting in COMPILE or "follow the guide" in PETALS are superseded.
+
 ## Bootstrap
 
 package.json (exact):

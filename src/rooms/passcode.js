@@ -74,7 +74,7 @@ export default {
     t = 0;
     const group = world.getGroup('passcode');
     world.sky.visible = true;
-    world.setFog(PALETTE.deepIndigo, 0.03);
+    world.setAtmosphere('day');
     world.clearBounds();
     world.setControls({ move: false, look: false });
     world.setPlayer(new THREE.Vector3(0, 1.6, 0), 0, 0.05);

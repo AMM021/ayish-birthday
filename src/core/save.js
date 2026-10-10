@@ -85,6 +85,17 @@ export function isRoomOpen(name) {
   return i >= 0 && ROOM_ORDER.slice(0, i).every((r) => done.includes(r));
 }
 export const allRoomsDone = () => ROOM_ORDER.every((r) => load().roomsDone.includes(r));
+// Levels are linear: each portal leads to the next level, the last to FINAL.
+export function nextState(afterRoom) {
+  const i = ROOM_ORDER.indexOf(afterRoom);
+  return i >= 0 && i < ROOM_ORDER.length - 1 ? ROOM_ORDER[i + 1].toUpperCase() : 'FINAL';
+}
+// The first level not finished yet (null when all four are done).
+export function currentLevel() {
+  const done = load().roomsDone;
+  const id = ROOM_ORDER.find((r) => !done.includes(r));
+  return id ? id.toUpperCase() : null;
+}
 
 export function reset() {
   memory = DEFAULTS();

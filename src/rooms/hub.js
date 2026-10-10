@@ -1,255 +1,125 @@
 import * as THREE from 'three';
-import { PALETTE, ROOM_ORDER, SECOND_BUBBLE_DISTANCE } from '../core/config.js';
+import { PALETTE } from '../core/config.js';
 import * as world from '../world/world.js';
-import * as save from '../core/save.js';
+import * as physics from '../world/physics.js';
 import * as audio from '../core/audio.js';
-import * as assets from '../core/assets.js';
 import * as transitions from '../world/transitions.js';
 import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
-import * as torii from '../objects/torii.js';
+import * as fragments from '../ui/fragments.js';
+import * as toriiObj from '../objects/torii.js';
 import * as portalObj from '../objects/portal.js';
 import * as sakura from '../objects/sakura.js';
 import * as bouquet from '../objects/bouquet.js';
+import * as treeObj from '../objects/tree.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
-// Floating torii shrine. Four gates in ROOM_ORDER (unlocking one at a
-// time), the sealed anniversary door in the middle, and the portal that
-// appears in front of it once all four rooms are done.
+// The void past the door: a small light-purple island floating in a soft
+// sky. The orb introduces itself; one portal (framed by a torii gate)
+// leads to the first level. Levels only go forward from here.
 
-const ARC_RADIUS = 18;
-const GATE_RADIUS = 2.2; // proximity trigger around the gate opening
-const REARM = 6;
-const DOOR5_RADIUS = 2.6;
-// left → right: torii, compile, [door 5], stars, petals
-const SLOTS = { torii: -60, compile: -30, door5: 0, stars: 30, petals: 60 };
+const ISLAND_R = 16;
+const PORTAL_POS = new THREE.Vector3(0, 1.9, -11);
+const SPAWN = new THREE.Vector3(0, 1.6, 10);
+const SECOND_DIST = 9; // beat 5 plays when she walks this close to the portal
 
-// session memory (a refresh replays the intro — acceptable per SPECS)
-let introPlayed = false;
+let introPlayed = false; // session memory: a refresh replays the intro
 let secondPlayed = false;
-let seenDoneCount = null;
 
 let group = null;
-let gates = [];
-let door5 = null;
 let portal = null;
 let petals = null;
 let leaving = false;
-let door5Inside = false;
-let portalShown = false;
-const tmp = new THREE.Vector3();
-const center = new THREE.Vector3();
+let ready = false; // intro + beat 5 done: the portal is open
 
-function slotPos(deg, y = 0) {
-  const a = THREE.MathUtils.degToRad(deg);
-  return new THREE.Vector3(Math.sin(a) * ARC_RADIUS, y, -Math.cos(a) * ARC_RADIUS);
-}
-
-// Procedural glyphs (no font dependency).
-function runeTexture(kind) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d');
-  g.strokeStyle = PALETTE.moonlight;
-  g.fillStyle = PALETTE.moonlight;
-  g.lineWidth = 7;
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  g.beginPath();
-  if (kind === 'torii') {
-    g.moveTo(22, 40); g.quadraticCurveTo(64, 26, 106, 40);
-    g.moveTo(30, 58); g.lineTo(98, 58);
-    g.moveTo(42, 40); g.lineTo(42, 108);
-    g.moveTo(86, 40); g.lineTo(86, 108);
-    g.stroke();
-  } else if (kind === 'compile') {
-    g.moveTo(64, 14); g.lineTo(64, 28);
-    g.stroke();
-    g.beginPath();
-    g.ellipse(64, 66, 26, 36, 0, 0, Math.PI * 2);
-    g.stroke();
-    g.beginPath();
-    g.moveTo(42, 52); g.lineTo(86, 52);
-    g.moveTo(40, 66); g.lineTo(88, 66);
-    g.moveTo(42, 80); g.lineTo(86, 80);
-    g.moveTo(52, 104); g.lineTo(76, 104);
-    g.stroke();
-  } else if (kind === 'stars') {
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2;
-      g.moveTo(64, 64);
-      g.lineTo(64 + Math.cos(a) * 46, 64 + Math.sin(a) * 46);
-    }
-    g.stroke();
-    g.beginPath();
-    g.arc(64, 64, 10, 0, Math.PI * 2);
-    g.fill();
-  } else {
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-      g.beginPath();
-      g.ellipse(64 + Math.cos(a) * 24, 64 + Math.sin(a) * 24, 14, 20, a + Math.PI / 2, 0, Math.PI * 2);
-      g.stroke();
-    }
-    g.beginPath();
-    g.arc(64, 64, 6, 0, Math.PI * 2);
-    g.fill();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function noteTexture(text) {
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 192;
-  const g = c.getContext('2d');
-  g.drawImage(assets.get('paper').image, 0, 0, 256, 192);
-  g.fillStyle = PALETTE.ink;
-  g.font = '30px Handwriting, cursive';
-  g.textAlign = 'center';
-  // wrap
-  const words = text.split(' ');
-  const lines = [];
-  let line = '';
-  for (const w of words) {
-    const test = line ? line + ' ' + w : w;
-    if (g.measureText(test).width > 220 && line) {
-      lines.push(line);
-      line = w;
-    } else line = test;
-  }
-  lines.push(line);
-  lines.forEach((l, i) => g.fillText(l, 128, 96 - ((lines.length - 1) * 34) / 2 + i * 34 + 10));
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function buildShrine() {
-  const stoneMat = new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple });
-  const platform = new THREE.Mesh(new THREE.CylinderGeometry(24, 22, 1.2, 64), stoneMat);
-  platform.position.y = -0.6;
-  const rimMat = new THREE.MeshBasicMaterial({ color: PALETTE.lavender, transparent: true, opacity: 0.35 });
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(24, 0.06, 6, 128), rimMat);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.01;
-  group.add(platform, rim);
-
-  // fake shadow / underside glow
+function buildIsland() {
+  const solid = [];
+  const topMat = new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist });
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 0.6, 0.8, 64), topMat);
+  top.position.y = -0.4;
   const under = new THREE.Mesh(
-    new THREE.CircleGeometry(20, 48),
-    new THREE.MeshBasicMaterial({ color: PALETTE.lavender, transparent: true, opacity: 0.08, depthWrite: false, blending: THREE.AdditiveBlending })
+    new THREE.ConeGeometry(ISLAND_R - 0.6, 9, 48, 1, true),
+    new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, side: THREE.DoubleSide })
   );
-  under.rotation.x = Math.PI / 2;
-  under.position.y = -1.3;
-  group.add(under);
+  under.rotation.x = Math.PI;
+  under.position.y = -5.3;
+  // a soft path to the portal
+  const path = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.6, 22),
+    new THREE.MeshLambertMaterial({ color: PALETTE.moonlight, transparent: true, opacity: 0.7 })
+  );
+  path.rotation.x = -Math.PI / 2;
+  path.position.set(0, 0.01, -0.5);
+  group.add(top, under, path);
+  solid.push(top);
 
-  // altar with the bouquet
-  const altarMat = new THREE.MeshLambertMaterial({ color: PALETTE.lacquer });
-  const altar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.9), altarMat);
-  altar.position.set(0, 0.45, 4);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 1.05), new THREE.MeshLambertMaterial({ color: PALETTE.vermillion }));
-  top.position.set(0, 0.94, 4);
+  // altar with the bouquet, off the path
+  const altar = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.8), new THREE.MeshLambertMaterial({ color: PALETTE.wisteria }));
+  altar.position.set(4.5, 0.45, 2);
+  const cloth = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.9), new THREE.MeshLambertMaterial({ color: PALETTE.softPink }));
+  cloth.position.set(4.5, 0.93, 2);
   const b = bouquet.create();
-  b.position.set(0, 0.98, 4);
-  b.scale.setScalar(1.3);
-  group.add(altar, top, b);
+  b.position.set(4.5, 0.96, 2);
+  b.scale.setScalar(1.1);
+  group.add(altar, cloth, b);
+  solid.push(altar);
 
-  // a few stone lanterns (emissive, no lights)
-  const lanternMat = new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple });
+  // blossom trees around the rim
+  const spots = [[-9, -6, 3.6], [9, -7, 3.2], [-11, 4, 3], [11, 5, 3.8], [-5, 11, 2.6], [6, -12, 2.8], [-7, -12, 3.1], [12, -1, 2.4]];
+  spots.forEach(([x, z, h], i) => {
+    const t = treeObj.create({ height: h, tint: i % 3 === 2 ? 'lavender' : 'softPink', seed: 0.13 + i * 0.17 });
+    t.position.set(x, 0, z);
+    group.add(t);
+    solid.push(t.userData.collider);
+  });
+
+  // stone lanterns either side of the path (emissive, no lights)
+  const stoneMat = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria });
   const glowMat = new THREE.MeshBasicMaterial({ color: PALETTE.gold });
   glowMat.color.multiplyScalar(1.6);
-  for (const x of [-7, 7]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.4, 0.35), lanternMat);
-    post.position.set(x, 0.7, 6);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), lanternMat);
-    head.position.set(x, 1.65, 6);
-    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.72), glowMat);
-    glow.position.set(x, 1.65, 6);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.35, 4), lanternMat);
-    cap.position.set(x, 2.05, 6);
+  for (const [x, z] of [[-2.4, 3], [2.4, 3], [-2.4, -5], [2.4, -5]]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, 0.3), stoneMat);
+    post.position.set(x, 0.55, z);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.42, 0.6), stoneMat);
+    head.position.set(x, 1.3, z);
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.62), glowMat);
+    glow.position.set(x, 1.3, z);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.3, 4), stoneMat);
+    cap.position.set(x, 1.66, z);
     cap.rotation.y = Math.PI / 4;
     group.add(post, head, glow, cap);
+    solid.push(post);
   }
-}
 
-function buildGates() {
-  gates = [];
-  for (const id of ROOM_ORDER) {
-    const g = torii.create({ rune: runeTexture(id) });
-    const pos = slotPos(SLOTS[id]);
-    g.group.position.copy(pos);
-    g.group.lookAt(0, 0, 0);
-    group.add(g.group);
-    gates.push({ id, gate: g, inside: false, lockedSaid: false, center: pos.clone().setY(1.6) });
+  // the gate framing the portal
+  const gate = toriiObj.create();
+  gate.group.position.set(PORTAL_POS.x, 0, PORTAL_POS.z - 0.3);
+  group.add(gate.group);
+  for (const x of [-2.2, 2.2]) {
+    const p = physics.solidBox(0.5, 4, 0.5);
+    p.position.set(PORTAL_POS.x + x, 2, PORTAL_POS.z - 0.3);
+    group.add(p);
+    solid.push(p);
   }
+
+  const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), ISLAND_R - 0.8);
+  group.add(edge);
+  solid.push(edge);
+  return solid;
 }
 
-function buildDoor5() {
-  const pos = slotPos(SLOTS.door5);
-  const d = new THREE.Group();
-  d.position.copy(pos);
-  d.lookAt(0, 0, 0);
-  const mat = new THREE.MeshLambertMaterial({ color: PALETTE.lacquer });
-  const frameMat = new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple });
-  frameMat.color.multiplyScalar(0.5);
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.6, 0.25), mat);
-  slab.position.y = 1.8;
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 4, 0.2), frameMat);
-  frame.position.set(0, 2, -0.08);
-  const note = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.54), new THREE.MeshBasicMaterial({ map: noteTexture(TEXT.sealedNote) }));
-  note.position.set(0.25, 1.9, 0.14);
-  note.rotation.z = -0.05;
-  d.add(frame, slab, note);
-  group.add(d);
-  // repaint once the handwriting font is ready
-  document.fonts?.load('30px Handwriting').then(() => {
-    if (!note.parent) return;
-    note.material.map.dispose();
-    note.material.map = noteTexture(TEXT.sealedNote);
-    note.material.needsUpdate = true;
-  }).catch(() => {});
-  door5 = { group: d, center: pos.clone().setY(1.6) };
-
-  portal = portalObj.create();
-  const front = slotPos(SLOTS.door5).multiplyScalar((ARC_RADIUS - 3.2) / ARC_RADIUS).setY(2);
-  portal.group.position.copy(front);
-  portal.group.lookAt(0, 2, 0);
-  portal.group.visible = false;
-  group.add(portal.group);
-}
-
-function refreshGates() {
-  const progress = save.load();
-  let nextOpen = null;
-  for (const g of gates) {
-    const done = progress.roomsDone.includes(g.id);
-    const open = save.isRoomOpen(g.id);
-    g.state = done ? 'done' : open ? 'open' : 'locked';
-    g.gate.setState(g.state);
-    g.gate.setPulse(0);
-    if (!done && open && !nextOpen) nextOpen = g;
-  }
-  if (nextOpen) nextOpen.gate.setPulse(1.6); // the gate that is ready glows
-}
-
-async function enterRoom(id) {
+async function enterFirstLevel() {
   if (leaving) return;
   leaving = true;
   world.setControls({ move: false });
   await transitions.portalFlash(PALETTE.lavender, 500);
-  machine.go(id.toUpperCase());
+  machine.go('TORII');
 }
 
-async function enterFinal() {
-  if (leaving) return;
-  leaving = true;
-  world.setControls({ move: false });
-  await transitions.portalFlash(PALETTE.moonlight, 700);
-  machine.go('FINAL');
+function openPortal() {
+  ready = true;
+  portal.enable();
 }
 
 export default {
@@ -258,112 +128,56 @@ export default {
   async enter() {
     group = world.getGroup('hub');
     leaving = false;
-    door5Inside = false;
+    ready = false;
     world.sky.visible = true;
-    world.setFog(PALETTE.deepIndigo, 0.012);
-    world.setBounds(new THREE.Vector3(0, 0, 0));
-    buildShrine();
-    buildGates();
-    buildDoor5();
-    petals = sakura.create(200, { x: [-26, 26], y: [-2, 14], z: [-26, 22] });
+    world.setAtmosphere('day');
+    world.setBounds(new THREE.Vector3(0, 0, 0), ISLAND_R + 4);
+    const solid = buildIsland();
+    world.setColliders(solid);
+    petals = sakura.create(160, { x: [-18, 18], y: [0, 12], z: [-18, 18] });
     group.add(petals.mesh);
-    refreshGates();
 
-    const progress = save.load();
-    const all = save.allRoomsDone();
-    portalShown = all;
-    if (all) {
-      portal.group.visible = true;
-      portal.enable();
-    }
+    portal = portalObj.create();
+    portal.group.position.copy(PORTAL_POS);
+    group.add(portal.group);
+    portal.disable();
 
-    // Spawn: arriving from a room, stand in front of its gate; otherwise
-    // at the shrine's front edge facing the arc.
-    const from = machine.previousName?.toLowerCase();
-    const fromGate = gates.find((g) => g.id === from);
-    if (fromGate) {
-      const p = fromGate.center.clone().multiplyScalar((ARC_RADIUS - 5) / ARC_RADIUS).setY(1.6);
-      const yaw = Math.atan2(-p.x, -p.z) + Math.PI;
-      world.setPlayer(p, yaw, 0);
-      fromGate.inside = true; // she must leave before re-entering
-    } else {
-      world.setPlayer(new THREE.Vector3(0, 1.6, 12), 0, 0);
-    }
+    world.setPlayer(SPAWN, 0, -0.04);
     world.setControls({ move: true, look: true });
     orb.setVisible(true);
     orb.setColor(PALETTE.lavender);
     orb.follow();
     orb.place();
-
+    fragments.show();
     audio.play('hub');
 
-    const doneCount = progress.roomsDone.length;
-    if (!introPlayed && doneCount === 0) {
+    if (!introPlayed) {
       introPlayed = true;
       for (const beat of TEXT.orbIntro) dialogue.say(orb.anchor, beat, { mode: 'story' });
+    } else if (secondPlayed) {
+      openPortal();
     }
-    if (seenDoneCount !== null && doneCount > seenDoneCount) {
-      if (all) dialogue.say(orb.anchor, TEXT.hub.allDone, { mode: 'story' });
-      else dialogue.say(orb.anchor, TEXT.hub.returning, { mode: 'ambient', queue: true });
-    } else if (all && seenDoneCount === null) {
-      dialogue.say(orb.anchor, TEXT.hub.allDone, { mode: 'story' });
-    }
-    seenDoneCount = doneCount;
   },
 
   update(dt) {
-    for (const g of gates) g.gate.update(dt);
     petals.update(dt);
     portal.update(dt);
     if (leaving) return;
     const p = world.camera.position;
-    const prev = world.player.prev;
-
-    for (const g of gates) {
-      const d = p.distanceTo(g.center);
-      if (!secondPlayed && d < SECOND_BUBBLE_DISTANCE && !dialogue.isStoryActive()) {
-        secondPlayed = true;
-        dialogue.say(orb.anchor, TEXT.orbSecond, { mode: 'story' });
-      }
-      const crossing = torii.crossed(g.gate.group, prev, p);
-      const was = g.inside;
-      if (d < GATE_RADIUS || crossing) g.inside = true;
-      else if (d > REARM) {
-        g.inside = false;
-        g.lockedSaid = false;
-      }
-      if (g.inside && !was) {
-        if (g.state === 'locked') {
-          if (!g.lockedSaid) {
-            g.lockedSaid = true;
-            dialogue.say(orb.anchor, TEXT.hub.locked, { mode: 'ambient' });
-          }
-        } else if (!dialogue.isStoryActive()) {
-          enterRoom(g.id);
-          return;
-        } else {
-          g.inside = false; // let the story finish; re-approach works
-        }
-      }
+    if (!secondPlayed && !dialogue.isStoryActive() && p.distanceTo(PORTAL_POS) < SECOND_DIST) {
+      secondPlayed = true;
+      dialogue.say(orb.anchor, TEXT.orbSecond, { mode: 'story' }).then(openPortal);
     }
+    if (ready && portal.checkEntry(p) && !dialogue.isStoryActive()) enterFirstLevel();
+  },
 
-    const d5 = p.distanceTo(door5.center);
-    if (d5 < DOOR5_RADIUS && !door5Inside) {
-      door5Inside = true;
-      dialogue.say(orb.anchor, TEXT.hub.sealed, { mode: 'ambient' });
-    } else if (d5 > REARM) {
-      door5Inside = false;
-    }
-
-    if (portalShown && portal.checkEntry(p) && !dialogue.isStoryActive()) {
-      enterFinal();
-    }
+  _debug() {
+    return { ready, secondPlayed, portal: PORTAL_POS.toArray() };
   },
 
   exit() {
     world.clearBounds();
     world.disposeGroup('hub');
-    gates = [];
     group = null;
   }
 };

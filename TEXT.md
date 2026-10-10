@@ -23,7 +23,7 @@ execute it with you next to me in order for me to come back home
 safely. heeeelpppppppp!
 — your lub dub
 
-## ORB intro (HUB, first arrival — 4 beats, one bubble each, Enter to continue)
+## ORB intro (HUB — the void past the door, first arrival — 4 beats, one bubble each, Enter to continue)
 1. oh. you're here. okay — don't panic.
 
 2. i'm... i'm his code. he wrote me right before it happened. i was
@@ -34,19 +34,22 @@ supposed to be a present.
 4. i don't know where everything is. he didn't have time to tell me. but
 i can feel where things should be. stay close.
 
-## ORB second bubble (beat 5 — plays once, the first time she comes within 20 units of a torii gate; Enter to continue)
+## ORB second bubble (beat 5 — plays once, the first time she walks near the portal to the first level; Enter to continue)
 four rooms. four pieces of him missing. walk through each one. then
 i can take you to him.
 
-## HUB — sealed door note (small paper on door 5, shown in 3D)
+## HOUSE — sealed door note (small paper on the anniversary door in the house, shown in 3D)
 Locked until our anniversary. Come back then.
 
-## HUB — orb lines
-First arrival: (see ORB intro above)
+## HOUSE — orb lines
 Sealed door: that one's for our anniversary. i'll be ready by then.
-Locked gate: not this one yet princess. there's a specific order to follow to get it fixed and reach him
-Returning after a room: one down. keep going, love.
-All 4 done (portal appears in front of door 5): he's through there.
+
+## FRAGMENTS — orb lines (after each level's Complete line, once the portal opens)
+H: look — the first piece. an H. he'll know what it means. three left. next, he needs your words.
+O: that's the second one. an O. two left. the stars are next — they remember something.
+M: the third piece. an M. just one left, love — and it won't be easy. stay close.
+E: that's all four. H. O. M. E.
+E (then): he's through there.
 go on. i'll be right behind you.
 
 ## ROOM: TORII — orb lines
@@ -56,18 +59,26 @@ Wrong: no worries. try again.
 Complete: okay that was perfect. portal's open.
 Hint (60s): watch them again. i'll flash the first one for you.
 
-## ROOM: COMPILE — orb lines
-Intro: five lanterns. each one holds a piece of the code that brings
-him home. light them all.
-Fragment 1: one.
-Fragment 2: two.
-Fragment 3: three.
-Fragment 4: four.
-Fragment 5: five.
-Complete: that's the last piece. the code is whole. he can come home now.
-Hint (60s): close your eyes. feel where the light wants to be.
+## ROOM: COMPILE — orb lines (fix the code: she types one word per blank; each right answer lights a lantern)
+Intro: his code broke in a few places. i'll ask, you fill in the blank. one word each.
+Question 1: who was he trying to find before it all went wrong?
+Answer 1: ayish
+Question 2: what goes lub dub?
+Answer 2: heart
+Question 3: he won't run it alone. how will he run it?
+Answer 3: together
+Question 4: and how does he want to come back?
+Answer 4: safe
+Correct 1: one.
+Correct 2: two.
+Correct 3: three.
+Correct 4: four.
+Wrong: close. try another word.
+Hint (60s): psst… it starts with “_”.
+Terminal: one last thing. he always starts it the same way. type: npm run dev
+Complete: oh. this is what he was making for you. only a glimpse — the rest is still in pieces.
 
-## COMPILE — HUD issue card text
+## COMPILE — HUD issue card text (the blanks: locate, bind, execute, return)
 Title:  #0042 — bring-him-home
 Status: open → resolved
 Body lines (revealed per fragment, in order):
@@ -92,12 +103,22 @@ Hint (60s): the shape is already there. you just have to wake it up.
 Intro: stay close to me. the petals like to play.
 Lost (pause): here, take my hand.
 Complete: almost there. hold on.
+Restart: too far, love. again — from the start.
 Hint (60s): here. take my light. follow it.
 
 ## OUT OF BOUNDS — orb line (ambient)
 here, this way
 
-## FINAL — orb line before letter
+## FINAL — orb line at the laptop (in the void)
+type them in, one by one. H first.
+
+## FINAL — laptop fragment code (H, O, M, E keys; each key types its block — full blocks to be drafted and approved)
+H: heart.connect(ayish)
+O: open(door.next)
+M: memories.load(all)
+E: execute(home.exe)
+
+## FINAL — orb line before letter (in the gaming room)
 it's on the screen. take your time.
 
 ## FINAL — orb line after letter
@@ -148,7 +169,10 @@ I'm here. Always.
 Happy Birthday, Ayish.
 Come back on our anniversary.
 
+## AFTER END — orb line (she wakes in the finished world)
+it's all yours now. go look around.
+
 ## UI hints (small, non-blocking)
 Look hint: click to look around
-Controls hint: W A S D to move · Space up · Shift down · mouse to look
+Controls hint: W A S D to walk · Shift to run · mouse to look
 Keyboard-first notice (if touch-only device detected): this experience is designed for a laptop with a keyboard and mouse. Please open it on a laptop for the intended experience.

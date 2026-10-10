@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, REDUCED_MOTION, MOVE_SPEED } from '../core/config.js';
+import { PALETTE, REDUCED_MOTION } from '../core/config.js';
 import * as world from '../world/world.js';
 import * as assets from '../core/assets.js';
 import * as transitions from '../world/transitions.js';
@@ -17,6 +17,7 @@ const REARM_RADIUS = 2.5;
 const doorPos = new THREE.Vector3(-ROOM.w / 2 + 0.1, 1.1, -0.8);
 
 let group = null;
+let solid = [];
 let rimMat = null;
 let noteSeenThisVisit = false;
 let noteOpen = false;
@@ -32,15 +33,12 @@ function box(w, h, d, mat) {
 }
 
 function build() {
-  const wallMat = new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple });
-  wallMat.color.multiplyScalar(0.55);
-  const floorMat = new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple, transparent: true, opacity: 0.4 });
+  const wallMat = new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist });
+  const floorMat = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), floorMat);
   floor.rotation.x = -Math.PI / 2;
-  const under = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), new THREE.MeshLambertMaterial({ color: PALETTE.lacquer }));
-  under.rotation.x = -Math.PI / 2;
-  under.position.y = -0.01;
-  group.add(under, floor);
+  group.add(floor);
+  solid = [floor];
 
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), wallMat);
   ceil.rotation.x = Math.PI / 2;
@@ -57,6 +55,7 @@ function build() {
     m.position.set(...p);
     m.rotation.y = ry;
     group.add(m);
+    solid.push(m);
   }
 
   // The normal door (back wall) and her bag beside it.
@@ -132,10 +131,10 @@ export default {
     t = 0;
     build();
     world.sky.visible = false;
-    world.setFog(PALETTE.deepIndigo, 0.02);
+    world.setAtmosphere('indoor');
     world.setPlayer(new THREE.Vector3(1.4, 1.6, 2.6), 0.35, 0);
     world.setBounds(new THREE.Vector3(0, 1.6, 0), 4.6);
-    world.player.speed = 5; // a small room: walking pace
+    world.setColliders(solid);
     world.setControls({ move: true, look: true });
     orb?.setVisible(false);
     overlay.showLine({ text: TEXT.arrival }).then(() => prompts.showControls());
@@ -143,11 +142,7 @@ export default {
 
   update(dt) {
     t += dt;
-    // Solid walls indoors.
     const p = world.camera.position;
-    p.x = Math.max(-ROOM.w / 2 + 0.35, Math.min(ROOM.w / 2 - 0.35, p.x));
-    p.z = Math.max(-ROOM.d / 2 + 0.35, Math.min(ROOM.d / 2 - 0.35, p.z));
-    p.y = Math.max(0.5, Math.min(ROOM.h - 0.3, p.y));
 
     if (ready) {
       rimMat.opacity = REDUCED_MOTION ? 0.85 : 0.55 + 0.35 * (0.5 + 0.5 * Math.sin((t * Math.PI * 2) / 2));
@@ -173,7 +168,6 @@ export default {
   },
 
   exit() {
-    world.player.speed = MOVE_SPEED;
     world.sky.visible = true;
     world.clearBounds();
     world.disposeGroup('threshold');

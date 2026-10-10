@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { PALETTE, MOVE_SPEED, TURN_ASSIST_DELAY, TURN_ASSIST_DURATION } from '../core/config.js';
+import { PALETTE, TURN_ASSIST_DELAY, TURN_ASSIST_DURATION } from '../core/config.js';
 import * as world from '../world/world.js';
+import * as physics from '../world/physics.js';
 import * as save from '../core/save.js';
 import * as audio from '../core/audio.js';
 import * as assets from '../core/assets.js';
@@ -11,6 +12,7 @@ import * as overlay from '../ui/overlay.js';
 import * as portalObj from '../objects/portal.js';
 import * as bouquet from '../objects/bouquet.js';
 import { orb } from '../objects/orb.js';
+import * as fragments from '../ui/fragments.js';
 import { TEXT } from '../ui/text.js';
 
 // FINAL — the void, a table, a chair, a laptop with the letter. After the
@@ -128,6 +130,14 @@ export function buildScene() {
   );
   floor.rotation.x = -Math.PI / 2;
   group.add(floor);
+  // solid: the floor, the table and an invisible edge
+  const ground = physics.solidBox(20, 1, 20);
+  ground.position.y = -0.5;
+  const tableCol = physics.solidBox(2, 0.8, 1);
+  tableCol.position.set(0, 0.4, 0);
+  const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), 8.6);
+  group.add(ground, tableCol, edge);
+  group.userData.solid = [ground, tableCol, edge];
 
   // the portal waits behind the chair: "turn around."
   portal = portalObj.create();
@@ -192,11 +202,12 @@ export default {
     portal.setOpacityNow(0.15);
     save.setReachedFinal();
     world.sky.visible = true;
-    world.setFog(PALETTE.deepIndigo, 0.03);
+    world.setAtmosphere('day', { fogDensity: 0.03 });
     world.setBounds(new THREE.Vector3(0, 1.6, 2), 12);
+    world.setColliders(group.userData.solid);
     orb.setVisible(true);
     orb.setColor(PALETTE.lavender);
-    world.player.speed = 4; // human scale
+    fragments.show();
     seatT = 0;
 
     if (save.load().seenLetter) {
@@ -271,7 +282,6 @@ export default {
   },
 
   exit(nextName) {
-    world.player.speed = MOVE_SPEED;
     world.clearBounds();
     // REVEAL reuses this set (portal glow, camera drift) and disposes it.
     if (nextName !== 'REVEAL') world.disposeGroup('final');

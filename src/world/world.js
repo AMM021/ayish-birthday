@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import {
-  PALETTE, CAMERA_FAR, MOVE_SPEED, MOVE_DAMP, LOOK_SENS, ROOM_BOUNDS_RADIUS
+  PALETTE, CAMERA_FAR, MOVE_SPEED, MOVE_DAMP, LOOK_SENS, ROOM_BOUNDS_RADIUS,
+  RUN_MULT, GRAVITY, FALL_RESPAWN_DEPTH, ATMOSPHERES, REDUCED_MOTION
 } from '../core/config.js';
 import * as input from '../core/input.js';
+import * as physics from './physics.js';
 
 // The one Scene and the one Camera. Rooms add groups; they never
 // create either.
@@ -11,25 +13,70 @@ export const scene = new THREE.Scene();
 // An explicit background (not just the renderer clear colour): RenderPass
 // disables autoClear and would otherwise clear with a colour cached in the
 // screen's sRGB space, washing the void out to grey-purple.
-scene.background = new THREE.Color(PALETTE.deepIndigo);
+scene.background = new THREE.Color(PALETTE.lilacHaze);
 export const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, CAMERA_FAR);
 export const rootGroup = new THREE.Group();
 rootGroup.name = 'root';
 scene.add(rootGroup);
 
-// Persistent sky (starfield + nebula), never part of a room group.
+// Persistent sky (gradient dome + starfield + nebula), never part of a
+// room group.
 export const sky = new THREE.Group();
 sky.name = 'sky';
 sky.renderOrder = -1;
 scene.add(sky);
 
-scene.add(new THREE.HemisphereLight(PALETTE.lavender, PALETTE.deepIndigo, 0.45));
-scene.add(new THREE.AmbientLight(PALETTE.lavender, 0.35));
+const hemi = new THREE.HemisphereLight(PALETTE.lilacHaze, PALETTE.wisteria, 1.1);
+const ambient = new THREE.AmbientLight(PALETTE.lavender, 0.45);
+// soft sun; no shadow maps (Performance Rule 5)
+const sun = new THREE.DirectionalLight(PALETTE.gold, 1.1);
+sun.position.set(40, 60, -30);
+scene.add(hemi, ambient, sun);
 
-const fog = new THREE.FogExp2(PALETTE.deepIndigo, 0.012);
+const fog = new THREE.FogExp2(PALETTE.lilacMist, 0.012);
 scene.fog = fog;
 let fogBase = 0.012;
 let fogEnabled = true;
+
+// --- atmosphere -----------------------------------------------------------
+let skyParts = null; // { dome, stars, nebula } registered once by main.js
+export function registerSky(parts) {
+  skyParts = parts;
+  sky.add(parts.dome.mesh);
+}
+// Blend two presets (0..1), e.g. COMPILE's bloom from the void to sunshine.
+const ca = new THREE.Color();
+const cb = new THREE.Color();
+function mixColor(a, b, k) {
+  return '#' + ca.set(a).lerp(cb.set(b), k).getHexString();
+}
+export function lerpAtmosphere(from, to, k) {
+  const A = ATMOSPHERES[from];
+  const B = ATMOSPHERES[to];
+  const num = (x) => A[x] + (B[x] - A[x]) * k;
+  setAtmosphere(from, {
+    top: mixColor(A.top, B.top, k), horizon: mixColor(A.horizon, B.horizon, k), bottom: mixColor(A.bottom, B.bottom, k),
+    clouds: mixColor(A.clouds, B.clouds, k), fog: mixColor(A.fog, B.fog, k), fogDensity: num('fogDensity'),
+    stars: num('stars'), nebula: num('nebula'),
+    hemi: [mixColor(A.hemi[0], B.hemi[0], k), mixColor(A.hemi[1], B.hemi[1], k), A.hemi[2] + (B.hemi[2] - A.hemi[2]) * k],
+    ambient: num('ambient'), sun: num('sun')
+  });
+}
+
+// One call per room: sky gradient, clouds, stars, fog and light levels.
+export function setAtmosphere(name, overrides = {}) {
+  const a = { ...ATMOSPHERES[name], ...overrides };
+  skyParts?.dome.set({ top: a.top, horizon: a.horizon, bottom: a.bottom, clouds: a.clouds, cloudAmt: a.stars > 0.5 ? 0.25 : 1, sun: a.sun });
+  skyParts?.stars.setOpacity(a.stars);
+  skyParts?.nebula.setOpacity(a.nebula);
+  scene.background.set(a.horizon);
+  hemi.color.set(a.hemi[0]);
+  hemi.groundColor.set(a.hemi[1]);
+  hemi.intensity = a.hemi[2];
+  ambient.intensity = a.ambient;
+  sun.intensity = a.sun;
+  setFog(a.fog, a.fogDensity);
+}
 
 const groups = new Map();
 
@@ -91,7 +138,11 @@ export function setFogEnabled(on) {
 }
 export const isFogEnabled = () => fogEnabled;
 
-// --- player (free-fly 6DOF) ---------------------------------------------
+// --- player (walking) ------------------------------------------------------
+// She walks: WASD on the ground plane (from yaw only), Shift to jog, mouse
+// to look. Gravity pulls her onto whatever the room registered as solid
+// (world/physics.js); she can never pass through floors or walls. Falling
+// far below her spawn puts her back at the spawn.
 export const player = {
   velocity: new THREE.Vector3(),
   yaw: 0,
@@ -100,6 +151,11 @@ export const player = {
   canLook: false,
   speed: MOVE_SPEED,
   prev: new THREE.Vector3(),
+  eye: new THREE.Vector3(), // physical eye position (camera adds a tiny bob)
+  spawn: new THREE.Vector3(),
+  spawnYaw: 0,
+  grounded: false,
+  bob: 0,
   moved: 0 // seconds spent actually moving (for the controls hint)
 };
 
@@ -109,11 +165,21 @@ let onOutOfBounds = null;
 
 export function setPlayer(pos, yaw = 0, pitch = 0) {
   camera.position.copy(pos);
+  player.eye.copy(pos);
   player.prev.copy(pos);
+  player.spawn.copy(pos);
+  player.spawnYaw = yaw;
   player.yaw = yaw;
   player.pitch = pitch;
   player.velocity.set(0, 0, 0);
+  player.bob = 0;
   applyLook();
+}
+
+// Rooms register what is solid. `null`/[] clears (no gravity then).
+export function setColliders(objects) {
+  if (objects && objects.length) physics.setColliders(objects);
+  else physics.clearColliders();
 }
 
 export function setBounds(center, radius = ROOM_BOUNDS_RADIUS) {
@@ -124,6 +190,7 @@ export function setBounds(center, radius = ROOM_BOUNDS_RADIUS) {
 }
 export function clearBounds() {
   bounds.active = false;
+  physics.clearColliders();
 }
 export function setOutOfBoundsHandler(fn) {
   onOutOfBounds = fn;
@@ -149,6 +216,8 @@ const fwd = new THREE.Vector3();
 const right = new THREE.Vector3();
 const wish = new THREE.Vector3();
 const toCenter = new THREE.Vector3();
+const step = new THREE.Vector3();
+const MAX_STEP = 0.2; // sub-step length, so nothing thin is tunnelled through
 
 function updatePlayer(dt) {
   player.prev.copy(camera.position);
@@ -160,43 +229,85 @@ function updatePlayer(dt) {
     applyLook();
   }
 
-  wish.set(0, 0, 0);
-  if (player.canMove) {
-    camera.getWorldDirection(fwd);
-    right.crossVectors(fwd, camera.up).normalize();
-    if (input.isDown('KeyW')) wish.add(fwd);
-    if (input.isDown('KeyS')) wish.sub(fwd);
-    if (input.isDown('KeyD')) wish.add(right);
-    if (input.isDown('KeyA')) wish.sub(right);
-    if (input.isDown('Space')) wish.y += 1;
-    if (input.isDown('ShiftLeft') || input.isDown('ShiftRight')) wish.y -= 1;
-    if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(player.speed);
+  if (!player.canMove) {
+    // A room may be animating the camera (seating, drift): follow it.
+    player.eye.copy(camera.position);
+    player.velocity.set(0, 0, 0);
+    return;
   }
-  // Frame-rate independent damping toward the wished velocity.
-  const k = Math.pow(MOVE_DAMP, dt * 60);
-  player.velocity.multiplyScalar(k).addScaledVector(wish, 1 - k);
-  if (!player.canMove && player.velocity.lengthSq() < 1e-4) player.velocity.set(0, 0, 0);
-  camera.position.addScaledVector(player.velocity, dt);
-  if (wish.lengthSq() > 0) player.moved += dt;
 
-  // Soft bounds: fog thickens, she is eased back toward the centre.
-  if (bounds.active) {
-    const d = camera.position.distanceTo(bounds.center);
-    if (d > bounds.radius) {
-      if (!oob.on) {
-        oob = { on: true, t: 0, fired: false };
-      }
+  wish.set(0, 0, 0);
+  fwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  right.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+  if (input.isDown('KeyW')) wish.add(fwd);
+  if (input.isDown('KeyS')) wish.sub(fwd);
+  if (input.isDown('KeyD')) wish.add(right);
+  if (input.isDown('KeyA')) wish.sub(right);
+  const running = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
+  if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(player.speed * (running ? RUN_MULT : 1));
+
+  // Frame-rate independent damping toward the wished horizontal velocity.
+  const k = Math.pow(MOVE_DAMP, dt * 60);
+  const v = player.velocity;
+  v.x = v.x * k + wish.x * (1 - k);
+  v.z = v.z * k + wish.z * (1 - k);
+
+  const solid = physics.hasColliders();
+  if (solid) v.y -= GRAVITY * dt;
+  else v.y = 0;
+
+  // Move in short sub-steps, resolving the capsule after each.
+  const total = Math.hypot(v.x, v.y, v.z) * dt;
+  const n = Math.max(1, Math.ceil(total / MAX_STEP));
+  player.grounded = false;
+  for (let i = 0; i < n; i++) {
+    step.copy(v).multiplyScalar(dt / n);
+    player.eye.add(step);
+    if (!solid) continue;
+    const push = physics.resolveCapsule(player.eye);
+    if (push.y > 1e-5 && push.y > Math.hypot(push.x, push.z) * 0.7) {
+      player.grounded = true;
+      if (v.y < 0) v.y = 0;
+    } else if (push.y < -1e-5 && v.y > 0) {
+      v.y = 0; // ceiling
     }
+  }
+  // Standing still on a slope must not slide: drop tiny horizontal drift.
+  if (player.grounded && wish.lengthSq() === 0 && Math.hypot(v.x, v.z) < 0.05) {
+    v.x = 0;
+    v.z = 0;
+  }
+
+  if (solid && player.eye.y < player.spawn.y - FALL_RESPAWN_DEPTH) {
+    // fell off the world: back to the start of the room, gently
+    player.eye.copy(player.spawn);
+    player.yaw = player.spawnYaw;
+    v.set(0, 0, 0);
+    applyLook();
+    onOutOfBounds?.();
+  }
+
+  const speedH = Math.hypot(v.x, v.z);
+  if (wish.lengthSq() > 0) player.moved += dt;
+  // a very small walking bob (none with reduced motion)
+  if (!REDUCED_MOTION && player.grounded && speedH > 0.5) player.bob += dt * speedH * 2.1;
+  const bobY = REDUCED_MOTION ? 0 : Math.sin(player.bob) * 0.035 * Math.min(1, speedH / MOVE_SPEED);
+  camera.position.set(player.eye.x, player.eye.y + bobY, player.eye.z);
+
+  // Soft bounds (horizontal): fog thickens, she is eased back.
+  if (bounds.active) {
+    toCenter.subVectors(bounds.center, player.eye).setY(0);
+    const d = toCenter.length();
+    if (d > bounds.radius && !oob.on) oob = { on: true, t: 0, fired: false };
     if (oob.on) {
       oob.t += dt;
       if (!oob.fired) {
         oob.fired = true;
         onOutOfBounds?.();
       }
-      toCenter.subVectors(bounds.center, camera.position);
-      const pull = Math.min(1, dt / 3) * 2;
-      camera.position.addScaledVector(toCenter, pull * 0.5);
-      player.velocity.multiplyScalar(0.9);
+      player.eye.addScaledVector(toCenter, Math.min(1, dt / 3));
+      v.x *= 0.9;
+      v.z *= 0.9;
       if (fogEnabled) fog.density = fogBase + Math.min(1, oob.t / 2) * 0.03;
       if (d < bounds.radius * 0.85) {
         oob.on = false;

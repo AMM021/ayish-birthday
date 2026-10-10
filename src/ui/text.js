@@ -107,7 +107,8 @@ function issueCard() {
   return { title: get('Title'), statusOpen: from, statusResolved: to, lines: code };
 }
 
-const hub = labeled('HUB — orb lines');
+const house = labeled('HOUSE — orb lines');
+const frags = labeled('FRAGMENTS — orb lines');
 const torii = labeled('ROOM: TORII — orb lines');
 const compile = labeled('ROOM: COMPILE — orb lines');
 const stars = labeled('ROOM: STARS — orb lines');
@@ -118,35 +119,37 @@ export const TEXT = {
   passcode: passcode(),
   arrival: body('THRESHOLD — arrival line'),
   doorNote: body('THRESHOLD — door note (handwritten)'),
-  orbIntro: numbered('ORB intro (HUB, first arrival — 4 beats, one bubble each, Enter to continue)'),
-  orbSecond: body('ORB second bubble (beat 5 — plays once, the first time she comes within 20 units of a torii gate; Enter to continue)'),
-  sealedNote: body('HUB — sealed door note (small paper on door 5, shown in 3D)'),
-  hub: {
-    sealed: hub['Sealed door'],
-    locked: hub['Locked gate'],
-    returning: hub['Returning after a room'],
-    allDone: hub['All 4 done (portal appears in front of door 5)']
-  },
+  orbIntro: numbered('ORB intro'),
+  orbSecond: body('ORB second bubble'),
+  sealedNote: body('HOUSE — sealed door note'),
+  house: { sealed: house['Sealed door'] },
+  // H · O · M · E: the line after each level ("E" has a second bubble)
+  fragments: { H: frags.H, O: frags.O, M: frags.M, E: frags.E, Ethen: frags['E (then)'] },
   torii: {
     intro: torii.Intro, success: torii.Success, wrong: torii.Wrong,
     complete: torii.Complete, hint: torii['Hint (60s)']
   },
   compile: {
     intro: compile.Intro,
-    fragments: [1, 2, 3, 4, 5].map((n) => compile[`Fragment ${n}`]),
-    complete: compile.Complete,
-    hint: compile['Hint (60s)']
+    questions: [1, 2, 3, 4].map((n) => ({ q: compile[`Question ${n}`], a: compile[`Answer ${n}`], ok: compile[`Correct ${n}`] })),
+    wrong: compile.Wrong,
+    hint: compile['Hint (60s)'],
+    terminal: compile.Terminal,
+    complete: compile.Complete
   },
   issue: issueCard(),
   resolution: section('COMPILE — resolution comment').map((l) => l.trim()).filter((l) => l.startsWith('//')).join('\n'),
   stars: { intro: stars.Intro, wrong: stars.Wrong, complete: stars.Complete, hint: stars['Hint (60s)'] },
-  petals: { intro: petals.Intro, lost: petals['Lost (pause)'], complete: petals.Complete, hint: petals['Hint (60s)'] },
+  petals: { intro: petals.Intro, lost: petals['Lost (pause)'], complete: petals.Complete, restart: petals.Restart, hint: petals['Hint (60s)'] },
   outOfBounds: body('OUT OF BOUNDS — orb line (ambient)'),
+  finalLaptop: body('FINAL — orb line at the laptop'),
+  laptopCode: labeled('FINAL — laptop fragment code'),
   finalBefore: body('FINAL — orb line before letter'),
   finalAfter: body('FINAL — orb line after letter'),
   letter: prose(section('FINAL — letter (typewriter, serif)')),
   revealFallback: body('FINAL REVEAL — fallback copy (use only if the video cannot play)'),
   endcard: section('END card').map((l) => l.trim()).filter(Boolean),
+  afterEnd: body('AFTER END — orb line'),
   lookHint: ui['Look hint'],
   controlsHint: ui['Controls hint'],
   touchNotice: ui['Keyboard-first notice (if touch-only device detected)']

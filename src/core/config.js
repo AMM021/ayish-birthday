@@ -12,7 +12,17 @@ export const PALETTE = {
   matcha: '#8fc9a3',
   moss: '#3f5e45',
   moonlight: '#fdf8ff',
-  lacquer: '#120a1c'
+  lacquer: '#120a1c',
+  // v2: the light-purple world (cute, never eerie)
+  lilacSky: '#c9b2f2',
+  lilacHaze: '#f3e9ff',
+  lilacMist: '#e2d3f8',
+  wisteria: '#a68ad9',
+  blush: '#f7d6e6',
+  twilight: '#6e55a8',
+  dusk: '#9a7cc9',
+  meadow: '#b9dca4',
+  sunlit: '#fff1d6'
 };
 
 export const PASSCODE = '1010';
@@ -36,12 +46,44 @@ export const REDUCED_MOTION = (() => {
 })();
 
 export const ROOM_ORDER = ['torii', 'compile', 'stars', 'petals'];
+// The fragment each level grants, in ROOM_ORDER: H · O · M · E.
+export const FRAGMENT_LETTERS = { torii: 'H', compile: 'O', stars: 'M', petals: 'E' };
+
+// Sky + fog + light presets. `stars` and `nebula` are 0..1 opacities.
+export const ATMOSPHERES = {
+  day: {
+    top: PALETTE.lilacSky, horizon: PALETTE.lilacHaze, bottom: PALETTE.lilacMist,
+    clouds: PALETTE.blush, fog: PALETTE.lilacMist, fogDensity: 0.012,
+    stars: 0, nebula: 0, hemi: [PALETTE.lilacHaze, PALETTE.wisteria, 1.1], ambient: 0.45, sun: 1.1
+  },
+  twilight: {
+    top: PALETTE.twilight, horizon: PALETTE.dusk, bottom: PALETTE.twilight,
+    clouds: PALETTE.softPink, fog: PALETTE.dusk, fogDensity: 0.008,
+    stars: 1, nebula: 0.6, hemi: [PALETTE.lavender, PALETTE.twilight, 0.8], ambient: 0.35, sun: 0.25
+  },
+  // COMPILE after `npm run dev`: the world he was making, in sunshine
+  garden: {
+    top: PALETTE.lilacSky, horizon: PALETTE.sunlit, bottom: PALETTE.blush,
+    clouds: PALETTE.moonlight, fog: PALETTE.sunlit, fogDensity: 0.006,
+    stars: 0, nebula: 0, hemi: [PALETTE.sunlit, PALETTE.meadow, 0.85], ambient: 0.3, sun: 1.15
+  },
+  indoor: {
+    top: PALETTE.lilacSky, horizon: PALETTE.lilacHaze, bottom: PALETTE.lilacMist,
+    clouds: PALETTE.blush, fog: PALETTE.lilacHaze, fogDensity: 0.01,
+    stars: 0, nebula: 0, hemi: [PALETTE.lilacHaze, PALETTE.wisteria, 0.9], ambient: 0.5, sun: 0.4
+  }
+};
 
 export const CAMERA_FAR = 500;
 export const PIXEL_RATIO_CAP = 1.5;
 export const BLOOM_RESOLUTION = 0.5;
-export const MOVE_SPEED = 12;
-export const MOVE_DAMP = 0.88;
+export const MOVE_SPEED = 4.2; // walking pace
+export const RUN_MULT = 1.7; // Shift: gentle jog
+export const MOVE_DAMP = 0.82;
+export const GRAVITY = 22;
+export const EYE_HEIGHT = 1.6;
+export const PLAYER_RADIUS = 0.3;
+export const FALL_RESPAWN_DEPTH = 20; // this far below her spawn → back to spawn
 export const LOOK_SENS = 0.002;
 export const ORB_FOLLOW_DIST = 3;
 export const ORB_FOLLOW_DAMP = 0.9;

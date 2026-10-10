@@ -28,10 +28,11 @@ const vert = /* glsl */ `
 `;
 const frag = /* glsl */ `
   uniform sampler2D uTex;
+  uniform float uOpacity;
   varying vec3 vColor;
   void main() {
     vec4 t = texture2D(uTex, gl_PointCoord);
-    gl_FragColor = vec4(vColor * t.a, t.a);
+    gl_FragColor = vec4(vColor * t.a * uOpacity, t.a * uOpacity);
   }
 `;
 
@@ -110,6 +111,7 @@ export function create() {
       uTime: { value: 0 },
       uPixelRatio: { value: 1 },
       uTwinkle: { value: REDUCED_MOTION ? 0 : 1 },
+      uOpacity: { value: 1 },
       uTex: { value: assets.get('star') }
     },
     transparent: true,
@@ -161,6 +163,11 @@ export function create() {
   return {
     group,
     extras: shootRoot,
+    setOpacity(o) {
+      mat.uniforms.uOpacity.value = o;
+      group.visible = o > 0.001;
+      shootRoot.visible = o > 0.5;
+    },
     setPixelRatio(r) {
       mat.uniforms.uPixelRatio.value = r;
     },

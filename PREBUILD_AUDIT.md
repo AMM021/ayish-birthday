@@ -76,6 +76,19 @@ Conflicts raised in the kickoff review, resolved by the owner and written into P
 15. **STARS usability:** trigger radius raised 0.7 → 1.1, roughly the size of a star's glow, so it is easier to hit in free flight. The closest pair is still 2.7 apart, leaving 0.5 clearance. A swept segment test stops fast passes from skipping a star. `MOVE_DAMP` is applied frame-rate independently.
 16. **Model:** the build runs on Opus. Sonnet may take over; all context lives in these docs.
 
+## Owner decisions — 2026-10-10 (v2 redesign after the first playtest)
+
+The owner played v0.6 and asked for a redesign. These items override decisions 11, 13 and 15 above, as well as the free-fly, hub and replay parts of the original plan.
+
+17. **Walking:** she walks with gravity instead of flying. Floors and walls are solid (`world/physics.js`, three-mesh-bvh 0.8.3, exact pin); she can never pass through the ground. Shift jogs (×1.7). Falling 20 units below her spawn returns her to it.
+18. **Light purple, cute, never eerie:** a gradient sky dome with pastel clouds and new palette entries (complementary, none overwritten). STARS stays at twilight so the stars still show.
+19. **Linear levels:** each portal leads to the next level, then to FINAL. There is no way back and no replay. The hub is now the small void island with the orb intro and one portal. A refresh mid-level restarts that level.
+20. **Fragments H · O · M · E:** each level grants one. They show top-left, and the orb line after each level praises her, names the fragment, says what's next and how many remain (copy approved).
+21. **COMPILE → fix the code:** four one-word blanks taken from the issue-card lines. Each right answer lights one of four lanterns, so the letter's "lanterns" line stays true. Then `npm run dev` blooms the void into a garden with a glimpse of the house. One typo is forgiven on words of five or more letters.
+22. **PETALS → stay in the light (hardest):** the orb's light circle drifts down the avenue, then gusts push it sideways, the circle shrinks and it speeds up. After 3 s outside it, the level restarts gently.
+23. **STARS for walking:** the heart lies flat over a lake and the stars float at chest height. Stars passed before star 1 is lit are ignored. On completion the camera rises to show the whole heart, then returns.
+24. **Planned, not built yet:** HOME typing at the laptop (blocks to be drafted for approval) → gaming room → letter → turn around → video → END → explore the garden and the three-story house (living room, dining, kitchen, library with a sliding ladder, bathroom with shower, tub, toilet with muslim shower and a sink with mirror, master bedroom with a sunset window and a balcony over a sunset city, and a couple's work/gaming room with both laptops and toy cars). The anniversary door moves into the house. The THRESHOLD home mixes their apartment with the game's style.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
@@ -85,7 +98,8 @@ Conflicts raised in the kickoff review, resolved by the owner and written into P
 - [x] Owner approves personal photos; count may vary. Place them in `src/assets/pics/`.
 - [ ] Listen to each of the three music previews (instrumental, no vocals, loops cleanly) and confirm the page URLs still work; they were not opened or heard during planning.
 - [ ] Record and compress the final reveal video; keep it 45–75 seconds and under 15 MB if possible.
-- [x] Locked-gate line confirmed by the owner (TEXT.md).
+- [x] Locked-gate line confirmed by the owner (no longer used after v2: there is no hub).
+- [ ] Approve the H/O/M/E laptop code blocks (phase 4).
 - [x] Planning handoff approved.
 - [ ] Download the three music tracks into `public/media/music/` (Pixabay blocks automated download).
 - [ ] Add photos and the reveal video + poster later (the game already handles their absence).

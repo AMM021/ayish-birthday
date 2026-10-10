@@ -12,7 +12,7 @@ export function initRenderer(canvas) {
     alpha: false,
     powerPreference: 'high-performance'
   });
-  renderer.setClearColor(new THREE.Color(PALETTE.deepIndigo));
+  renderer.setClearColor(new THREE.Color(PALETTE.lilacHaze));
   initialPixelRatio = Math.min(window.devicePixelRatio || 1, PIXEL_RATIO_CAP);
   renderer.setPixelRatio(initialPixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);

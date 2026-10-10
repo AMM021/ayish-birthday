@@ -3,7 +3,9 @@ import { PALETTE, PORTAL_TRIGGER_RADIUS, REDUCED_MOTION } from '../core/config.j
 import * as assets from '../core/assets.js';
 import { enableBloom } from '../world/layers.js';
 
-// Glowing ring + soft inner disc + orbiting motes. Disabled = faint.
+// Glowing ring + soft swirling disc + orbiting motes. Disabled = faint.
+// The disc blends normally (not additively) so it stays a soft purple
+// swirl against the light sky instead of burning out to white.
 
 const discVert = /* glsl */ `
   varying vec2 vUv;
@@ -14,14 +16,16 @@ const discVert = /* glsl */ `
 `;
 const discFrag = /* glsl */ `
   uniform vec3 uColor;
+  uniform vec3 uDeep;
   uniform float uOpacity;
   uniform float uTime;
   varying vec2 vUv;
   void main() {
     float r = length(vUv - 0.5) * 2.0;
     float swirl = 0.5 + 0.5 * sin(atan(vUv.y - 0.5, vUv.x - 0.5) * 3.0 + uTime * 0.8 - r * 6.0);
-    float a = smoothstep(1.0, 0.0, r) * (0.55 + 0.25 * swirl);
-    gl_FragColor = vec4(uColor * a * uOpacity * 1.2, a * uOpacity);
+    vec3 c = mix(uDeep, uColor, 0.35 + 0.65 * swirl * (1.0 - r * 0.5));
+    float a = smoothstep(1.0, 0.15, r) * (0.7 + 0.2 * swirl);
+    gl_FragColor = vec4(c, a * uOpacity * 0.9);
   }
 `;
 
@@ -46,12 +50,12 @@ export function create() {
     fragmentShader: discFrag,
     uniforms: {
       uColor: { value: new THREE.Color(PALETTE.lavender) },
+      uDeep: { value: new THREE.Color(PALETTE.warmPurple) },
       uOpacity: { value: 0.15 },
       uTime: { value: 0 }
     },
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide
   });
   const disc = new THREE.Mesh(assets.shared('portal.disc', () => new THREE.CircleGeometry(1.8, 48)), discMat);
@@ -65,12 +69,11 @@ export function create() {
   moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
   const moteMat = new THREE.PointsMaterial({
     map: assets.get('star'),
-    color: PALETTE.lavender,
-    size: 0.14,
+    color: PALETTE.gold,
+    size: 0.16,
     transparent: true,
     opacity: 0.15,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
+    depthWrite: false
   });
   const motes = new THREE.Points(moteGeo, moteMat);
   group.add(disc, ring, motes);

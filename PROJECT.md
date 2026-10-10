@@ -7,9 +7,9 @@
 
 ## Vision
 
-A single-page browser 3D experience, designed first for a laptop with keyboard + mouse. It opens directly at the passcode gate (no timer lock). She free-flies through four Japanese-themed purple rooms guided by a glowing orb. The final door leads to a void where a laptop displays a handwritten letter, followed by a personal video reveal with voice, then a soft end card.
+A single-page browser 3D experience, designed first for a laptop with keyboard + mouse. It opens directly at the passcode gate (no timer lock). She walks through four Japanese-themed light-purple levels guided by a glowing orb, earning one fragment per level: H, O, M, E. At the laptop in the void she types the four fragments in, lands in his work/gaming room, reads the handwritten letter, turns around for his personal video reveal with voice, sees a soft end card, and then wakes in the finished world: a garden and a three-story house to explore.
 
-Tone: dreamy, playful, romantic, warm. Not scary. Not static.
+Tone: dreamy, playful, romantic, warm, cute. Light purple, never eerie. Not scary. Not static.
 Philosophy: she shouldn't just click and read. She should walk through
 something. The effort is the gift.
 
@@ -34,17 +34,28 @@ The orb is his last act of love.
 - Passcode: `1010`
 - No timer lock: the experience opens straight on the passcode screen
 - Device: laptop, keyboard + mouse, pointer lock
-- Movement: free-fly 6DOF, WASD + Space/Shift + mouse look
-- Rooms: 4 challenges + 1 sealed anniversary door
-- Room order: gates unlock one at a time in `ROOM_ORDER` (TORII → COMPILE →
-  STARS → PETALS). A locked gate stays dark and the orb says the locked-gate
-  line. Finished rooms turn lavender and stay replayable without losing
-  completion. After all four, a portal in front of door 5 takes her to FINAL.
+- Movement: walking with gravity — WASD on the ground, Shift to jog, mouse
+  look. Floors and walls are solid (capsule vs. a static BVH per room); she
+  can never pass through the ground. No flying, no jump.
+- Levels: 4 challenges, strictly linear: TORII → COMPILE → STARS → PETALS →
+  FINAL. Each level's portal leads to the next; there is no way back and no
+  replay. Each level grants a fragment (H, O, M, E), shown top-left.
+- The void past the door (state HUB) is a small island where the orb
+  introduces itself; its one portal leads to TORII.
+- COMPILE is "fix the code": four one-word blanks, then `npm run dev`, then
+  the void blooms into the garden with a glimpse of the house.
+- PETALS is "stay in the light" and is the hardest level.
+- FINAL: at the laptop she presses H, O, M, E (each types its code block),
+  then lands in his work/gaming room for the letter → "turn around." → video.
+- After END she explores the finished world (garden + three-story house);
+  the sealed anniversary door is in the house. (Phases 4–6, not built yet.)
 - Companion: glowing orb, gold core, lavender halo, soft trail
 - No Cinnamoroll: the orb is the companion (decided, nothing to build)
 - Text: story dialogue types out and waits for Enter; ambient lines never interrupt story dialogue
-- Sky: one persistent celestial sky that follows the camera (no edges)
-- Vibe: Japanese theming, dark warm purples, gold, sparse vermillion
+- Sky: one persistent sky that follows the camera (no edges): a soft
+  gradient dome with pastel clouds, plus the starfield for twilight (STARS)
+- Vibe: Japanese theming, light cute purples, gold, sparse vermillion;
+  the house is luxurious, homey, wooden, nature-filled, whimsical, purple
 - Tech: Three.js + Vite
 - Hosting: Netlify free tier
 - Admin: `?dev=true` URL param
@@ -70,6 +81,15 @@ The orb is his last act of love.
 | moss        | `#3f5e45` | Bouquet stems                    |
 | moonlight   | `#fdf8ff` | Flashes / whiteouts (never pure white) |
 | lacquer     | `#120a1c` | Near-black props (table, chair, bag) |
+| lilacSky    | `#c9b2f2` | Day sky (top)                    |
+| lilacHaze   | `#f3e9ff` | Day sky (horizon), fades, clear  |
+| lilacMist   | `#e2d3f8` | Day fog, island ground           |
+| wisteria    | `#a68ad9` | Stone, island undersides         |
+| blush       | `#f7d6e6` | Pastel clouds, blossom accents   |
+| twilight    | `#6e55a8` | STARS sky                        |
+| dusk        | `#9a7cc9` | STARS horizon, the lake          |
+| meadow      | `#b9dca4` | Garden grass after the bloom     |
+| sunlit      | `#fff1d6` | Garden horizon, sunshine         |
 
 ## File Structure
 
@@ -99,11 +119,11 @@ WIFES_BIRTHDAY/
     ├── assets/pics/       # any number of personal photos; auto-discovered by Vite
     ├── main.js
     ├── core/{renderer,composer,clock,input,assets,audio,save,config,hints}.js
-    ├── world/{world,layers,transitions}.js
-    ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,fragment,bouquet}.js
+    ├── world/{world,layers,transitions,physics}.js   # physics: colliders (three-mesh-bvh)
+    ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end}.js
     ├── state/{machine,states}.js
-    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text}.js   # text.js reads TEXT.md verbatim
+    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor
     └── styles/{base,overlay,devtools,issuecard}.css
 ```
 
@@ -147,16 +167,12 @@ WIFES_BIRTHDAY/
 ## State Machine
 
 ```
-BOOT → PASSCODE → THRESHOLD → HUB
-                              ├→ TORII   → HUB   (open from the start)
-                              ├→ COMPILE → HUB   (unlocks after TORII)
-                              ├→ STARS   → HUB   (unlocks after COMPILE)
-                              └→ PETALS  → HUB   (unlocks after STARS)
-                                           │
-              all 4 rooms done → portal opens in front of door 5
-                                           ↓
-                                         FINAL → REVEAL → END
+BOOT → PASSCODE → THRESHOLD → HUB (the void: orb intro, one portal)
+     → TORII (H) → COMPILE (O) → STARS (M) → PETALS (E)
+     → FINAL (laptop: type H·O·M·E → gaming room → letter) → REVEAL → END
+     → (planned) the finished world to explore
 ```
+Each portal leads only forward.
 
 Every room module default-exports an object `{ name, async enter(),
 update(dt), exit() }` (the four challenge rooms also have
@@ -173,11 +189,12 @@ On boot, load progress and decide:
 - `!unlocked` → `PASSCODE`
 - `unlocked` and `seenReveal` → `END`
 - `unlocked` and `reachedFinal` → `FINAL`
-- otherwise `unlocked` → `HUB` (if all 4 rooms are done, the portal in
-  front of door 5 is already open)
+- `unlocked`, no level done yet → `HUB`
+- otherwise → the first unfinished level in `ROOM_ORDER` (FINAL if all
+  four are done)
 
-Refresh mid-room → back at HUB with finished rooms kept; she walks
-into that gate again to restart the room.
+Refresh mid-level → that level restarts from its beginning; finished
+levels and their fragments are kept.
 Refresh after passcode → resume at HUB.
 Refresh in FINAL before the letter is finished → FINAL, the letter
 replays from the top.
@@ -221,7 +238,9 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 - [x] Instrumental music choices selected in SETUP.md; verify previews and record credits before shipping
 - [ ] Add personal photos to `src/assets/pics/` (any number; see SETUP.md)
 - [ ] Record and prepare the final reveal video
-- [ ] Confirm or replace the draft HUB locked-gate line in TEXT.md
+- [x] v2 copy (fragments, COMPILE blanks, controls, restart) approved 2026-10-10
+- [ ] Approve the laptop code blocks for H, O, M, E (drafted in phase 4)
+- [ ] Real-apartment details for THRESHOLD (optional)
 
 ## Error / Fallback Specs
 
