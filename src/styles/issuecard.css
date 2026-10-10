@@ -1,0 +1,61 @@
+.issuecard {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: min(360px, 40vw);
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid rgba(var(--lavender-rgb), 0.25);
+  border-radius: 10px;
+  background: rgba(var(--lacquer-rgb), 0.82);
+  color: var(--paper);
+  font: 0.82rem/1.5 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  box-shadow: 0 10px 30px rgba(var(--lacquer-rgb), 0.5);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 500ms ease, transform 500ms ease, border-color 600ms ease;
+  pointer-events: none;
+}
+.issuecard.show { opacity: 1; transform: none; }
+.issuecard-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
+.issuecard-title { flex: 1; font-weight: 600; color: var(--lavender); }
+.issuecard-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(var(--vermillion-rgb), 0.85);
+  color: var(--paper);
+  font-size: 0.72rem;
+  transition: background 600ms ease;
+}
+.issuecard-badge svg { width: 12px; height: 12px; display: none; }
+.issuecard.resolved { border-color: rgba(var(--matcha-rgb), 0.6); }
+.issuecard.resolved .issuecard-badge { background: var(--matcha); color: var(--lacquer); }
+.issuecard.resolved .issuecard-badge svg { display: inline; animation: check-pop 500ms ease; }
+@keyframes check-pop { from { transform: scale(0); } to { transform: scale(1); } }
+.issuecard-body { margin: 0; white-space: pre; min-height: 7.5em; color: var(--paper); }
+.issuecard-body .line { display: block; }
+.issuecard.compiling .issuecard-body { color: var(--matcha); }
+.issuecard-comment {
+  margin: 0.8rem 0 0;
+  font: italic 0.82rem/1.5 'Lora', Georgia, serif;
+  color: var(--lavender);
+  opacity: 0.75;
+  white-space: pre-line;
+}
+.compile-scroll {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: min(360px, 40vw);
+  height: 10rem;
+  overflow: hidden;
+  pointer-events: none;
+  font: 0.7rem/1.2 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--matcha);
+  opacity: 0.85;
+  mask-image: linear-gradient(180deg, transparent, var(--lacquer) 20%, var(--lacquer) 80%, transparent);
+}
+.compile-scroll div { animation: compile-scroll 1.2s linear forwards; }
+@keyframes compile-scroll { from { transform: translateY(10rem); } to { transform: translateY(-100%); } }

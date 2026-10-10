@@ -103,7 +103,7 @@ WIFES_BIRTHDAY/
     ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,fragment,bouquet}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end}.js
     ├── state/{machine,states}.js
-    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts}.js
+    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text}.js   # text.js reads TEXT.md verbatim
     └── styles/{base,overlay,devtools,issuecard}.css
 ```
 

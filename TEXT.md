@@ -44,7 +44,7 @@ Locked until our anniversary. Come back then.
 ## HUB — orb lines
 First arrival: (see ORB intro above)
 Sealed door: that one's for our anniversary. i'll be ready by then.
-Locked gate (DRAFT — owner to confirm or replace): not that one yet. this one first.
+Locked gate: not this one yet princess. there's a specific order to follow to get it fixed and reach him
 Returning after a room: one down. keep going, love.
 All 4 done (portal appears in front of door 5): he's through there.
 go on. i'll be right behind you.

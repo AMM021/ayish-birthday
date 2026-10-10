@@ -120,8 +120,9 @@ applied by the composer's `OutputPass`).
 ## core/composer.js
 
 `EffectComposer` with this pass chain, in order: `RenderPass` →
-`UnrealBloomPass` → `ShaderPass(VignetteShader)` (`darkness: 0.4`,
-`offset: 1.0`) → `OutputPass`. `OutputPass` is mandatory: it does the
+`UnrealBloomPass` → `ShaderPass(VignetteShader)` (`darkness: 1.0`,
+`offset: 0.9`, about 40% darker corners; three's shader *lightens* edges
+when darkness < 1, so the earlier 0.4 was a bug) → `OutputPass`. `OutputPass` is mandatory: it does the
 linear → sRGB conversion and tone mapping, and without it every palette
 colour renders dark and muddy. It is the last pass, so the composer
 sends it to the screen (do not set `renderToScreen` by hand).

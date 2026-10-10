@@ -1,0 +1,219 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  contain: strict;
+  will-change: opacity;
+}
+
+/* note */
+.overlay-note { background: rgba(var(--deepIndigo-rgb), 0.55); }
+.note-card {
+  position: relative;
+  width: min(86vw, 520px);
+  padding: 2.4rem 2.6rem 2.8rem;
+  background-color: var(--paper);
+  background-size: cover;
+  color: var(--ink);
+  font-family: 'Handwriting', cursive;
+  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+  line-height: 1.35;
+  transform: rotate(-2deg);
+  box-shadow: 0 18px 50px rgba(var(--lacquer-rgb), 0.6);
+  border-radius: 3px;
+}
+.note-card::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 110px;
+  height: 28px;
+  transform: translateX(-50%) rotate(3deg);
+  background: rgba(var(--paper-rgb), 0.55);
+  box-shadow: 0 2px 6px rgba(var(--lacquer-rgb), 0.25);
+}
+.note-text { white-space: pre-line; min-height: 8em; }
+
+.enter-hint {
+  margin-top: 1rem;
+  text-align: right;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+  animation: hint-pulse 1.4s ease-in-out infinite alternate;
+}
+.enter-hint.still { animation: none; }
+@keyframes hint-pulse { from { opacity: 0.25; } to { opacity: 0.7; } }
+
+/* letter */
+.overlay-letter { background: rgba(var(--deepIndigo-rgb), 0.72); }
+.letter-stage { position: absolute; inset: 0; display: grid; place-items: center; }
+.letter-paper {
+  position: relative;
+  z-index: 2;
+  width: min(90vw, 640px);
+  max-height: 86vh;
+  overflow: hidden;
+  padding: 2.6rem 3rem;
+  background-color: var(--paper);
+  background-size: cover;
+  color: var(--ink);
+  font-family: 'Lora', Georgia, serif;
+  font-size: clamp(0.98rem, 1.5vw, 1.12rem);
+  line-height: 1.62;
+  box-shadow: 0 24px 70px rgba(var(--lacquer-rgb), 0.65);
+  border-radius: 4px;
+}
+.letter-text { white-space: pre-line; }
+.letter-skip {
+  position: absolute;
+  right: 1.4rem;
+  bottom: 1.2rem;
+  z-index: 3;
+  padding: 0.3rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--lavender);
+  font: italic 0.85rem 'Lora', Georgia, serif;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.letter-skip:hover, .letter-skip:focus-visible { opacity: 1; }
+.polaroids { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.polaroid {
+  position: absolute;
+  margin: 0;
+  width: clamp(110px, 12vw, 170px);
+  padding: 8px 8px 26px;
+  background: var(--paper);
+  box-shadow: 0 10px 28px rgba(var(--lacquer-rgb), 0.55);
+  transform: rotate(var(--rot));
+  animation: polaroid-float 6s ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+  transition: opacity 700ms ease;
+}
+.polaroid.swap { opacity: 0; }
+.polaroid img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; }
+@keyframes polaroid-float {
+  from { transform: translateY(-6px) rotate(var(--rot)); }
+  to { transform: translateY(8px) rotate(calc(var(--rot) * -0.6)); }
+}
+
+/* endcard: translucent so the sky and petals drift behind it */
+.overlay-endcard {
+  background: linear-gradient(180deg, rgba(var(--deepIndigo-rgb), 0.78), rgba(var(--warmPurple-rgb), 0.72));
+  color: var(--paper);
+  text-align: center;
+}
+.endcard-lines { display: grid; gap: 1rem; }
+.endcard-title { margin: 0; font: 400 clamp(2rem, 4.6vw, 3.4rem) 'Lora', Georgia, serif; color: var(--paper); min-height: 1.2em; }
+.endcard-sub { margin: 0; font: italic 400 clamp(1rem, 1.8vw, 1.3rem) 'Lora', Georgia, serif; color: var(--lavender); }
+
+/* line caption */
+.overlay-line {
+  position: fixed;
+  left: 50%;
+  bottom: 24%;
+  transform: translateX(-50%);
+  max-width: min(90vw, 760px);
+  text-align: center;
+  font: italic 400 clamp(1.1rem, 2vw, 1.5rem) 'Lora', Georgia, serif;
+  color: var(--lavender);
+  text-shadow: 0 0 18px rgba(var(--deepIndigo-rgb), 0.9);
+  opacity: 0;
+  transition: opacity 600ms ease;
+  contain: layout paint;
+  will-change: opacity;
+}
+.overlay-line.show { opacity: 1; }
+
+/* dialogue bubble */
+.bubble {
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: grid;
+  max-width: 320px;
+  padding: 0.7rem 0.95rem;
+  border-radius: 14px;
+  background: var(--lavender);
+  color: var(--ink);
+  font: 400 0.98rem/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 6px 24px rgba(var(--deepIndigo-rgb), 0.5), 0 0 22px rgba(var(--lavender-rgb), 0.35);
+  opacity: 0;
+  transition: opacity 280ms ease;
+  will-change: transform, opacity;
+  pointer-events: auto;
+  cursor: default;
+}
+.bubble.show { opacity: 0.96; }
+.bubble-sizer, .bubble-text { grid-area: 1 / 1; white-space: pre-wrap; }
+.bubble-sizer { visibility: hidden; }
+.bubble-hint {
+  justify-self: end;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  animation: hint-pulse 1.4s ease-in-out infinite alternate;
+}
+.bubble-hint.still { animation: none; }
+
+/* reveal */
+.reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: var(--lacquer);
+  opacity: 0;
+  transition: opacity 1500ms ease;
+  contain: strict;
+  will-change: opacity;
+}
+.reveal.show { opacity: 1; }
+.reveal video, .reveal .poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reveal .poster { background-size: cover; background-position: center; }
+.reveal .reveal-fallback {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 1.4rem;
+  justify-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+.reveal .reveal-fallback p {
+  margin: 0;
+  font: italic 400 clamp(1.6rem, 3.4vw, 2.6rem) 'Lora', Georgia, serif;
+  color: var(--paper);
+  text-shadow: 0 0 24px rgba(var(--lacquer-rgb), 0.9);
+}
+.reveal-btn {
+  padding: 0.7rem 1.6rem;
+  border: 1px solid var(--lavender);
+  border-radius: 999px;
+  background: rgba(var(--deepIndigo-rgb), 0.55);
+  color: var(--paper);
+  font: 400 1.05rem 'Lora', Georgia, serif;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.reveal-btn:hover, .reveal-btn:focus-visible { box-shadow: 0 0 22px rgba(var(--lavender-rgb), 0.6); }
+.reveal .reveal-play { position: relative; z-index: 2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .polaroid { animation: none; }
+  .enter-hint, .bubble-hint { animation: none; }
+}
