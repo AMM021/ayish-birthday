@@ -38,9 +38,13 @@ i can feel where things should be. stay close.
 four rooms. four pieces of him missing. walk through each one. then
 i can take you to him.
 
+## HUB — sealed door note (small paper on door 5, shown in 3D)
+Locked until our anniversary. Come back then.
+
 ## HUB — orb lines
 First arrival: (see ORB intro above)
 Sealed door: that one's for our anniversary. i'll be ready by then.
+Locked gate (DRAFT — owner to confirm or replace): not that one yet. this one first.
 Returning after a room: one down. keep going, love.
 All 4 done (portal appears in front of door 5): he's through there.
 go on. i'll be right behind you.

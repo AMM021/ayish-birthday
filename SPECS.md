@@ -55,7 +55,7 @@ npm run dev
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>Something is waiting…</title>
-  <link rel="icon" href="/favicon.svg" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23c4a5e8'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ffd88a'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/src/styles/base.css" />
 </head>
 <body>
@@ -80,14 +80,14 @@ npm run dev
    `clock.getRawDelta()`, then call `world.update(dt)`,
    `machine.update(dt)`, `dialogue.update(dt)`,
    `composer.updateQuality(rawDt)` and `composer.render()`.
-9. rAF pauses only while a blocking overlay (`note`, `letter`,
-   `endcard`) is open or the opaque REVEAL video is playing (PROJECT.md
-   Rule 14). `line` captions and dialogue bubbles never pause it. On
+9. rAF pauses only while a blocking overlay (`note`, `letter`) is open
+   or the opaque REVEAL video is playing (PROJECT.md Rule 14; the END
+   `endcard` keeps the loop running). `line` captions and dialogue bubbles never pause it. On
    resume, clear held keys and apply only the capped delta.
 
 ## core/config.js
 
-Exports: `PALETTE` (from PROJECT.md), `PASSCODE`,
+Exports: `PALETTE` (all twelve entries from PROJECT.md), `PASSCODE`,
 `DEV`, `ROOM_ORDER = ['torii','compile','stars','petals']`,
 `CAMERA_FAR = 500`, `PIXEL_RATIO_CAP = 1.5`, `BLOOM_RESOLUTION = 0.5`,
 `MOVE_SPEED = 12`, `MOVE_DAMP = 0.88`, `LOOK_SENS = 0.002`,
@@ -96,10 +96,13 @@ Exports: `PALETTE` (from PROJECT.md), `PASSCODE`,
 `ROOM_BOUNDS_RADIUS = 100`, `HINT_DISTANCE = 60`,
 `BLOOM_STRENGTH = 0.8`, `BLOOM_RADIUS = 0.8`, `BLOOM_THRESHOLD = 1.0`,
 `SKY_RADIUS = 450`, `SECOND_BUBBLE_DISTANCE = 20`,
-`STAR_TRIGGER_RADIUS = 0.7`, `REVEAL_START_TIMEOUT = 8000` (ms),
+`STAR_TRIGGER_RADIUS = 1.1`, `REVEAL_START_TIMEOUT = 8000` (ms),
+`TURN_ASSIST_DELAY = 8000` (ms), `TURN_ASSIST_DURATION = 2500` (ms),
 `QUALITY_LOW_FPS = 30`, `QUALITY_LOW_SECONDS = 5`,
 `QUALITY_RESTORE_FPS = 45`, `QUALITY_RESTORE_SECONDS = 10`,
 `QUALITY_MIN_PIXEL_RATIO = 1.0`, `QUALITY_PIXEL_STEP = 0.25`.
+`MOVE_DAMP` is a per-1/60 s factor; apply it as `MOVE_DAMP ** (dt * 60)`
+so movement feels the same at any frame rate.
 
 ## core/renderer.js
 
@@ -175,7 +178,9 @@ Texture loader with cache. Methods: `get(key)`, `preload(keys[])`, `dispose(key)
 `reveal-poster.webp`) is a single `<video>` element created with
 `preload="none"` and `playsinline`; nothing downloads at boot. Once the
 FINAL letter overlay has finished opening, set `preload="auto"` and call
-`load()` so it buffers while she reads (never earlier). It starts playing
+`load()` so it buffers while she reads. When FINAL resumes with
+`seenLetter` already true (refresh), or REVEAL is entered from dev tools,
+buffer immediately instead. Never earlier than FINAL. It starts playing
 only in REVEAL.
 
 Procedural fallbacks: if a texture file is missing (`petal`, `star`,
@@ -192,7 +197,10 @@ crossfades from current track over 1200ms. `mute()`, `unmute()`,
 `fadeOut(ms = 800)` (fades the current track to silence; used when REVEAL
 begins). The `M` key toggles mute; a small speaker icon in
 `ui/prompts.js` shows the muted/blocked state.
-First `play()` must be triggered by a user gesture (passcode submit). If play rejects or a track is missing, continue silently and expose a discreet mute/audio status control; never block progression or spam the console. Do not rely on autoplay succeeding on every browser.
+The first `play()` must come from a user gesture: the passcode submit
+on a fresh run, or, when progress resumes past PASSCODE (HUB, FINAL or
+END after a refresh), her first keydown or pointerdown on the page.
+`audio.armOnFirstGesture(name)` registers that one-shot listener. If play rejects or a track is missing, continue silently and expose a discreet mute/audio status control; never block progression or spam the console. Do not rely on autoplay succeeding on every browser.
 
 ## core/save.js
 
@@ -212,8 +220,8 @@ Single `THREE.Clock`. Exports `getDelta()` (the frame delta capped at
 Tracks `timeSinceProgress` per room. Room calls `hints.reset()` on any progress. Timers use capped simulation `dt`, not wall-clock time. Pause hint timers while a story dialogue is visible/queued, a blocking overlay is open, or the tab is hidden; resume from the same remaining time. Room calls `hints.update(dt, orb, room)` only when eligible. It triggers:
 - 30s → orb drifts closer, bob speed ×1.3
 - 60s → `dialogue.say(orb, room.nudgeLine, { mode: 'ambient' })`, then
-  `room.onNudge?.()` (optional; TORII flashes the first gate of the
-  current round, as its hint line promises)
+  `room.onNudge?.()` (optional; TORII replays the current round and
+  keeps its first gate pulsing, as its hint line promises)
 - 90s → orb pulse + beam toward nearest `room.hintTargets()[i]` (3s)
 - 150s → repeat beam every 30s
 
@@ -229,6 +237,8 @@ Creates `THREE.Scene`, `PerspectiveCamera(60, aspect, 0.1, CAMERA_FAR)`,
 `rootGroup`. `getGroup(name)` creates-if-missing and adds to root.
 `showGroup(name)`, `hideGroup(name)`, `disposeGroup(name)` walks and
 disposes geometries, materials, textures it finds, then removes group.
+It skips resources marked `userData.shared` (the `objects/*` registry
+cache), so shared pieces survive into the next room.
 Adds `HemisphereLight` and `AmbientLight(lavender, 0.35)` once.
 
 Also owns `world.sky`: a persistent group (starfield + nebula, see their
@@ -245,16 +255,22 @@ state except THRESHOLD (indoor room), where `world.sky.visible = false`.
 Named layers: `0` default, `1` glow tag. `enableBloom(obj, intensity =
 2.5)` tags `obj.layers.enable(1)` recursively (the object stays on layer
 0, so it renders normally; the tag lets dev tools and hints find glowing
-things) AND multiplies each material's colour / emissive by `intensity`
-so its luminance rises above the bloom threshold (1.0). Glow materials
-are created once in the `objects/*` registry, never mutated per
-instance. Layers are not used for rendering; bloom is by brightness
+things) AND raises each material's colour / emissive to `base ×
+intensity` so its luminance rises above the bloom threshold (1.0).
+It is idempotent: the base colour is stored once in
+`material.userData.baseColor` and every call sets from that base, so
+repeated calls never compound. `disableBloom(obj)` restores the base.
+Shared glow materials (orb, portal, fragment) get their glow once in the
+registry. Objects that light up individually (lanterns, torii gates)
+take their own material from `registry.ownMaterial(key)`, so lighting
+one never lights the others; those materials are disposed with the
+room group. Layers are not used for rendering; bloom is by brightness
 (see core/composer.js).
 
 ## world/transitions.js
 
-`fade(out = 400, hold = 200, in = 600)` — CSS black overlay div.
-`portalFlash(color)` — white/lavender flash. Returns a Promise.
+`fade(out = 400, hold = 200, in = 600)` — CSS overlay div in deepIndigo.
+`portalFlash(color)` — moonlight/lavender flash. Returns a Promise.
 
 ## state/machine.js + state/states.js
 
@@ -306,15 +322,19 @@ player at `ORB_FOLLOW_DIST` with `ORB_FOLLOW_DAMP`. `say(line, opts)` calls
 
 Cached geometry: two pillars (BoxGeometry 0.4×4×0.4), top beam
 (BoxGeometry 4.4×0.5×0.5), upper beam (5×0.4×0.4). Material:
-`MeshStandardMaterial(vermillion, roughness 0.7)`. `create(opts)` returns
+`MeshStandardMaterial(vermillion, roughness 0.7)`, one per gate via
+`registry.ownMaterial` (see world/layers.js). `create(opts)` returns
 a Group. `setLit(bool)` toggles emissive intensity (lit = above the bloom
 threshold, so it glows).
-`flash(color, ms)` pulses emissive briefly.
+`flash(color, ms)` pulses emissive briefly. `setState(state)` for HUB
+gates: `'locked'` (dark, no emissive), `'open'` (vermillion, soft glow),
+`'done'` (emissive lavender glow + small check mark; still enterable).
 
 ## objects/lantern.js
 
 Cylinder (radius 0.5, height 0.8) `MeshStandardMaterial(paper, emissive
-gold, emissiveIntensity 0)`. Ring caps top/bottom in ink.
+gold, emissiveIntensity 0)`, one material per lantern via
+`registry.ownMaterial`. Ring caps top/bottom in ink.
 `light()` animates emissiveIntensity 0→1.2 over 600ms and calls
 `enableBloom()` so the lit lantern crosses the bloom threshold, then
 plays the chime. (Gold is the palette's lantern light; a warmPurple
@@ -389,7 +409,7 @@ flowers." This object makes that line true.
 Geometry:
 - 7–9 small cone/flattened-sphere blossoms in lavender, warmPurple,
   softPink
-- Green stems (thin cylinders, MeshLambertMaterial deep green)
+- Stems (thin cylinders, MeshLambertMaterial moss)
 - Paper wrapper cone (paper color, slight transparency)
 - Ribbon ring at base (vermillion or gold)
 
@@ -405,7 +425,7 @@ distant torii (dim), lavender accents. DOM overlay, serif: the heading
 lines and the hint line from TEXT.md (they type out once) + 4 box
 inputs (auto-advance on digit). Enter key submits. Wrong → shake 400ms,
 clear, wrong-code line from TEXT.md (types out). Correct →
-`save.setUnlocked()`, `audio.play('hub')`, fullscreen request, white
+`save.setUnlocked()`, `audio.play('hub')`, fullscreen request, moonlight
 flash 600ms, `machine.go('THRESHOLD')`.
 Developer bypass: only when `?dev=true` is present. In production mode, `0000` must be treated as an ordinary incorrect code. Never render or announce the bypass code in user-facing UI.
 
@@ -418,7 +438,7 @@ one that wasn't there before. A note is taped to it.
 3D setup:
 - Small dark room. Warm low light.
 - Floor plane `MeshLambertMaterial(warmPurple, opacity 0.4)`.
-- A bag (BoxGeometry, dark) on the floor near the door.
+- A bag (BoxGeometry, lacquer) on the floor near the door.
 - A plain door (BoxGeometry, warmPurple) as the "normal" door.
 - An extra door on the side wall (BoxGeometry, warmPurple) with a
   faint lavender rim glow.
@@ -448,12 +468,17 @@ Torii shrine floating in void. `world.sky`, 200 petals.
 Small bouquet on the shrine altar (objects/bouquet.js).
 
 Five doors arranged in a semicircle:
-- Doors 1–4: torii gates, open, rune above each. Use an edge-triggered proximity crossing with a transition lock so a single approach starts only one room transition. Returning from a room → that torii dims and shows a small check mark. Completed gates remain replayable; replaying a completed room must not erase its saved completion, and `setRoomDone(name)` is idempotent.
-- Door 5: sealed. Dark, no glow. Small note attached: "Locked until
-  our anniversary. Come back then." Walking into it → orb line.
+- Doors 1–4: torii gates in `ROOM_ORDER`, rune above each. They unlock one at a time: a gate is `open` when every earlier room in `ROOM_ORDER` is done, `done` once its own room is done, otherwise `locked` (see objects/torii.js `setState`). Use an edge-triggered proximity crossing with a transition lock so a single approach starts only one room transition. Walking into a `locked` gate never starts a room; it plays the locked-gate orb line from TEXT.md (ambient, once per approach). `done` gates glow lavender with a small check mark and remain replayable; replaying a completed room must not erase its saved completion, and `setRoomDone(name)` is idempotent. Dev-mode state jumps ignore the lock.
+- Door 5: sealed. Dark, no glow. A small paper note on the door shows
+  the sealed-door note from TEXT.md, rendered as text on the note's
+  texture in 3D (not an overlay). Walking into it → sealed-door orb line.
 
 When all 4 rooms are done, a portal spawns in front of door 5
 (objects/portal.js). Walking into the portal → `machine.go('FINAL')`.
+
+Returning after a room: play the "Returning after a room" line (ambient)
+after rooms 1–3 only. After the 4th, the "All 4 done" story line plays
+instead.
 
 Orb intro: on first arrival (only when `roomsDone.length === 0`) the orb
 says the 4 beats of "ORB intro" from TEXT.md, one story bubble at a time
@@ -467,7 +492,7 @@ only; a refresh before her first room is finished replays the intro
 
 9 torii gates in a loose arc. 3 rounds. Each round flashes 3 distinct gates in a stored sequence (600ms lit, 300ms gap). The orb visibly indicates which gate is currently being demonstrated. Do not accept crossings while the sequence is flashing or during the inter-flash gap. After playback finishes, accept only a player crossing through the opening of the next expected gate (not proximity to its frame or passing behind it). Correct → gate stays lit and progress advances. Wrong → all gates dim, 800ms pause, show the Wrong line once, and replay the current round from the beginning. Debounce each crossing so one movement cannot count twice. After all 3 rounds, spawn the portal, show the Complete line, and save `torii` once. Portal returns to HUB.
 
-`hintTargets()` returns gates in the current sequence. A hint replays the current round only when no story dialogue or sequence is active; never overlap two flash sequences.
+`hintTargets()` returns gates in the current sequence. `onNudge()` (60 s hint, after the Hint line) replays the current round, then keeps the round's first gate softly pulsing until she crosses it, so the line ("watch them again. i'll flash the first one for you.") is true on both counts. It runs only when no story dialogue or sequence is active; never overlap two flash sequences, and crossings are not accepted during the replay.
 
 ## Room: COMPILE (challenge — exploration + code fragments)
 
@@ -490,9 +515,9 @@ HUD issue card (top-right DOM): keep it inside a reserved top-right safe zone. T
 Lanterns can be discovered in any order, but the issue card reveals the next unrevealed code line in the fixed sequence. A lantern can count only once; entering its radius repeatedly must not create duplicate fragments. While a story bubble is open, enqueue COMPILE fragment counters in the `progress` queue rather than overlaying the bubble. Do not queue generic hints or stale ambience behind story dialogue.
 
 On 5th fragment:
-- Issue card animates to `resolved` (checkmark, color shift to green)
+- Issue card animates to `resolved` (checkmark, color shift to matcha)
 - Resolution comment types out below the code
-- Compile animation: rapid green scroll 1.2s
+- Compile animation: rapid matcha scroll 1.2s
 - Floating panel in room center shows assembled code for 3s, then fades
 - Portal opens
 - Orb line: "that's the last piece. the code is whole. he can come home now."
@@ -502,9 +527,9 @@ On 5th fragment:
 
 ## Room: STARS (challenge — ordered traversal)
 
-Deep void, 9 large glowing stars arranged along a recognizable heart outline. Stars are activated by proximity, not clicking; use a small trigger radius (`STAR_TRIGGER_RADIUS`, 0.7 world units) and activate each star once per attempt. Triggers are edge-triggered: a star counts only at the moment she enters its sphere; after a reset, a star she is still inside does not count until she has left and re-entered. All nine coordinates must be distinct: star 1 and star 9 must not overlap. Player reaches the next expected star → it brightens and the trail advances. Entering any other star trigger resets the sequence and trail, plays a soft pulse, and queues the Wrong line without interrupting story dialogue. All 9 → heart outline glows, portal opens, and `stars` is saved once.
+Deep void, 9 large glowing stars arranged along a recognizable heart outline. Stars are activated by proximity, not clicking; use a trigger radius of `STAR_TRIGGER_RADIUS` (1.1 world units, about the size of each star's visible glow) and activate each star once per attempt. Test entry with a swept check (the segment from last frame's position to this frame's against the sphere), so a fast pass at the 0.05 s delta cap cannot skip a star. Triggers are edge-triggered: a star counts only at the moment she enters its sphere; after a reset, a star she is still inside does not count until she has left and re-entered. All nine coordinates must be distinct: star 1 and star 9 must not overlap. Player reaches the next expected star → it brightens and the trail advances. Entering any other star trigger resets the sequence and trail, plays a soft pulse, and queues the Wrong line without interrupting story dialogue. All 9 → heart outline glows, portal opens, and `stars` is saved once.
 
-Use these nine ordered points in unit space (a symmetric heart; x right, y up, lying in the x/y plane), then scale x/y by 4 and use fixed z offsets alternating -0.5 and +0.5 (star 1 gets -0.5, star 2 gets +0.5, and so on): `(0.44,0.78) (1.0,0.49) (0.9,-0.14) (0.41,-0.6) (0,-1.12) (-0.41,-0.6) (-0.9,-0.14) (-1.0,0.49) (-0.44,0.78)`. Star 5 is the bottom tip; stars 1 and 9 sit just either side of the heart's top notch, so after the ninth star the glowing outline fills the small gap. The closest pair of stars is about 2.7 units apart (more than twice the trigger radius), so trigger spheres never overlap. Spawn the player about 14 units in front of the heart (on its +z side, at its vertical centre), facing it, so the heart reads from the front on arrival. Validate the outline in a front-on debug view (looking down -z) before polish.
+Use these nine ordered points in unit space (a symmetric heart; x right, y up, lying in the x/y plane), then scale x/y by 4 and use fixed z offsets alternating -0.5 and +0.5 (star 1 gets -0.5, star 2 gets +0.5, and so on): `(0.44,0.78) (1.0,0.49) (0.9,-0.14) (0.41,-0.6) (0,-1.12) (-0.41,-0.6) (-0.9,-0.14) (-1.0,0.49) (-0.44,0.78)`. Star 5 is the bottom tip; stars 1 and 9 sit just either side of the heart's top notch, so after the ninth star the glowing outline fills the small gap. The closest pair of stars is about 2.7 units apart (more than twice the 1.1 trigger radius, with 0.5 units of clearance), so trigger spheres never overlap. Spawn the player about 14 units in front of the heart (on its +z side, at its vertical centre), facing it, so the heart reads from the front on arrival. Validate the outline in a front-on debug view (looking down -z) before polish.
 
 `hintTargets()` returns only the next correct star position.
 
@@ -519,7 +544,7 @@ Corridor ~80 units long and 20 wide, centred inside the standard 100-unit room b
 Reached from HUB by walking through the portal that spawned in front
 of door 5 (after all 4 rooms are done).
 
-Void. Black table (BoxGeometry 2×0.1×1). Office chair (seat box +
+Void. Lacquer table (BoxGeometry 2×0.1×1). Chair in lacquer. Office chair (seat box +
 back box + cylinder leg). Laptop (base box 0.35×0.02×0.25 + screen
 box 0.35×0.24×0.01 tilted, screen uses `MeshBasicMaterial` with
 canvas texture showing the letter title). Small bouquet
@@ -528,7 +553,7 @@ canvas texture showing the letter title). Small bouquet
 
 Approach chair → lock movement, lower camera over 1.2s, then open the letter overlay (typewriter, floating polaroids from `src/assets/pics/`, music `letter`). The Skip control must be explicit and keyboard accessible. Only after typing completes or she deliberately skips: fade the overlay, save `seenLetter`, restore the chair-facing camera, and show the “turn around.” story bubble. Do not allow the reveal transition to arm during the camera move or while the letter is open. When the letter overlay has finished opening, start buffering the reveal video (see core/assets.js).
 
-Arm the turn-around trigger only after the “turn around.” bubble has been dismissed with Enter/click and the camera is in its stable chair-facing pose. Then require a wrap-safe shortest-angle yaw change greater than 120° from that recorded baseline to enter `REVEAL`; ordinary movement before arming must not trigger it. Clear held keys and input repeat state at each transition.
+Arm the turn-around trigger only after the “turn around.” bubble has been dismissed with Enter/click and the camera is in its stable chair-facing pose. Then require a wrap-safe shortest-angle yaw change greater than 120° from that recorded baseline to enter `REVEAL`; ordinary movement before arming must not trigger it. Gentle backup: if she has not turned within `TURN_ASSIST_DELAY` (8 s) of arming, ease the camera's yaw 180° over `TURN_ASSIST_DURATION` (2.5 s, ease-in-out; mouse look ignored during it), then enter `REVEAL`. The timer pauses while the tab is hidden. Clear held keys and input repeat state at each transition.
 
 On enter, save `reachedFinal`. If `seenLetter` is already true after a refresh, restore the chair-facing view and replay the “turn around.” beat without showing the letter again, and start buffering the reveal video immediately.
 
@@ -544,19 +569,24 @@ Enter only after the FINAL turn-around trigger is armed and activated. On entry:
 
 Scene continuity: REVEAL reuses FINAL's scene group (`final`), because the portal glow and camera drift happen in it. `final.exit(nextName)` therefore does NOT dispose its group when `nextName === 'REVEAL'`. FINAL exposes `buildScene()` (table, chair, laptop, bouquet, portal); `REVEAL.enter()` calls `world.getGroup('final')` and, if the group is missing or empty (for example after the dev tools' "Replay final reveal" jump), calls `buildScene()` first. `REVEAL.exit()` disposes the group.
 
-Completion (video `ended`, or Continue in the fallback): resume the 3D loop, fade the video out over 1000 ms, glow the portal, ease the camera to face it and drift toward it over 3 s, white flash, then END. Save `seenReveal` immediately before entering END, never on entry to REVEAL. There is no skip button during normal playback (dev mode's state jumps cover testing).
+Completion (video `ended`, or Continue in the fallback): resume the 3D loop, fade the video out over 1000 ms, glow the portal, ease the camera to face it and drift toward it over 3 s, moonlight flash, then END. Save `seenReveal` immediately before entering END, never on entry to REVEAL. There is no skip button during normal playback (dev mode's state jumps cover testing).
 
 ## Room: END
 
-Dark warm purple gradient background (DOM). Text from TEXT.md
-(end card). Small serif line: "Come back on our anniversary." No
-button. The lines type out one after the other (typewriter). Confetti optional (200 petals drifting down). Music fades
-to hub track at low volume.
+Dark warm purple gradient (DOM, translucent: deepIndigo → warmPurple at
+about 75% opacity) over a live 3D backdrop of `world.sky` plus 200
+drifting petals (objects/sakura.js, group `end`). The `endcard` is the one
+blocking overlay that does not pause the loop (PROJECT.md Rule 14).
+Reduced motion: petals hold still. Text from TEXT.md (end card), serif,
+the second line smaller. No button. The lines type out one after the
+other (typewriter). Music fades to hub track at low volume (after a
+refresh, on her first gesture; see core/audio.js).
 
 ## UI: overlay.js
 
 `show(type, opts)`, `close()`, `isOpen()`, `type`. Types: `note`,
-`letter`, `endcard` (blocking: pause rAF and release pointer lock) and
+`letter`, `endcard` (blocking: release pointer lock; `note` and `letter`
+pause rAF, `endcard` does not, see Room: END) and
 `line` (non-blocking caption: no pause, keeps pointer lock, fades out 4 s
 after its text finishes typing). Each is a
 `<div class="overlay overlay-<type>">` appended to `#ui`. Fade in 600ms,
@@ -612,7 +642,7 @@ deepIndigo, no panel; they fade in/out, no typing). Copy is in TEXT.md →
 DOM panel fixed top-right. Header row, status badge, monospace body.
 `revealNextLine()` types the next code line in the fixed canonical order, then reveals it fully. The lantern/fragment index is not used to choose the code line because lanterns may be found in any order.
 `resolve()` plays checkmark animation, swaps status to `resolved`,
-green color shift, and types out the resolution comment from TEXT.md.
+matcha color shift, and types out the resolution comment from TEXT.md.
 `reset()` clears.
 
 ## UI: devtools.js
@@ -633,11 +663,16 @@ place-items:center; contain: strict; will-change: opacity }`.
 `.overlay-letter` paper bg, max-width 640px, serif, polaroids absolutely
 positioned with `float` animation.
 
-issuecard.css: monospace, dark panel top-right, GitHub-ish. Green
+issuecard.css: monospace, dark panel top-right, GitHub-ish. Matcha
 `resolved` badge, checkmark SVG. Resolution comment styled as
 italic serif, smaller, dimmed.
 
 devtools.css: monospace, dark panel, small buttons.
+
+Fonts in CSS: `handwriting` (Caveat) for `note`; `serif` (Lora) for
+`letter`, `endcard`, `line`, PASSCODE and prompts; dialogue bubbles use
+the system UI sans stack (`system-ui, -apple-system, "Segoe UI",
+Roboto, sans-serif`); issue card uses monospace.
 
 ## Asset specs
 
@@ -708,18 +743,18 @@ conversationally. See SETUP.md.
    controls hint appear then fade, note types out, Enter closes,
    extra door → HUB
 5. HUB: orb intro plays as 4 Enter-paced beats, second bubble fires
-   near the torii, 4 torii walkable, bouquet visible, sealed door
-   reads line
+   near the torii, only TORII is open at first, bouquet visible, sealed
+   door shows its note and reads its line
 6. TORII: three rounds; no crossings accepted during flash playback; wrong gate resets only current round; correct gate counts once; hints never overlap sequence playback; portal works
 7. COMPILE: 5 lanterns light (and visibly glow), fragments fly, HUD
    card fills, resolution comment shows, compile anim plays
-8. STARS: nine distinct positions; stars activate by proximity; from the spawn point they read as a symmetric heart; star 1 and 9 do not overlap; wrong star resets; each trigger counts once; standing inside a star after a reset does not re-trigger it; heart glows
+8. STARS: nine distinct positions; flying straight through a star at full speed always counts it; stars activate by proximity; from the spawn point they read as a symmetric heart; star 1 and 9 do not overlap; wrong star resets; each trigger counts once; standing inside a star after a reset does not re-trigger it; heart glows
 9. PETALS: corridor and all targets fit within room bounds; orb pauses/returns at thresholds; hint timers pause during story dialogue; end opens portal and returns to HUB
 10. HUB: portal in front of door 5 now open → FINAL
 11. FINAL: bouquet visible on table, letter types fully, skip works,
     polaroids float, orb says "turn around"
 12. REVEAL: pointer lock is released and no look hint shows; letter music fades out; the video plays with sound; if autoplay is rejected a Play control appears and Enter/click starts it; a failed, missing or stalled video (>8 s) shows poster + fallback line + Continue; completion → portal glows → camera eases toward it → whiteout → END
-13. END: text displays, music fades
+13. END: text displays over drifting petals and sky, music fades
 14. Refresh mid-room → back at HUB with finished rooms kept
 15. Refresh in FINAL before letter completion → letter replays; refresh after letter completion → chair-facing view and “turn around.” beat; refresh after completed reveal → END
 16. `?dev=true` → developer panel/bypass work; without it, no developer panel, `0000` bypass, or shortcut exists; verify this in a fresh production URL
@@ -736,12 +771,13 @@ conversationally. See SETUP.md.
 27. Storage disabled/private browsing: game still runs in memory; refresh-resume limitations are disclosed in developer QA
 28. Public build: `noindex` is present but do not treat it as access control; developer bypass/panel are inactive and invisible unless `?dev=true`
 29. THRESHOLD note opens only once on first approach; it never reopens while standing nearby; after it closes the door pulses; second approach works only after leaving and re-entering the radius
-30. HUB gate proximity causes one transition per approach; completed gates can be replayed without losing their completion marks
+30. HUB gate proximity causes one transition per approach; gates unlock strictly in order (a locked gate plays the locked-gate line and never starts a room); completed gates glow lavender with a check and can be replayed without losing their completion marks
+34. FINAL turn-around: turning herself >120° after dismissing "turn around." starts REVEAL; doing nothing for 8 s makes the camera turn her gently and REVEAL starts; nothing triggers before the bubble is dismissed
 31. COMPILE issue card and orb dialogue never overlap; fragment counters display in order after story dialogue clears
 32. Audio: `M` mutes/unmutes; the speaker icon reflects the state; blocked autoplay or a missing track never blocks progress
 33. Photos: every photo in `src/assets/pics/` appears upright and carries no GPS/EXIF metadata (check with `identify -verbose`); an empty folder does not crash the letter
 
 ## Favicon
 
-Inline SVG data URI in index.html: lavender circle with gold dot.
-See SETUP.md for the exact markup.
+Inline SVG data URI in index.html (exact markup in ## index.html):
+lavender circle with gold dot. No `public/favicon.svg` file.

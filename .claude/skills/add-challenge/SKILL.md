@@ -37,8 +37,8 @@ const challenge = {
 2. Feedback is generous. Highlights, chimes, glow pulses near right answer.
 3. Completion reward consistent: portal enables, orb says line, chime,
    `save.setRoomDone(roomName)`.
-4. Visual language consistent. Glowing = interactable. Lit = done.
-   Dim = inactive.
+4. Visual language consistent. Glowing = interactable. Lavender = done
+   (still replayable). Dark = locked/inactive.
 5. No time pressure unless room explicitly timed (none are).
 
 ## Existing challenge patterns to reuse

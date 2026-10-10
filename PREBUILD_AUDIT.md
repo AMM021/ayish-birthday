@@ -48,6 +48,28 @@ This file records the planning repairs made before implementation. It supplement
 - Photos: `-auto-orient -strip` and a correct resize command; repository must be private.
 - The reveal video starts buffering once the letter is open, so REVEAL does not stall.
 
+## Owner decisions — 2026-10-10 (handoff review)
+
+Conflicts raised in the kickoff review, resolved by the owner and written into PROJECT.md, SPECS.md, TEXT.md, SETUP.md and the add-challenge skill:
+
+1. **Git:** private GitHub repo created: `AMM021/ayish-birthday` (branch `main`).
+2. **Passcode/date:** keep `1010` as the only gate, with no timer. Her birthday is 10 October.
+3. **Sealed-door note:** its copy is now in TEXT.md. It is text on a small paper note on door 5 in 3D, not an overlay.
+4. **Off-palette colours:** new PALETTE entries `matcha` (resolved badge/scroll), `moss` (bouquet stems), `moonlight` (flashes), `lacquer` (near-black props). No existing colour changed.
+5. **Per-object lighting:** lanterns and torii gates own one material each (`registry.ownMaterial`). `enableBloom` is idempotent (stores the base colour, never compounds). `disposeGroup` skips registry-shared resources. PROJECT.md Rule 7 notes the exception.
+6. **TORII hint:** the 60 s hint says its line, replays the current round, then keeps the first gate pulsing until she crosses it.
+7. **FINAL group exception:** approved and written into PROJECT.md Rule 11.
+8. **Video buffering:** buffering starts when the letter opens, or immediately when FINAL resumes after the letter, or on a dev REVEAL jump. Rule 12 updated.
+   **Turn-around:** she turns herself (>120°). If she hasn't turned 8 s after dismissing "turn around.", the camera eases her round 180° over 2.5 s and REVEAL starts.
+9. **Favicon:** inline SVG data URI in index.html. `public/favicon.svg` removed from the plan.
+10. **Music after refresh:** starts on her first keydown/pointerdown when resuming past PASSCODE.
+11. **Room order (new):** gates unlock one at a time, TORII → COMPILE → STARS → PETALS. A locked gate stays dark and the orb says the locked-gate line. Finished gates glow lavender with a check and stay replayable. After all four, the portal in front of door 5 leads to FINAL.
+12. **END petals:** 3D petals + sky behind a translucent end card. The `endcard` does not pause the loop (Rule 14 exception).
+13. **"Returning after a room"** plays after rooms 1–3 only. After the 4th, "All 4 done" plays instead.
+14. **Dialogue font:** system UI sans stack (no extra font file).
+15. **STARS usability:** trigger radius raised 0.7 → 1.1, roughly the size of a star's glow, so it is easier to hit in free flight. The closest pair is still 2.7 apart, leaving 0.5 clearance. A swept segment test stops fast passes from skipping a star. `MOVE_DAMP` is applied frame-rate independently.
+16. **Model:** the build runs on Opus. Sonnet may take over; all context lives in these docs.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
@@ -57,6 +79,8 @@ This file records the planning repairs made before implementation. It supplement
 - [x] Owner approves personal photos; count may vary. Place them in `src/assets/pics/`.
 - [ ] Listen to each of the three music previews (instrumental, no vocals, loops cleanly) and confirm the page URLs still work; they were not opened or heard during planning.
 - [ ] Record and compress the final reveal video; keep it 45–75 seconds and under 15 MB if possible.
+- [ ] Confirm or replace the draft locked-gate line in TEXT.md ("not that one yet. this one first.").
+- [ ] Explicitly approve the planning handoff so implementation can begin.
 
 ## Build gate / acceptance criteria
 

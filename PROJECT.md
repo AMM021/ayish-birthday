@@ -36,6 +36,10 @@ The orb is his last act of love.
 - Device: laptop, keyboard + mouse, pointer lock
 - Movement: free-fly 6DOF, WASD + Space/Shift + mouse look
 - Rooms: 4 challenges + 1 sealed anniversary door
+- Room order: gates unlock one at a time in `ROOM_ORDER` (TORII → COMPILE →
+  STARS → PETALS). A locked gate stays dark and the orb says the locked-gate
+  line. Finished rooms turn lavender and stay replayable without losing
+  completion. After all four, a portal in front of door 5 takes her to FINAL.
 - Companion: glowing orb, gold core, lavender halo, soft trail
 - No Cinnamoroll: the orb is the companion (decided, nothing to build)
 - Text: story dialogue types out and waits for Enter; ambient lines never interrupt story dialogue
@@ -45,7 +49,9 @@ The orb is his last act of love.
 - Hosting: Netlify free tier
 - Admin: `?dev=true` URL param
 - Progress: localStorage
-- Build model: Claude Sonnet, effort high (low for boilerplate)
+- Build model: Claude Opus (Sonnet may continue the build; the planning docs
+  and `PREBUILD_AUDIT.md` carry every decision), effort high (low for
+  boilerplate)
 - Dev environment: see SETUP.md
 
 ## Palette (use via `core/config.js`, never inline)
@@ -60,6 +66,10 @@ The orb is his last act of love.
 | vermillion  | `#e85a4f` | Torii gates (sparingly)          |
 | paper       | `#f5eee0` | Note + letter backgrounds        |
 | ink         | `#2a1f1a` | Note + letter text               |
+| matcha      | `#8fc9a3` | COMPILE `resolved` badge + scroll |
+| moss        | `#3f5e45` | Bouquet stems                    |
+| moonlight   | `#fdf8ff` | Flashes / whiteouts (never pure white) |
+| lacquer     | `#120a1c` | Near-black props (table, chair, bag) |
 
 ## File Structure
 
@@ -80,7 +90,6 @@ WIFES_BIRTHDAY/
 ├── .gitignore
 ├── .claude/skills/{new-room,add-challenge,add-overlay,deploy}/SKILL.md
 ├── public/
-│   ├── favicon.svg
 │   ├── fonts/{handwriting.woff2, serif.woff2, serif-italic.woff2}
 │   ├── textures/{petal.png, star.png, paper.jpg, shoji.png}
 │   └── media/
@@ -113,17 +122,25 @@ WIFES_BIRTHDAY/
 5. No shadow maps. Fake shadows with a dark circle mesh if needed.
 6. Max 4 active point lights. Lanterns use emissive, not lights.
 7. Geometry and material shared via `objects/*` registry (cached).
+   Exception: objects that light up individually (lanterns, torii gates)
+   own one material each from the registry, disposed with their group.
+   `enableBloom` is idempotent and never compounds.
 8. Anything >100 copies → `InstancedMesh`.
 9. Camera `far = 500`. Fog hides the edge. The sky (radius 450) ignores
    fog and follows the camera.
 10. Frustum culling stays on.
-11. Every room's `exit()` calls `world.disposeGroup(name)`.
+11. Every room's `exit()` calls `world.disposeGroup(name)`. Approved
+    exception: FINAL keeps its group when the next state is REVEAL (REVEAL
+    reuses it and disposes it on exit).
 12. Assets lazy-load via `core/assets.js`. The reveal video starts with
-    `preload="none"`; it switches to `preload="auto"` only once she is
-    in FINAL with the letter open (see SPECS → core/assets.js).
+    `preload="none"`; it switches to `preload="auto"` only in FINAL: once
+    the letter is open, or immediately when FINAL resumes after the letter
+    was already seen (see SPECS → core/assets.js).
 13. Overlays use `contain: strict; will-change: opacity;`.
 14. rAF pauses when a blocking overlay is open (not for `dialogue` or
-    `line`) and while the opaque REVEAL video is playing.
+    `line`) and while the opaque REVEAL video is playing. Exception: the
+    END `endcard` does not pause, because sky + drifting petals render
+    behind its translucent gradient.
 15. Distant objects use `MeshBasicMaterial`/`MeshLambertMaterial`.
 16. Adaptive quality: measure a rolling FPS average. If FPS remains below 30 for 5 seconds, lower renderer pixel ratio in small steps down to 1.0; if still below 30, disable bloom. Do not change gameplay logic or challenge timing to improve FPS. Restore bloom/pixel ratio only after FPS remains above 45 for 10 seconds, and never exceed the initial pixel ratio. Avoid quality oscillation with these separate thresholds.
 
@@ -131,10 +148,10 @@ WIFES_BIRTHDAY/
 
 ```
 BOOT → PASSCODE → THRESHOLD → HUB
-                              ├→ TORII   → HUB
-                              ├→ COMPILE → HUB
-                              ├→ STARS   → HUB
-                              └→ PETALS  → HUB
+                              ├→ TORII   → HUB   (open from the start)
+                              ├→ COMPILE → HUB   (unlocks after TORII)
+                              ├→ STARS   → HUB   (unlocks after COMPILE)
+                              └→ PETALS  → HUB   (unlocks after STARS)
                                            │
               all 4 rooms done → portal opens in front of door 5
                                            ↓
@@ -204,6 +221,7 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 - [x] Instrumental music choices selected in SETUP.md; verify previews and record credits before shipping
 - [ ] Add personal photos to `src/assets/pics/` (any number; see SETUP.md)
 - [ ] Record and prepare the final reveal video
+- [ ] Confirm or replace the draft HUB locked-gate line in TEXT.md
 
 ## Error / Fallback Specs
 
@@ -215,6 +233,6 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 - Reduced motion (`prefers-reduced-motion`) → disable petal drift,
   slow portal pulse, no bloom animation, no star twinkle or shooting
   stars, typewriter 2× faster.
-- Favicon missing → inline SVG data URI in index.html.
+- Favicon → inline SVG data URI in index.html (no file, so it can never be missing).
 - Page title → "Something is waiting…"
 - Robots → `<meta name="robots" content="noindex">` (discourages indexing; does NOT make the public site private). A client-side passcode is a surprise gate, not security; anyone with the URL can inspect or bypass front-end code.

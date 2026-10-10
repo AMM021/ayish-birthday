@@ -96,7 +96,9 @@ Open `http://localhost:5173` in Chrome or Firefox on the laptop.
 
 Inside a Claude Code session:
 
-- `/model sonnet` — for most work. Best balance for this project.
+- The build started on Opus. `/model sonnet` can take over at any point:
+  the conversation carries on, and every decision lives in the planning
+  docs and `PREBUILD_AUDIT.md`, so a fresh session loses nothing either.
 - `/effort high` — for 3D math, game logic, shaders, state machine
 - `/effort low` — for boilerplate, refactors, cleanup, comments
 
@@ -230,14 +232,9 @@ Preview each candidate before use and replace it if it has vocals, a distracting
 
 ## Favicon
 
-Create `public/favicon.svg`:
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <circle cx="16" cy="16" r="14" fill="#c4a5e8"/>
-  <circle cx="16" cy="16" r="4" fill="#ffd88a"/>
-</svg>
-```
+Nothing to create: the favicon (lavender circle, gold dot) is an inline
+SVG data URI in `index.html` (SPECS → index.html), so it can never be
+missing.
 
 ## Deployment
 
