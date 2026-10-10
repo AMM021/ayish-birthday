@@ -91,6 +91,9 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 
 25. **Laptop code blocks approved** (TEXT.md → FINAL — laptop fragment code). **The home is the dream house:** it is the house they plan to have, not a real one, so THRESHOLD, the gaming room and the house share one style (luxurious, homey, wooden, nature-filled, whimsical, cute purple). No apartment details are needed.
 
+26. **Furniture looked bland → Kenney Furniture Kit (CC0)**, recoloured to the palette and credited in ASSET_CREDITS (credit not required). **Free roam:** END now fades into EXPLORE (the finished world) after 12 s, and a refresh after the reveal resumes there. **THRESHOLD stairs removed** (the owner saw the handrail clipping through the steps).
+27. **COMPILE questions clarified** (owner-approved): answers finish familiar phrases ("princess", "lub dub", "not apart… together", "safe and sound").
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.

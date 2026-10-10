@@ -59,6 +59,47 @@ Detailed implementation specs. Grep by `##` heading.
 - **house/props.js:** shared procedural furniture (plants, toy cars, laptop,
   mug, books, frame, lamp, fairy lights, rug, beanbag, gaming chair, shelf
   with an LED strip). The phase 6 house reuses them.
+- **Phases 5–6, the finished world:**
+  - *Models:* `public/models/kenney/*.glb` (Kenney Furniture Kit 2.0, CC0) are loaded lazily by
+    `assets.model()` (GLTFLoader, dynamic import, geometry marked shared).
+    `house/models.js` `preload(names)` then `place(name, {parent, at, rot,
+    scale, tint, solid, solids})`. It uses `KIT_SCALE` 2.1, centres each piece on `at`,
+    puts its front toward +z at rot 0 (`face(dx, dz)`), and adds an AABB
+    collider. Every kit material maps to a PALETTE colour (`MAP`, with `tint`
+    overrides), so no colour from the files survives.
+  - *Structure:* `house/structure.js` `wall` (with door and window openings and
+    trim), `floor` (with holes), `stairs` (oak steps and risers, plus an invisible
+    ramp collider, side guards and an optional handrail) and `railing`.
+  - *Draw calls:* `house/bake.js` `bakeStatic(group)` merges static untextured
+    opaque meshes per material. Colliders must be registered before baking.
+  - *House* (`house/house.js`): 20 × 14 m, three floors 3.4 m apart; stairs A (right wall, 1→2) and
+    B (left wall, 2→3).
+    - Floor 1: an open-plan entry, living room (TV wall, sofa, rugs), dining (table for six) and kitchen (a run of
+      units with uppers and a hood, an island with stools, and a fridge, washer, coffee
+      machine, toaster and blender).
+    - Floor 2: the library (walnut shelves full of books, a brass rail and a sliding ladder, reading
+      chairs), the bathroom (big tub under the window, shower, toilet with a muslim shower
+      (bracket, hose, spray head), pedestal sink with a mirror, cabinet, towels),
+      the gaming room (`gamingRoom.build` turned 180° with its window to the garden, a
+      door, no own light or outside) and a lounge.
+    - Floor 3: the hall with the anniversary door
+      (note = TEXT "HOUSE — sealed door note"; the orb's ambient line within 2.4 m), and the
+      bedroom (big bed with pillows and fairy lights, nightstands with lamps, wardrobes,
+      vanity, ottoman, ceiling fan, chair corner) opening onto a balcony with
+      loungers.
+    - Outside: flower boxes, a pitched roof and a chimney.
+  - *Garden:* a meadow (r 70) with a stone path from the torii gate to the front door, 1400
+    instanced flowers, 30 blossom trees, a pond with stones, lily pads and lotus, a bench, six
+    stone lanterns, a hedge ring (collider r 42.8) and 160 instanced city towers with
+    lit windows far toward the sunset (+z).
+  - *EXPLORE* (`rooms/explore.js`): `sunset` atmosphere (sunDir low toward +z); spawn in the garden
+    facing the house; the orb follows; the TEXT "AFTER END" line; `hub` music. The
+    whole world is three point lights plus the sun.
+  - *END* fades into EXPLORE after 12 s. A refresh after the reveal resumes in EXPLORE.
+- **THRESHOLD furniture:** kit pieces (sofa with pillows and a teddy, coffee
+  table, armchair, bookcase with books and a radio, floor lamp, console with a mirror
+  and lamp, coat rack, bench with her bag, doormat, plants, rugs). The stairs
+  were removed (their rail clipped through the steps).
 - **Older sections below** that describe free flight, the hub gates, door 5,
   lantern hunting in COMPILE or "follow the guide" in PETALS are superseded.
 

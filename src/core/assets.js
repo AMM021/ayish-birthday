@@ -172,3 +172,29 @@ export function bufferRevealVideo() {
 }
 
 export const posterURL = () => BASE + 'media/reveal/reveal-poster.webp';
+
+// --- 3D models (lazy; GLB from public/models/) ----------------------------
+// model(path) → Promise<Object3D template>. Geometry is marked shared so
+// disposeGroup never frees it from under other clones; clone the template
+// (house/models.js does this) instead of adding it.
+const models = new Map();
+let gltf = null;
+export function model(path) {
+  if (!models.has(path)) {
+    models.set(path, (async () => {
+      if (!gltf) {
+        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+        gltf = new GLTFLoader();
+      }
+      const g = await gltf.loadAsync(BASE + path);
+      g.scene.traverse((o) => {
+        if (o.geometry) o.geometry.userData.shared = true;
+      });
+      return g.scene;
+    })().catch((e) => {
+      console.warn('model failed', path, e?.message);
+      return null;
+    }));
+  }
+  return models.get(path);
+}

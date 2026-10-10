@@ -9,7 +9,8 @@ export const STATES = {
   PETALS: () => import('../rooms/petals.js'),
   FINAL: () => import('../rooms/final.js'),
   REVEAL: () => import('../rooms/reveal.js'),
-  END: () => import('../rooms/end.js')
+  END: () => import('../rooms/end.js'),
+  EXPLORE: () => import('../rooms/explore.js')
 };
 
 export const CHALLENGE_STATES = new Set(['TORII', 'COMPILE', 'STARS', 'PETALS']);

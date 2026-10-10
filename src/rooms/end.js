@@ -5,11 +5,15 @@ import * as audio from '../core/audio.js';
 import * as overlay from '../ui/overlay.js';
 import * as sakura from '../objects/sakura.js';
 import { orb } from '../objects/orb.js';
+import * as machine from '../state/machine.js';
 import { TEXT } from '../ui/text.js';
 
-// END — the end card over a slow fall of petals under the sky. No button.
+// END — the end card over a slow fall of petals under the sky. No button:
+// after 12 s it fades into EXPLORE, the finished world.
 
 let petals = null;
+let timer = null;
+const END_HOLD = 12000;
 
 export default {
   name: 'end',
@@ -26,6 +30,8 @@ export default {
     group.add(petals.mesh);
     audio.play('hub', { fade: 2000, volume: 0.18 });
     overlay.show('endcard', { lines: TEXT.endcard });
+    // after the card has been read, she wakes in the finished world
+    timer = setTimeout(() => machine.go('EXPLORE', { fadeOut: 1600, hold: 400, fadeIn: 1400 }), END_HOLD);
   },
 
   update(dt) {
@@ -34,6 +40,7 @@ export default {
   },
 
   exit() {
+    clearTimeout(timer);
     overlay.close();
     world.disposeGroup('end');
     petals = null;

@@ -63,10 +63,13 @@ export function lerpAtmosphere(from, to, k) {
   });
 }
 
+const DEFAULT_SUN = [0.4, 0.35, -0.8];
 // One call per room: sky gradient, clouds, stars, fog and light levels.
 export function setAtmosphere(name, overrides = {}) {
   const a = { ...ATMOSPHERES[name], ...overrides };
-  skyParts?.dome.set({ top: a.top, horizon: a.horizon, bottom: a.bottom, clouds: a.clouds, cloudAmt: a.stars > 0.5 ? 0.25 : 1, sun: a.sun });
+  const sunDir = a.sunDir ?? DEFAULT_SUN;
+  skyParts?.dome.set({ top: a.top, horizon: a.horizon, bottom: a.bottom, clouds: a.clouds, cloudAmt: a.stars > 0.5 ? 0.25 : 1, sun: a.sun, sunDir });
+  sun.position.set(...sunDir).normalize().multiplyScalar(80);
   skyParts?.stars.setOpacity(a.stars);
   skyParts?.nebula.setOpacity(a.nebula);
   scene.background.set(a.horizon);

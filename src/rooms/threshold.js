@@ -3,6 +3,11 @@ import { PALETTE, REDUCED_MOTION } from '../core/config.js';
 import * as world from '../world/world.js';
 import * as physics from '../world/physics.js';
 import * as P from '../house/props.js';
+import * as M from '../house/models.js';
+
+const KIT = ['rugDoormat', 'coatRackStanding', 'benchCushion', 'pottedPlant', 'rugRectangle', 'loungeSofaLong', 'pillow', 'bear',
+  'tableCoffee', 'books', 'plantSmall1', 'loungeChair', 'lampRoundFloor', 'bookcaseOpen', 'radio', 'sideTable', 'lampRoundTable',
+  'plantSmall3', 'bathroomMirror', 'rugRound'];
 import * as assets from '../core/assets.js';
 import * as transitions from '../world/transitions.js';
 import * as machine from '../state/machine.js';
@@ -66,89 +71,46 @@ function build() {
   runner.position.set(1.2, 0.006, -d / 2 + 2.2);
   group.add(runner);
 
-  // her things by the door: bench with a cushion, her bag, a coat on a hook
-  const bench = P.box(1.2, 0.08, 0.38, P.lambert('oak'));
-  bench.position.set(-0.6, 0.45, -d / 2 + 0.3);
-  const benchBase = P.box(1.1, 0.4, 0.34, P.lambert('walnut'));
-  benchBase.position.set(-0.6, 0.2, -d / 2 + 0.3);
-  const cushion = P.soft(0.9, 0.08, 0.32, P.lambert('lavender'), 0.03);
-  cushion.position.set(-0.6, 0.53, -d / 2 + 0.3);
-  group.add(bench, benchBase, cushion);
-  solid.push(benchBase);
+  // her things by the door, and a cosy living corner (Kenney kit, recoloured)
+  const k = { parent: group, solids: solid };
+  M.place('rugDoormat', { ...k, at: [1.2, 0.01, -d / 2 + 0.55], solid: false, tint: { carpet: 'blush' } });
+  M.place('coatRackStanding', { ...k, at: [2.45, 0, -d / 2 + 0.45] });
+  M.place('benchCushion', { ...k, at: [-0.7, 0, -d / 2 + 0.35], tint: { carpet: 'lavender' } });
   const bag = P.soft(0.42, 0.34, 0.2, P.lambert('softPink'), 0.06);
-  bag.position.set(-0.3, 0.74, -d / 2 + 0.3);
+  bag.position.set(-0.4, 0.68, -d / 2 + 0.35);
   bag.rotation.y = 0.25;
   const strap = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 6, 20, Math.PI), P.lambert('softPink'));
-  strap.position.set(-0.3, 0.9, -d / 2 + 0.3);
+  strap.position.set(-0.4, 0.84, -d / 2 + 0.35);
   strap.rotation.y = 0.25;
   group.add(bag, strap);
-  const hooks = P.box(1.0, 0.08, 0.04, P.lambert('oak'));
-  hooks.position.set(-0.6, 1.75, -d / 2 + 0.07);
-  const coat = P.soft(0.4, 0.8, 0.12, P.lambert('wisteria'), 0.06);
-  coat.position.set(-0.9, 1.35, -d / 2 + 0.12);
-  const scarf = P.soft(0.12, 0.6, 0.06, P.lambert('blush'), 0.03);
-  scarf.position.set(-0.4, 1.45, -d / 2 + 0.11);
-  group.add(hooks, coat, scarf);
+  M.place('pottedPlant', { ...k, at: [-1.8, 0, -d / 2 + 0.4] });
 
-  // console table with a mirror, lamp, bowl and plant (right wall)
-  const top = P.box(0.4, 0.05, 1.4, P.lambert('oak'));
-  top.position.set(w / 2 - 0.25, 0.85, 0.2);
-  group.add(top);
-  for (const z of [-0.4, 0.8]) {
-    const leg = P.box(0.05, 0.85, 0.05, P.lambert('walnut'));
-    leg.position.set(w / 2 - 0.1, 0.425, z);
-    group.add(leg);
+  M.place('rugRectangle', { ...k, at: [-0.8, 0.01, 2.2], solid: false, tint: { carpet: 'blush', carpetWhite: 'linen' } });
+  M.place('loungeSofaLong', { ...k, at: [-0.8, 0, d / 2 - 0.55], rot: M.face(0, -1), tint: { carpet: 'lavender', carpetDarker: 'wisteria' } });
+  for (const [x, t] of [[-1.5, 'blush'], [-0.1, 'softPink']]) M.place('pillow', { ...k, at: [x, 0.5, d / 2 - 0.75], rot: Math.PI, solid: false, tint: { carpetWhite: t } });
+  M.place('bear', { ...k, at: [-0.8, 0.5, d / 2 - 0.7], rot: Math.PI, scale: 0.45, solid: false, tint: { fur: 'blush' } });
+  M.place('tableCoffee', { ...k, at: [-0.8, 0, 2.1] });
+  M.place('books', { ...k, at: [-0.6, 0.48, 2.0], solid: false });
+  M.place('plantSmall1', { ...k, at: [-1.1, 0.48, 2.2], solid: false });
+  M.place('loungeChair', { ...k, at: [-3.0, 0, 2.0], rot: M.face(1, 0), tint: { carpet: 'softPink' } });
+  M.place('lampRoundFloor', { ...k, at: [-3.4, 0, d / 2 - 0.45] });
+  M.place('bookcaseOpen', { ...k, at: [w / 2 - 0.3, 0, 2.6], rot: M.face(-1, 0) });
+  M.place('radio', { ...k, at: [w / 2 - 0.3, 1.85, 2.6], rot: M.face(-1, 0), scale: 0.7, solid: false });
+  for (const sy of [0.1, 0.62, 1.12]) {
+    const bb = P.books(6, Math.round(sy * 10));
+    bb.rotation.y = Math.PI / 2; // the row runs toward −z, inside the case
+    bb.position.set(w / 2 - 0.3, sy, 2.95);
+    group.add(bb);
   }
-  const consoleCol = physics.solidBox(0.45, 0.9, 1.4);
-  consoleCol.position.set(w / 2 - 0.25, 0.45, 0.2);
-  group.add(consoleCol);
-  solid.push(consoleCol);
-  const mirrorFrame = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.04, 8, 40), P.lambert('gold'));
-  mirrorFrame.scale.set(1, 1.3, 1);
-  mirrorFrame.position.set(w / 2 - 0.07, 1.7, 0.2);
-  mirrorFrame.rotation.y = -Math.PI / 2;
-  const glass = new THREE.Mesh(new THREE.CircleGeometry(0.41, 40), new THREE.MeshPhongMaterial({ color: PALETTE.lilacHaze, specular: PALETTE.moonlight, shininess: 120 }));
-  glass.scale.set(1, 1.3, 1);
-  glass.position.set(w / 2 - 0.08, 1.7, 0.2);
-  glass.rotation.y = -Math.PI / 2;
-  group.add(mirrorFrame, glass);
-  const lamp = P.deskLamp();
-  lamp.position.set(w / 2 - 0.25, 0.875, -0.3);
-  const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), P.lambert('blush'));
-  bowl.position.set(w / 2 - 0.25, 0.99, 0.35);
-  const plant = P.pottedPlant({ h: 0.5 });
-  plant.scale.setScalar(0.6);
-  plant.position.set(w / 2 - 0.25, 0.875, 0.75);
-  group.add(lamp, bowl, plant);
+  M.place('pottedPlant', { ...k, at: [w / 2 - 0.45, 0, d / 2 - 0.45], scale: 1.2 });
 
-  // the stairs up (front-right corner), with a railing she cannot pass
-  for (let i = 0; i < 9; i++) {
-    const step = P.box(1.1, 0.33, 0.32, P.lambert(i % 2 ? 'oak' : 'walnut'));
-    // each step is solid down to the floor
-    step.scale.y = i + 1;
-    step.position.set(w / 2 - 0.6, ((i + 1) * 0.33) / 2, d / 2 - 0.2 - i * 0.32);
-    group.add(step);
-  }
-  const rail = P.box(0.05, 1, 3.0, P.lambert('walnut'));
-  rail.position.set(w / 2 - 1.18, 2.0, d / 2 - 1.5);
-  rail.rotation.x = -0.83;
-  group.add(rail);
-  const stairCol = physics.solidBox(1.3, h, 3.2);
-  stairCol.position.set(w / 2 - 0.6, h / 2, d / 2 - 1.5);
-  group.add(stairCol);
-  solid.push(stairCol);
+  // console table with a mirror, a lamp and a plant (right wall)
+  M.place('sideTable', { ...k, at: [w / 2 - 0.25, 0, -0.6], rot: M.face(-1, 0) });
+  M.place('lampRoundTable', { ...k, at: [w / 2 - 0.25, 0.82, -1.0], solid: false });
+  M.place('plantSmall3', { ...k, at: [w / 2 - 0.25, 0.82, -0.2], solid: false });
+  M.place('bathroomMirror', { ...k, at: [w / 2 - 0.12, 1.25, -0.6], rot: M.face(-1, 0), solid: false });
 
-  // plants, frames, a soft rug
-  for (const [x, z, sc] of [[-w / 2 + 0.45, -d / 2 + 0.45, 1.3], [-w / 2 + 0.45, d / 2 - 0.45, 1.1], [w / 2 - 0.45, -d / 2 + 0.45, 1.2]]) {
-    const pl = P.pottedPlant({ h: 1 });
-    pl.scale.setScalar(sc);
-    pl.position.set(x, 0, z);
-    group.add(pl);
-    solid.push(...pl.userData.solid);
-  }
-  const hp = P.hangingPlant(0.9);
-  hp.position.set(-2.6, h - 0.15, 2.4);
-  group.add(hp);
+  // frames on the left wall, a trailing plant, a soft round rug
   const frameTints = ['blush', 'lavender', 'softPink'];
   [[-w / 2 + 0.07, 1.8, 1.6], [-w / 2 + 0.07, 1.6, 2.5], [-w / 2 + 0.07, 1.9, 3.2]].forEach(([x, y, z], i) => {
     const f = P.box(0.03, 0.5 - i * 0.08, 0.4 - i * 0.05, P.lambert('oak'));
@@ -157,7 +119,10 @@ function build() {
     pic.position.set(x + 0.02, y, z);
     group.add(f, pic);
   });
-  group.add(P.rug(1.4, 'lavender'));
+  const hp = P.hangingPlant(0.9);
+  hp.position.set(-2.6, h - 0.15, -2.4);
+  group.add(hp);
+  M.place('rugRound', { ...k, at: [1.4, 0.01, -1.2], solid: false, tint: { carpet: 'lavender' } });
 
   // The extra door: side wall, faint lavender rim.
   const doorMat = P.lambert('warmPurple');
@@ -184,7 +149,11 @@ function build() {
   group.add(rim, extra, note, tape);
 
   // warm pendant light
-  const pendant = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10), P.glow('linen', 1.05));
+  const pendant = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.6), P.lambert('linen'));
+  pendant.rotation.x = Math.PI;
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), P.glow('gold', 1.8));
+  bulb.position.set(0.4, h - 0.55, 0.6);
+  group.add(bulb);
   pendant.position.set(0.4, h - 0.45, 0.6);
   const cord = P.box(0.01, 0.35, 0.01, P.lambert('walnut'));
   cord.position.set(0.4, h - 0.17, 0.6);
@@ -221,6 +190,7 @@ export default {
     ready = false;
     leaving = false;
     t = 0;
+    await M.preload(KIT);
     build();
     world.sky.visible = false;
     world.setAtmosphere('indoor');

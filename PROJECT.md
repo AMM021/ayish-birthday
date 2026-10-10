@@ -49,8 +49,10 @@ The orb is his last act of love.
   then lands in his work/gaming room for the letter → "turn around." → video.
 - THRESHOLD is the entry hall of their planned dream house; the gaming room
   and the house share its style.
-- After END she explores the finished world (garden + three-story house);
-  the sealed anniversary door is in the house. (Phases 5–6, not built yet.)
+- After END (12 s) she wakes in EXPLORE: the garden, a sunset city and the
+  three-story dream house to walk through freely; the sealed anniversary
+  door is on the top floor. Furniture is the Kenney Furniture Kit (CC0),
+  recoloured to PALETTE at load.
 - Companion: glowing orb, gold core, lavender halo, soft trail
 - No Cinnamoroll: the orb is the companion (decided, nothing to build)
 - Text: story dialogue types out and waits for Enter; ambient lines never interrupt story dialogue
@@ -114,6 +116,7 @@ WIFES_BIRTHDAY/
 ├── public/
 │   ├── fonts/{handwriting.woff2, serif.woff2, serif-italic.woff2}
 │   ├── textures/{petal.png, star.png, paper.jpg, shoji.png}
+│   ├── models/kenney/*.glb   # Furniture Kit (CC0), see ASSET_CREDITS.md
 │   └── media/
 │       ├── music/{hub.mp3, challenge.mp3, letter.mp3}
 │       └── reveal/{reveal-video.mp4, reveal-poster.webp}
@@ -123,9 +126,9 @@ WIFES_BIRTHDAY/
     ├── core/{renderer,composer,clock,input,assets,audio,save,config,hints}.js
     ├── world/{world,layers,transitions,physics}.js   # physics: colliders (three-mesh-bvh)
     ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet}.js
-    ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end}.js
+    ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end,explore}.js
     ├── state/{machine,states}.js
-    ├── house/{props,gamingRoom}.js   # dream-house furniture + rooms (house.js in phase 6)
+    ├── house/{props,models,structure,bake,gamingRoom,house}.js   # dream house: props, Kenney kit loader, walls/stairs, draw-call baking
     ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments,laptop}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor
     └── styles/{base,overlay,devtools,issuecard}.css
 ```
@@ -173,7 +176,7 @@ WIFES_BIRTHDAY/
 BOOT → PASSCODE → THRESHOLD → HUB (the void: orb intro, one portal)
      → TORII (H) → COMPILE (O) → STARS (M) → PETALS (E)
      → FINAL (laptop: type H·O·M·E → gaming room → letter) → REVEAL → END
-     → (planned) the finished world to explore
+     → EXPLORE (the finished world: garden + dream house, free roam)
 ```
 Each portal leads only forward.
 
@@ -190,7 +193,7 @@ Shape: `{ unlocked:bool, roomsDone:string[], reachedFinal:bool, seenLetter:bool,
 On boot, load progress and decide:
 
 - `!unlocked` → `PASSCODE`
-- `unlocked` and `seenReveal` → `END`
+- `unlocked` and `seenReveal` → `EXPLORE` (the end card was already seen)
 - `unlocked` and `reachedFinal` → `FINAL`
 - `unlocked`, no level done yet → `HUB`
 - otherwise → the first unfinished level in `ROOM_ORDER` (FINAL if all
@@ -202,7 +205,7 @@ Refresh after passcode → resume at HUB.
 Refresh in FINAL before the letter is finished → FINAL, the letter
 replays from the top.
 Refresh in FINAL after the letter but before the reveal completes → FINAL resumes at the chair-facing view and replays the “turn around.” beat; the letter is not repeated.
-Refresh after the reveal → END.
+Refresh after the reveal → EXPLORE.
 
 Flags are set at: `reachedFinal` on entering FINAL; `seenLetter` only after the letter finishes or is deliberately skipped; `seenReveal` when the reveal video finishes, or its fallback has been shown and she continues, immediately before END. Do not set `seenReveal` merely because the reveal state was entered.
 

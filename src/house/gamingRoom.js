@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE } from '../core/config.js';
 import * as P from './props.js';
+import * as M from './models.js';
 import * as treeObj from '../objects/tree.js';
 
 // The couple's work/gaming room in the dream house: minimal, full of
@@ -18,7 +19,13 @@ export const PORTAL_SCALE = 0.72; // the ring fits under the 3 m ceiling
 
 const CAR_COLORS = ['vermillion', 'gold', 'lavender', 'softPink', 'matcha', 'wisteria', 'blush', 'walnut'];
 
-export function build(group, { photo = null } = {}) {
+// Kenney models used here (preload before build).
+export const MODELS = ['bear', 'speakerSmall', 'lampRoundFloor', 'pottedPlant', 'bookcaseOpenLow', 'rugRounded', 'pillow', 'plantSmall2', 'radio'];
+
+// options: outside (meadow + trees beyond the window; off inside the
+// house), light (its own ceiling point light), door (a doorway in the
+// front wall at local x `door`).
+export function build(group, { photo = null, outside = true, light: withLight = true, door = null } = {}) {
   const solid = [];
   const add = (o, isSolid = false) => {
     group.add(o);
@@ -61,7 +68,13 @@ export function build(group, { photo = null } = {}) {
     mull.position.set(x, 1.75, z0);
     add(mull);
   }
-  wallBox(w, h, 0.1, cx, h / 2, z1); // front wall
+  if (door === null) wallBox(w, h, 0.1, cx, h / 2, z1); // front wall
+  else {
+    const dw = 1.3;
+    wallBox(door - dw / 2 - x0, h, 0.1, (x0 + door - dw / 2) / 2, h / 2, z1);
+    wallBox(x1 - door - dw / 2, h, 0.1, (door + dw / 2 + x1) / 2, h / 2, z1);
+    wallBox(dw, h - 2.35, 0.1, door, (2.35 + h) / 2, z1);
+  }
   wallBox(0.1, h, d, x0, h / 2, cz); // left
   wallBox(0.1, h, d, x1, h / 2, cz); // right
   // wainscot band on the side and front walls
@@ -72,6 +85,7 @@ export function build(group, { photo = null } = {}) {
   }
 
   // outside the window: a meadow, blossom trees, the soft sky
+  if (outside) {
   const meadow = new THREE.Mesh(new THREE.CircleGeometry(40, 32), P.lambert('meadow'));
   meadow.rotation.x = -Math.PI / 2;
   meadow.position.set(cx, -0.25, z0 - 20);
@@ -81,6 +95,7 @@ export function build(group, { photo = null } = {}) {
     const t = treeObj.create({ height: 3 + (i % 3) * 0.7, tint: i % 3 === 1 ? 'lavender' : 'softPink', seed: 0.4 + i * 0.11 });
     t.position.set(-6 + i * 2.4, -0.25, z0 - 5 - (i % 3) * 3);
     add(t);
+  }
   }
 
   // the long desk
@@ -171,14 +186,28 @@ export function build(group, { photo = null } = {}) {
     new THREE.Vector3(winX1 + 0.3, 2.75, z0 + 0.08)
   ], 36));
 
+  // kit pieces: a teddy on the beanbag, speakers, a floor lamp, more green
+  const kit = { parent: group, solids: solid };
+  M.place('bear', { ...kit, at: [-2.2, 0.42, 3.55], rot: Math.PI * 0.8, scale: 0.55, solid: false, tint: { fur: 'blush' } });
+  M.place('speakerSmall', { ...kit, at: [-0.85, 0.81, -0.32], scale: 0.6, solid: false });
+  M.place('speakerSmall', { ...kit, at: [2.12, 0.81, 0.25], scale: 0.6, solid: false });
+  M.place('lampRoundFloor', { ...kit, at: [-2.75, 0, 2.3], rot: Math.PI / 2 });
+  M.place('bookcaseOpenLow', { ...kit, at: [-3.0, 0, 3.6], rot: Math.PI / 2 });
+  M.place('plantSmall2', { ...kit, at: [-3.0, 0.82, 3.2], solid: false });
+  M.place('radio', { ...kit, at: [-3.0, 0.82, 4.0], rot: Math.PI / 2, scale: 0.7, solid: false });
+  M.place('pottedPlant', { ...kit, at: [3.6, 0, 3.2] });
+  M.place('pillow', { ...kit, at: [-1.3, 0.45, 4.0], rot: 0.4, solid: false, tint: { carpetWhite: 'blush' } });
+
   // one warm ceiling light (point lights ≤ 4)
-  const light = new THREE.PointLight(PALETTE.gold, 6, 12, 1.4);
-  light.position.set(0.6, h - 0.3, 1.8);
-  group.add(light);
   const lampShade = new THREE.Mesh(new THREE.SphereGeometry(0.28, 18, 12), P.glow('linen', 1.05));
   lampShade.scale.y = 0.6;
-  lampShade.position.copy(light.position).add(new THREE.Vector3(0, 0.1, 0));
+  lampShade.position.set(0.6, h - 0.2, 1.8);
   group.add(lampShade);
+  if (withLight) {
+    const light = new THREE.PointLight(PALETTE.gold, 6, 12, 1.4);
+    light.position.set(0.6, h - 0.3, 1.8);
+    group.add(light);
+  }
 
   return { solid, herScreen: her.userData.screen, hisScreen: his.userData.screen };
 }

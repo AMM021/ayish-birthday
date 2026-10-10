@@ -17,6 +17,7 @@ import * as laptop from '../ui/laptop.js';
 import * as transitions from '../world/transitions.js';
 import * as props from '../house/props.js';
 import * as gamingRoom from '../house/gamingRoom.js';
+import * as models from '../house/models.js';
 import { TEXT } from '../ui/text.js';
 
 // FINAL — the void: a table, a chair, his laptop. Seated, she types the
@@ -255,6 +256,7 @@ export default {
   name: 'final',
 
   async enter() {
+    await models.preload(gamingRoom.MODELS);
     buildScene();
     portal = group.userData.portal;
     portal.disable();

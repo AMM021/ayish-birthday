@@ -38,7 +38,7 @@ function fallback(message) {
 function resumeTarget() {
   const p = save.load();
   if (!p.unlocked) return 'PASSCODE';
-  if (p.seenReveal) return 'END';
+  if (p.seenReveal) return 'EXPLORE'; // the end card was seen; she wakes in the finished world
   if (p.reachedFinal) return 'FINAL';
   // Mid-journey: restart the level she was on (levels only go forward).
   if (p.roomsDone.length === 0) return 'HUB';

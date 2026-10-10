@@ -82,8 +82,9 @@ export function create() {
   mesh.userData.noCollide = true;
   return {
     mesh,
-    set({ top, horizon, bottom, clouds, cloudAmt = 1, sun = 1 }) {
+    set({ top, horizon, bottom, clouds, cloudAmt = 1, sun = 1, sunDir = null }) {
       const u = mat.uniforms;
+      if (sunDir) u.uSunDir.value.set(...sunDir).normalize();
       u.uTop.value.set(top);
       u.uHorizon.value.set(horizon);
       u.uBottom.value.set(bottom);

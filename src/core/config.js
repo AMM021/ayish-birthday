@@ -26,7 +26,8 @@ export const PALETTE = {
   // the house: warm wood, soft linen
   oak: '#c9a27e',
   walnut: '#8b6450',
-  linen: '#f6efe9'
+  linen: '#f6efe9',
+  peach: '#ffcfa6' // sunset horizon
 };
 
 export const PASSCODE = '1010';
@@ -70,6 +71,13 @@ export const ATMOSPHERES = {
     top: PALETTE.lilacSky, horizon: PALETTE.sunlit, bottom: PALETTE.blush,
     clouds: PALETTE.moonlight, fog: PALETTE.sunlit, fogDensity: 0.006,
     stars: 0, nebula: 0, hemi: [PALETTE.sunlit, PALETTE.meadow, 0.85], ambient: 0.3, sun: 1.15
+  },
+  // the finished world: a warm, forever sunset over the garden and city
+  sunset: {
+    top: PALETTE.lilacSky, horizon: PALETTE.peach, bottom: PALETTE.blush,
+    clouds: PALETTE.softPink, fog: PALETTE.peach, fogDensity: 0.004,
+    stars: 0, nebula: 0, hemi: [PALETTE.sunlit, PALETTE.blush, 0.95], ambient: 0.42, sun: 1.25,
+    sunDir: [0.12, 0.09, 1]
   },
   indoor: {
     top: PALETTE.lilacSky, horizon: PALETTE.lilacHaze, bottom: PALETTE.lilacMist,

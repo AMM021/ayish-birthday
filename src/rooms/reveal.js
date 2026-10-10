@@ -9,6 +9,8 @@ import * as clock from '../core/clock.js';
 import * as transitions from '../world/transitions.js';
 import * as machine from '../state/machine.js';
 import { buildScene, getPortal } from './final.js';
+import * as models from '../house/models.js';
+import * as gamingRoom from '../house/gamingRoom.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
@@ -169,6 +171,7 @@ export default {
     // The FINAL set carries over; rebuild it if we were jumped here.
     const g = world.getGroup('final');
     if (!g.children.length) {
+      await models.preload(gamingRoom.MODELS);
       buildScene();
       world.setAtmosphere('indoor', { fogDensity: 0.004 });
       world.setPlayer(new THREE.Vector3(0, 1.18, 0.95), Math.PI, 0);

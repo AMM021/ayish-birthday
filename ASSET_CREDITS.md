@@ -9,3 +9,9 @@ The following are selected instrumental candidates for the project. Download dat
 | `letter.mp3` — Peaceful Ambient Background | samsabt | https://pixabay.com/music/ambient-peaceful-ambient-background-478782/ | Pixabay Content License; verify current terms on download | Courtesy credit: Music by samsabt from Pixabay | Pending | Page describes deep ambient instrumental music with no vocals. |
 
 No personal photos are included in this planning package. The owner will add their own photos to `src/assets/pics/`; no external photo credits are needed for photos they own or have permission to use.
+
+## 3D models
+
+| Asset | Creator | Source URL | License / terms | Attribution required | Download date | Notes |
+|---|---|---|---|---|---|---|
+| Furniture Kit 2.0 (`public/models/kenney/*.glb`) | Kenney | https://kenney.nl/assets/furniture-kit | CC0 1.0 (licence copied to `public/models/kenney/LICENSE-kenney-furniture-kit.txt`) | Not required (courtesy: "Furniture by Kenney, www.kenney.nl") | 2026-10-11 | Materials are remapped to PALETTE at load time (`house/models.js`). |
