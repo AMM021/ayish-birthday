@@ -67,7 +67,7 @@ export function create({ dim = false, rune = null } = {}) {
 
   const checkMat = new THREE.MeshBasicMaterial({ color: PALETTE.lavender, side: THREE.DoubleSide, transparent: true });
   const check = new THREE.Mesh(g.check, checkMat);
-  check.position.set(0, 5.3, 0.05);
+  check.position.set(0.85, 4.85, 0.05);
   check.visible = false;
   gate.add(check);
 

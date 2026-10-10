@@ -27,16 +27,39 @@ export function create() {
   const coreMat = new THREE.MeshBasicMaterial({ color: PALETTE.gold, fog: false });
   const core = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 16), coreMat);
   enableBloom(core, 3.2);
-  const haloMat = new THREE.MeshBasicMaterial({
-    color: PALETTE.lavender,
+  // Soft halo: bright toward the centre, fading to nothing at the rim.
+  const haloMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(PALETTE.lavender) },
+      uIntensity: { value: 1 },
+      uOpacity: { value: 0.55 }
+    },
+    vertexShader: `
+      varying vec3 vN;
+      varying vec3 vV;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uIntensity;
+      uniform float uOpacity;
+      varying vec3 vN;
+      varying vec3 vV;
+      void main() {
+        float f = pow(max(dot(normalize(vN), normalize(vV)), 0.0), 3.0) * uOpacity;
+        gl_FragColor = vec4(uColor * uIntensity * f, f);
+      }`,
     transparent: true,
-    opacity: 0.32,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     fog: false
   });
   const halo = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16), haloMat);
-  enableBloom(halo, 2.2);
+  enableBloom(halo, 1.4);
   const light = new THREE.PointLight(PALETTE.gold, 0.8, 12, 1);
   body.add(core, halo, light);
   root.add(body);
@@ -133,8 +156,7 @@ export function create() {
     },
     setColor(hex) {
       state.haloBase.set(hex);
-      haloMat.userData.baseColor.copy(state.haloBase);
-      enableBloom(halo, 2.2);
+      haloMat.uniforms.uColor.value.copy(state.haloBase);
       trailColor.set(hex);
     },
     setHintLevel(level) {

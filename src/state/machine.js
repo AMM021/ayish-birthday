@@ -8,6 +8,7 @@ import * as overlay from '../ui/overlay.js';
 
 export let current = null;
 export let currentName = null;
+export let previousName = null;
 let busy = false;
 const listeners = [];
 
@@ -30,6 +31,7 @@ export async function go(name, { fadeOut = 400, hold = 200, fadeIn = 600 } = {})
     if (current) await current.exit(name);
     const mod = (await STATES[name]()).default;
     current = mod;
+    previousName = currentName;
     currentName = name;
     await mod.enter();
     hints.reset();
