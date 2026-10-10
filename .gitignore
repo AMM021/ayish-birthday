@@ -5,3 +5,4 @@ dist/
 # Blender pipeline: downloaded sources and intermediates (re-fetch with npm run art:fetch)
 art/cache/
 art/out/
+__pycache__/
