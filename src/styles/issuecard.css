@@ -112,3 +112,58 @@
 @media (prefers-reduced-motion: reduce) {
   .editor-field.shake, .editor-row.fixed, .editor-term.show { animation: none; }
 }
+
+/* FINAL's laptop screen: H · O · M · E */
+.laptop {
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  width: min(560px, calc(100vw - 32px));
+  min-height: 330px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(var(--warmPurple-rgb), 0.94);
+  color: var(--lilacHaze);
+  font: 0.98rem/1.55 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  box-shadow: 0 18px 50px rgba(var(--warmPurple-rgb), 0.45), 0 0 40px rgba(var(--lavender-rgb), 0.5);
+  opacity: 0;
+  transform: translate(-50%, -46%) scale(0.96);
+  transition: opacity 500ms ease, transform 500ms ease, box-shadow 800ms ease;
+  pointer-events: none;
+}
+.laptop.show { opacity: 1; transform: translate(-50%, -46%) scale(1); }
+.laptop.running { box-shadow: 0 0 80px rgba(var(--gold-rgb), 0.9), 0 0 30px rgba(var(--moonlight-rgb), 0.9); }
+.laptop-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.8rem;
+  background: rgba(var(--lacquer-rgb), 0.35);
+  font-size: 0.8rem;
+  color: var(--lavender);
+}
+.laptop-bar i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--softPink); }
+.laptop-bar i:nth-child(2) { background: var(--gold); }
+.laptop-bar i:nth-child(3) { background: var(--matcha); }
+.laptop-bar span { margin-left: 0.5rem; }
+.laptop-code { padding: 0.9rem 1.1rem 0.4rem; min-height: 210px; }
+.laptop-block { white-space: pre; margin-bottom: 0.7rem; color: var(--lilacHaze); }
+.laptop-keys { display: flex; gap: 0.6rem; justify-content: center; padding: 0.4rem 0 1rem; }
+.laptop-chip {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.6rem;
+  font: 600 1.15rem/1 'Lora', Georgia, serif;
+  color: rgba(var(--lilacHaze-rgb), 0.5);
+  border: 1px solid rgba(var(--lavender-rgb), 0.4);
+  transition: color 400ms ease, background 400ms ease, box-shadow 400ms ease;
+}
+.laptop-chip.next { color: var(--warmPurple); background: var(--lilacHaze); box-shadow: 0 0 16px rgba(var(--gold-rgb), 0.8); animation: chip-breathe 1.6s ease-in-out infinite; }
+.laptop-chip.done { color: var(--warmPurple); background: var(--gold); border-color: var(--gold); }
+.laptop-chip.nudge { animation: editor-shake 360ms ease; }
+@keyframes chip-breathe { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .laptop-chip.next, .laptop-chip.nudge { animation: none; }
+}

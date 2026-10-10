@@ -12,6 +12,7 @@ const NO_SCROLL = new Set([
 const held = new Set();
 const actionHandlers = [];
 const muteHandlers = [];
+let muteKey = true; // off while the FINAL laptop needs M for a fragment
 const lockListeners = [];
 let canvasEl = null;
 let lookDX = 0;
@@ -68,7 +69,7 @@ function onKeyDown(e) {
     dispatchAction('key');
     return;
   }
-  if (e.code === 'KeyM' && !inField) {
+  if (e.code === 'KeyM' && !inField && muteKey) {
     if (e.repeat) return;
     for (const fn of muteHandlers) fn();
     return;
@@ -94,6 +95,10 @@ export function dispatchAction(source) {
     if (actionHandlers[i](source) === true) return true;
   }
   return false;
+}
+
+export function setMuteKeyEnabled(on) {
+  muteKey = on;
 }
 
 export function onMute(fn) {

@@ -47,8 +47,10 @@ The orb is his last act of love.
 - PETALS is "stay in the light" and is the hardest level.
 - FINAL: at the laptop she presses H, O, M, E (each types its code block),
   then lands in his work/gaming room for the letter → "turn around." → video.
+- THRESHOLD is the entry hall of their planned dream house; the gaming room
+  and the house share its style.
 - After END she explores the finished world (garden + three-story house);
-  the sealed anniversary door is in the house. (Phases 4–6, not built yet.)
+  the sealed anniversary door is in the house. (Phases 5–6, not built yet.)
 - Companion: glowing orb, gold core, lavender halo, soft trail
 - No Cinnamoroll: the orb is the companion (decided, nothing to build)
 - Text: story dialogue types out and waits for Enter; ambient lines never interrupt story dialogue
@@ -123,7 +125,8 @@ WIFES_BIRTHDAY/
     ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end}.js
     ├── state/{machine,states}.js
-    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor
+    ├── house/{props,gamingRoom}.js   # dream-house furniture + rooms (house.js in phase 6)
+    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments,laptop}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor
     └── styles/{base,overlay,devtools,issuecard}.css
 ```
 
@@ -239,8 +242,8 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 - [ ] Add personal photos to `src/assets/pics/` (any number; see SETUP.md)
 - [ ] Record and prepare the final reveal video
 - [x] v2 copy (fragments, COMPILE blanks, controls, restart) approved 2026-10-10
-- [ ] Approve the laptop code blocks for H, O, M, E (drafted in phase 4)
-- [ ] Real-apartment details for THRESHOLD (optional)
+- [x] Laptop code blocks for H, O, M, E approved
+- [x] The home is their planned dream house (not a real apartment)
 
 ## Error / Fallback Specs
 

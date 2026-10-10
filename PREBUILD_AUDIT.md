@@ -89,6 +89,8 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 23. **STARS for walking:** the heart lies flat over a lake and the stars float at chest height. Stars passed before star 1 is lit are ignored. On completion the camera rises to show the whole heart, then returns.
 24. **Planned, not built yet:** HOME typing at the laptop (blocks to be drafted for approval) → gaming room → letter → turn around → video → END → explore the garden and the three-story house (living room, dining, kitchen, library with a sliding ladder, bathroom with shower, tub, toilet with muslim shower and a sink with mirror, master bedroom with a sunset window and a balcony over a sunset city, and a couple's work/gaming room with both laptops and toy cars). The anniversary door moves into the house. The THRESHOLD home mixes their apartment with the game's style.
 
+25. **Laptop code blocks approved** (TEXT.md → FINAL — laptop fragment code). **The home is the dream house:** it is the house they plan to have, not a real one, so THRESHOLD, the gaming room and the house share one style (luxurious, homey, wooden, nature-filled, whimsical, cute purple). No apartment details are needed.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
@@ -99,7 +101,7 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 - [ ] Listen to each of the three music previews (instrumental, no vocals, loops cleanly) and confirm the page URLs still work; they were not opened or heard during planning.
 - [ ] Record and compress the final reveal video; keep it 45–75 seconds and under 15 MB if possible.
 - [x] Locked-gate line confirmed by the owner (no longer used after v2: there is no hub).
-- [ ] Approve the H/O/M/E laptop code blocks (phase 4).
+- [x] H/O/M/E laptop code blocks approved.
 - [x] Planning handoff approved.
 - [ ] Download the three music tracks into `public/media/music/` (Pixabay blocks automated download).
 - [ ] Add photos and the reveal video + poster later (the game already handles their absence).

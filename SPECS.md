@@ -41,6 +41,24 @@ Detailed implementation specs. Grep by `##` heading.
 - **PETALS:** see PROJECT.md. The light radius goes 3.0 → 2.1 and its speed 2.6 → 3.6
   (walking is 4.2). Gusts arrive every ~5–8 s from 12 % of the path on. `OUT_LIMIT` is 3 s;
   her time outside the light recovers at 2× while she is inside it.
+- **FINAL (phase 4):** the `final` group holds two sets, and only one is visible at a time.
+  The void set (offset `VOID` z 300: walnut table, gaming chair, laptop,
+  bouquet) and the gaming room at the origin (`house/gamingRoom.js`). She
+  sits in the void and the orb says the laptop line. `ui/laptop.js` then
+  takes H, O, M, E in order; each key types its TEXT.md block, wrong keys
+  only nudge the next chip, and M does not mute here
+  (`input.setMuteKeyEnabled`). A moonlight flash moves her to the gaming room,
+  seated at her laptop (the letter title shows on its screen). The orb says
+  the before-letter line, then the letter, then "turn around." The portal
+  stands behind her chair (holder scale 0.72) and REVEAL drifts toward it.
+  A refresh after the letter resumes seated in the gaming room.
+- **THRESHOLD (phase 4):** the entry hall of the dream house: oak floor, lilac
+  walls, walnut wainscot, a bench with her bag, a coat on hooks, a console
+  with a mirror, lamp and plant, stairs going up (blocked by a collider),
+  plants, frames and a pendant light. The extra door and note are unchanged.
+- **house/props.js:** shared procedural furniture (plants, toy cars, laptop,
+  mug, books, frame, lamp, fairy lights, rug, beanbag, gaming chair, shelf
+  with an LED strip). The phase 6 house reuses them.
 - **Older sections below** that describe free flight, the hub gates, door 5,
   lantern hunting in COMPILE or "follow the guide" in PETALS are superseded.
 

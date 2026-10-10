@@ -13,10 +13,16 @@ import * as portalObj from '../objects/portal.js';
 import * as bouquet from '../objects/bouquet.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
+import * as laptop from '../ui/laptop.js';
+import * as transitions from '../world/transitions.js';
+import * as props from '../house/props.js';
+import * as gamingRoom from '../house/gamingRoom.js';
 import { TEXT } from '../ui/text.js';
 
-// FINAL — the void, a table, a chair, a laptop with the letter. After the
-// letter: "turn around." and the reveal.
+// FINAL — the void: a table, a chair, his laptop. Seated, she types the
+// four fragments (H·O·M·E) and the code carries her into their work/gaming
+// room in the dream house. On her laptop: the letter. Then "turn around."
+// and the reveal.
 
 // Personal photos: any number, discovered at build time, natural order.
 const PHOTO_MODULES = import.meta.glob('../assets/pics/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', {
@@ -27,17 +33,23 @@ const PHOTO_MODULES = import.meta.glob('../assets/pics/*.{jpg,jpeg,png,webp,JPG,
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 const PHOTOS = Object.keys(PHOTO_MODULES).sort(collator.compare).map((k) => PHOTO_MODULES[k]);
 
-const CHAIR = new THREE.Vector3(0, 0, 1.0);
+// The void set sits far from the gaming room (which is at the origin), so
+// each can be shown on its own; only one is ever visible.
+const VOID = new THREE.Vector3(0, 0, 300);
+const CHAIR = new THREE.Vector3(0, 0, 1.0).add(VOID);
 const SEAT_RADIUS = 1.3;
-const SEATED = new THREE.Vector3(0, 1.18, 0.95);
+const SEATED = new THREE.Vector3(0, 1.18, 0.95).add(VOID);
 const SEATED_PITCH = -0.32;
-// off to the side, so the table (not the waiting portal) is what she sees
-const SPAWN = new THREE.Vector3(-6.5, 1.6, 3.5);
-const SPAWN_YAW = Math.atan2(SPAWN.x - 0, SPAWN.z - 0.3);
+// off to the side, so the table (not the empty void) is what she sees
+const SPAWN = new THREE.Vector3(-6.5, 1.6, 3.5).add(VOID);
+const SPAWN_YAW = Math.atan2(SPAWN.x - VOID.x, SPAWN.z - (VOID.z + 0.3));
+const ROOM_PITCH = -0.22;
 
 let group = null;
 let portal = null;
-let phase = 'approach'; // approach | seating | letter | after | armed | assist | leaving
+// approach | seating | laptopIntro | typing | toRoom | roomIntro | letter |
+// after | armed | assist | leaving
+let phase = 'approach';
 let seatT = 0;
 let seatFrom = null;
 let fromPitch = 0;
@@ -45,7 +57,8 @@ let baseYaw = 0;
 let armedT = 0;
 let assistT = 0;
 let assistFrom = 0;
-let orbHome = new THREE.Vector3(0.75, 1.25, 0.35);
+const orbVoid = new THREE.Vector3(0.75, 1.25, 0.35).add(VOID);
+const orbRoom = new THREE.Vector3(0.62, 1.32, 0.05);
 
 function box(w, h, d, mat) {
   return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -70,82 +83,86 @@ function screenTexture() {
   return t;
 }
 
-// Builds the FINAL set into the `final` group. REVEAL calls this too when
-// it is entered directly (dev tools) and the group is missing.
-export function buildScene() {
-  group = world.getGroup('final');
-  if (group.children.length) return group;
-  const lacquer = new THREE.MeshStandardMaterial({ color: PALETTE.lacquer, roughness: 0.35, metalness: 0.1 });
+function buildVoidSet() {
+  const set = new THREE.Group();
+  set.name = 'final-void';
+  set.position.copy(VOID);
+  const lacquer = new THREE.MeshStandardMaterial({ color: PALETTE.walnut, roughness: 0.5 });
   const top = box(2, 0.1, 1, lacquer);
   top.position.set(0, 0.75, 0);
-  group.add(top);
+  set.add(top);
   for (const [x, z] of [[-0.92, -0.42], [0.92, -0.42], [-0.92, 0.42], [0.92, 0.42]]) {
     const leg = box(0.06, 0.7, 0.06, lacquer);
     leg.position.set(x, 0.35, z);
-    group.add(leg);
+    set.add(leg);
   }
-  // office chair, facing the table (−z)
-  const chairMat = new THREE.MeshStandardMaterial({ color: PALETTE.lacquer, roughness: 0.6 });
-  const seat = box(0.55, 0.08, 0.5, chairMat);
-  seat.position.set(CHAIR.x, 0.5, CHAIR.z);
-  const back = box(0.55, 0.6, 0.06, chairMat);
-  back.position.set(CHAIR.x, 0.84, CHAIR.z + 0.25);
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), chairMat);
-  post.position.set(CHAIR.x, 0.25, CHAIR.z);
-  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 16), chairMat);
-  foot.position.set(CHAIR.x, 0.03, CHAIR.z);
-  group.add(seat, back, post, foot);
-
-  // laptop
-  const shell = new THREE.MeshStandardMaterial({ color: PALETTE.warmPurple, roughness: 0.4, metalness: 0.3 });
-  const base = box(0.35, 0.02, 0.25, shell);
-  base.position.set(0, 0.81, -0.08);
-  const hinge = new THREE.Group();
-  hinge.position.set(0, 0.82, -0.2);
-  hinge.rotation.x = -0.28;
-  const screen = box(0.35, 0.24, 0.01, shell);
-  screen.position.set(0, 0.12, 0);
-  const display = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.21), new THREE.MeshBasicMaterial({ map: screenTexture() }));
-  display.position.set(0, 0.12, 0.006);
-  hinge.add(screen, display);
-  group.add(base, hinge);
-
+  const chair = props.gamingChair('lavender');
+  chair.position.set(0, 0, 1.0);
+  set.add(chair);
+  const lap = props.laptop({ shell: 'lavender' });
+  lap.position.set(0, 0.8, -0.08);
+  lap.userData.screen.material.color.set(PALETTE.lilacHaze).multiplyScalar(1.3);
+  set.add(lap);
   const b = bouquet.create();
   b.position.set(0.62, 0.8, -0.15);
   b.scale.setScalar(0.8);
-  group.add(b);
-
-  // fake shadow under the table
+  set.add(b);
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(1.6, 32),
-    new THREE.MeshBasicMaterial({ color: PALETTE.lacquer, transparent: true, opacity: 0.6, depthWrite: false })
+    new THREE.MeshBasicMaterial({ color: PALETTE.wisteria, transparent: true, opacity: 0.45, depthWrite: false })
   );
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.002;
-  group.add(shadow);
-  // faint floor disc so the set does not float in nothing
+  set.add(shadow);
   const floor = new THREE.Mesh(
     new THREE.CircleGeometry(9, 48),
-    new THREE.MeshLambertMaterial({ color: PALETTE.warmPurple, transparent: true, opacity: 0.25, depthWrite: false })
+    new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist, transparent: true, opacity: 0.8, depthWrite: false })
   );
   floor.rotation.x = -Math.PI / 2;
-  group.add(floor);
-  // solid: the floor, the table and an invisible edge
+  set.add(floor);
   const ground = physics.solidBox(20, 1, 20);
   ground.position.y = -0.5;
   const tableCol = physics.solidBox(2, 0.8, 1);
   tableCol.position.set(0, 0.4, 0);
   const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), 8.6);
-  group.add(ground, tableCol, edge);
-  group.userData.solid = [ground, tableCol, edge];
+  set.add(ground, tableCol, edge);
+  return { set, solid: [ground, tableCol, edge] };
+}
 
-  // the portal waits behind the chair: "turn around."
+// Builds the FINAL sets (the void and the gaming room) into the `final`
+// group, the gaming room visible. REVEAL calls this too when it is entered
+// directly (dev tools) and the group is missing.
+export function buildScene() {
+  group = world.getGroup('final');
+  if (group.children.length) return group;
+  const room = new THREE.Group();
+  room.name = 'final-room';
+  let photo = null;
+  if (PHOTOS.length) {
+    photo = new THREE.TextureLoader().load(PHOTOS[0]);
+    photo.colorSpace = THREE.SRGBColorSpace;
+  }
+  const built = gamingRoom.build(room, { photo });
+  const tex = screenTexture();
+  built.herScreen.material.map = tex;
+  built.herScreen.material.color.set(PALETTE.moonlight);
+  built.herScreen.material.needsUpdate = true;
+  group.add(room);
+  const v = buildVoidSet();
+  v.set.visible = false;
+  group.add(v.set);
+
+  // the portal waits behind her chair: "turn around."
+  // (a holder carries the room-size scale; the portal animates its own)
   portal = portalObj.create();
-  portal.group.position.set(0, 1.6, 6);
-  portal.group.lookAt(0, 1.6, 0);
+  const holder = new THREE.Group();
+  holder.position.copy(gamingRoom.portalSpot);
+  holder.lookAt(gamingRoom.HER_SEAT.x, gamingRoom.portalSpot.y, gamingRoom.HER_SEAT.z);
+  holder.scale.setScalar(gamingRoom.PORTAL_SCALE);
   portal.group.name = 'final-portal';
-  group.add(portal.group);
-  group.userData.portal = portal;
+  holder.add(portal.group);
+  room.add(holder);
+  group.userData = { portal, room, voidSet: v.set, roomSolid: built.solid, voidSolid: v.solid };
   return group;
 }
 
@@ -153,28 +170,70 @@ export function getPortal() {
   return world.getGroup('final').userData.portal;
 }
 
+function showSet(which) {
+  const u = group.userData;
+  u.room.visible = which === 'room';
+  u.voidSet.visible = which === 'void';
+  if (which === 'room') {
+    world.setAtmosphere('indoor', { fogDensity: 0.004 });
+    world.setBounds(new THREE.Vector3(0.5, 1.6, 1.8), 6);
+    world.setColliders(u.roomSolid);
+  } else {
+    world.setAtmosphere('day', { fogDensity: 0.03 });
+    world.setBounds(new THREE.Vector3(VOID.x, 1.6, VOID.z + 2), 12);
+    world.setColliders(u.voidSolid);
+  }
+}
+
 const shortest = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-function seatNow() {
+function seatInVoid() {
   world.setPlayer(SEATED, 0, SEATED_PITCH);
   world.setControls({ move: false, look: false });
-  orb.hold(orbHome);
+  orb.hold(orbVoid);
+}
+
+function seatInRoom() {
+  world.setPlayer(gamingRoom.HER_SEAT, 0, ROOM_PITCH);
+  world.setControls({ move: false, look: false });
+  orb.place(orbRoom);
+  orb.hold(orbRoom);
+}
+
+// Seated in the void: the orb asks for the fragments, she types H·O·M·E.
+async function laptopTime() {
+  phase = 'laptopIntro';
+  await dialogue.say(orb.anchor, TEXT.finalLaptop, { mode: 'story' });
+  if (phase !== 'laptopIntro') return;
+  phase = 'typing';
+  await laptop.open();
+  if (phase !== 'typing') return;
+  phase = 'toRoom';
+  await transitions.portalFlash(PALETTE.moonlight, 900);
+  if (phase !== 'toRoom') return;
+  showSet('room');
+  seatInRoom();
+  roomIntro();
+}
+
+async function roomIntro() {
+  phase = 'roomIntro';
+  audio.play('letter');
+  await dialogue.say(orb.anchor, TEXT.finalBefore, { mode: 'story' });
+  if (phase === 'roomIntro') openLetter();
 }
 
 async function openLetter() {
   phase = 'letter';
-  audio.play('letter');
   setTimeout(() => assets.bufferRevealVideo(), 650); // once the overlay has opened
-  let skipped = false;
-  await overlay.show('letter', { text: TEXT.letter, photos: PHOTOS, onSkip: () => { skipped = true; } });
-  void skipped;
+  await overlay.show('letter', { text: TEXT.letter, photos: PHOTOS });
   save.setSeenLetter();
   afterLetter();
 }
 
 function afterLetter() {
   phase = 'after';
-  seatNow(); // stable chair-facing pose
+  seatInRoom(); // stable chair-facing pose
   dialogue.say(orb.anchor, TEXT.finalAfter, { mode: 'story' }).then(() => {
     if (phase !== 'after') return;
     // Arm only now: bubble dismissed and camera stable. Fresh baseline.
@@ -202,30 +261,27 @@ export default {
     portal.setOpacityNow(0.15);
     save.setReachedFinal();
     world.sky.visible = true;
-    world.setAtmosphere('day', { fogDensity: 0.03 });
-    world.setBounds(new THREE.Vector3(0, 1.6, 2), 12);
-    world.setColliders(group.userData.solid);
     orb.setVisible(true);
     orb.setColor(PALETTE.lavender);
     fragments.show();
     seatT = 0;
 
     if (save.load().seenLetter) {
-      // Refresh after the letter: chair-facing view and the turn-around
-      // beat; the letter is not repeated.
-      orb.place(orbHome);
-      seatNow();
+      // Refresh after the letter: chair-facing view in the gaming room and
+      // the turn-around beat; the letter is not repeated.
+      showSet('room');
+      seatInRoom();
       audio.play('letter');
       assets.bufferRevealVideo();
       afterLetter();
       return;
     }
+    showSet('void');
     phase = 'approach';
     world.setPlayer(SPAWN, SPAWN_YAW, -0.12);
     world.setControls({ move: true, look: true });
     orb.follow();
     orb.place();
-    dialogue.say(orb.anchor, TEXT.finalBefore, { mode: 'story' });
   },
 
   update(dt) {
@@ -240,18 +296,18 @@ export default {
         seatFrom = p.clone();
         fromPitch = world.player.pitch;
         baseYaw = shortest(world.player.yaw);
-        orb.hold(orbHome);
+        orb.hold(orbVoid);
       }
     } else if (phase === 'seating') {
       seatT = Math.min(1, seatT + dt / 1.2);
       const e = seatT * seatT * (3 - 2 * seatT);
       world.camera.position.lerpVectors(seatFrom, SEATED, e);
-      world.player.yaw = baseYaw * (1 - e);
+      world.player.yaw = baseYaw * (1 - e); // ease to face the laptop (−z)
       world.player.pitch = fromPitch + (SEATED_PITCH - fromPitch) * e;
       world.camera.rotation.set(world.player.pitch, world.player.yaw, 0, 'YXZ');
       if (seatT >= 1) {
-        seatNow();
-        openLetter();
+        seatInVoid();
+        laptopTime();
       }
     } else if (phase === 'armed') {
       const turned = Math.abs(shortest(world.player.yaw - baseYaw));
@@ -278,10 +334,16 @@ export default {
   },
 
   _debug() {
-    return { phase, baseYaw, yaw: world.player.yaw, armedT, photos: PHOTOS.length };
+    return { phase, baseYaw, yaw: world.player.yaw, armedT, photos: PHOTOS.length, laptop: laptop.isOpen() };
+  },
+
+  devComplete() {
+    if (phase === 'typing') laptop.devTypeAll();
   },
 
   exit(nextName) {
+    phase = 'leaving';
+    laptop.close();
     world.clearBounds();
     // REVEAL reuses this set (portal glow, camera drift) and disposes it.
     if (nextName !== 'REVEAL') world.disposeGroup('final');

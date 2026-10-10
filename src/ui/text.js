@@ -68,6 +68,25 @@ function labeled(name) {
   return out;
 }
 
+// "H:" then indented code lines until the next blank line → { H: '…' }
+function codeBlocks(name) {
+  const out = {};
+  let key = null;
+  for (const l of section(name)) {
+    const m = l.match(/^([A-Z]):\s*$/);
+    if (m) {
+      key = m[1];
+      out[key] = [];
+    } else if (key && l.trim()) {
+      out[key].push(l.replace(/\s+$/, ''));
+    } else if (key && out[key].length) {
+      key = null;
+    }
+  }
+  for (const k of Object.keys(out)) out[k] = out[k].join('\n');
+  return out;
+}
+
 function numbered(name) {
   const items = [];
   for (const l of section(name)) {
@@ -143,7 +162,7 @@ export const TEXT = {
   petals: { intro: petals.Intro, lost: petals['Lost (pause)'], complete: petals.Complete, restart: petals.Restart, hint: petals['Hint (60s)'] },
   outOfBounds: body('OUT OF BOUNDS — orb line (ambient)'),
   finalLaptop: body('FINAL — orb line at the laptop'),
-  laptopCode: labeled('FINAL — laptop fragment code'),
+  laptopCode: codeBlocks('FINAL — laptop fragment code'),
   finalBefore: body('FINAL — orb line before letter'),
   finalAfter: body('FINAL — orb line after letter'),
   letter: prose(section('FINAL — letter (typewriter, serif)')),

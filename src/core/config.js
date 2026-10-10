@@ -22,7 +22,11 @@ export const PALETTE = {
   twilight: '#6e55a8',
   dusk: '#9a7cc9',
   meadow: '#b9dca4',
-  sunlit: '#fff1d6'
+  sunlit: '#fff1d6',
+  // the house: warm wood, soft linen
+  oak: '#c9a27e',
+  walnut: '#8b6450',
+  linen: '#f6efe9'
 };
 
 export const PASSCODE = '1010';

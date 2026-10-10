@@ -170,6 +170,7 @@ export default {
     const g = world.getGroup('final');
     if (!g.children.length) {
       buildScene();
+      world.setAtmosphere('indoor', { fogDensity: 0.004 });
       world.setPlayer(new THREE.Vector3(0, 1.18, 0.95), Math.PI, 0);
     }
     world.sky.visible = true;

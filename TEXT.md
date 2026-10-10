@@ -112,11 +112,26 @@ here, this way
 ## FINAL — orb line at the laptop (in the void)
 type them in, one by one. H first.
 
-## FINAL — laptop fragment code (H, O, M, E keys; each key types its block — full blocks to be drafted and approved)
-H: heart.connect(ayish)
-O: open(door.next)
-M: memories.load(all)
-E: execute(home.exe)
+## FINAL — laptop fragment code (H, O, M, E keys; each key types its block, in order; approved 2026-10-10)
+H:
+heart.connect(ayish)
+  .beat("lub dub")
+  .stay(forever);
+
+O:
+open(door.next)
+  .with(you)
+  .always();
+
+M:
+memories.load(all)
+  .keep("the night we watched the stars")
+  .save();
+
+E:
+execute(home.exe)
+  // together
+  // safe
 
 ## FINAL — orb line before letter (in the gaming room)
 it's on the screen. take your time.
