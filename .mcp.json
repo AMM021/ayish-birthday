@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "okffs": {
+      "command": "npx",
+      "args": ["@neturely/okffs@latest"]
+    }
+  }
+}
