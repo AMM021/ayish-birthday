@@ -1,0 +1,563 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tsuki House</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Karla:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an architect's review set — title block, then drawings on paper, each sheet with a caption strip and a dimensioned plan. */
+:root {
+  --paper: #f7f5f1;
+  --sheet: #ffffff;
+  --ink: #23212a;
+  --muted: #6c6875;
+  --line: #2c2a33;
+  --hair: #d9d5de;
+  --accent: #7e5fb8;
+  --accent-soft: #e9e0f6;
+  --water: #cfe3ec;
+  --green: #d9e7cf;
+  --green-deep: #a9c79a;
+  --stone: #e6e1d8;
+  --wood: #e9d6bd;
+  --fill: #f3f0ec;
+  --display: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Noto Serif JP', Georgia, serif;
+  --body: 'Karla', 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #17161b; --sheet: #1f1e25; --ink: #ece9f2; --muted: #a29eac; --line: #e4e0ec; --hair: #3a3742;
+    --accent: #b99cf0; --accent-soft: #3a2f52; --water: #29404b; --green: #2b3a28; --green-deep: #3f5638;
+    --stone: #34312e; --wood: #46392b; --fill: #26252c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #17161b; --sheet: #1f1e25; --ink: #ece9f2; --muted: #a29eac; --line: #e4e0ec; --hair: #3a3742;
+  --accent: #b99cf0; --accent-soft: #3a2f52; --water: #29404b; --green: #2b3a28; --green-deep: #3f5638;
+  --stone: #34312e; --wood: #46392b; --fill: #26252c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 16px/1.6 var(--body); padding-inline: 16px; padding-block: 0 64px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; }
+h2 { font-size: 1.55rem; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 500 0.72rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header.title { padding-block: 40px 8px; display: grid; gap: 14px; }
+.titleblock { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); border: 1px solid var(--line); background: var(--sheet); }
+.titleblock div { padding: 10px 14px; border-right: 1px solid var(--hair); min-width: 0; }
+.titleblock div:last-child { border-right: 0; }
+.titleblock b { display: block; font: 500 0.68rem/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.sheet { background: var(--sheet); border: 1px solid var(--hair); padding: 22px; display: grid; gap: 16px; min-width: 0; }
+.sheet-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 20px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.drawing { overflow-x: auto; }
+.drawing svg { display: block; max-width: none; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.cols > * { min-width: 0; }
+ul.clean { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+th { font: 500 0.7rem/1.3 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { font: 500 0.82rem/1 var(--mono); padding: 8px 12px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--sheet); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sw { border: 1px solid var(--hair); }
+.sw i { display: block; height: 54px; }
+.sw span { display: block; padding: 6px 8px; font-size: 0.82rem; line-height: 1.35; }
+.sw small { display: block; color: var(--muted); font-family: var(--mono); font-size: 0.7rem; }
+.decision { display: grid; grid-template-columns: 2.2rem 1fr; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.decision b.k { font: 700 1.1rem/1 var(--display); color: var(--accent); }
+.note { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--accent-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 0.82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--line); }
+.story { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; counter-reset: s; }
+.story div { border: 1px solid var(--hair); padding: 10px; font-size: 0.88rem; }
+.story div::before { counter-increment: s; content: counter(s); display: block; font: 700 1.2rem/1 var(--display); color: var(--accent); margin-bottom: 6px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--fill); padding: 1px 5px; }
+svg text { font-family: var(--body); fill: var(--ink); }
+svg .dim { font-family: var(--mono); fill: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .tabs button { transition: background 150ms ease, color 150ms ease; } }
+</style>
+
+<div class="wrap">
+  <header class="title">
+    <span class="eyebrow">Design review · revision 2 · organic form, tea room removed</span>
+    <h1>Tsuki House</h1>
+    <p>Ayish's dream house and garden. <em>Tsuki</em> means moon. The house has no box in it: a long crescent of rooms curves around a koi pond, a round tower holds the stair and an indoor tree, a rounded east wing holds the kitchen, and an oval bedroom floats above the crescent. Curved earth walls face outward and full-height glass faces the pond. Everything is drawn to scale in metres.</p>
+    <div class="titleblock">
+      <div><b>Site</b><span class="mono">68 × 64 m</span></div>
+      <div><b>Gross floor area</b><span class="mono" id="gfa">—</span></div>
+      <div><b>Floors</b><span class="mono">3 + tower crown</span></div>
+      <div><b>Floor to floor</b><span class="mono">3.40 m (3.00 clear)</span></div>
+      <div><b>Orientation</b><span class="mono">Garden + sunset → south-west</span></div>
+    </div>
+  </header>
+
+  <section class="sheet" aria-labelledby="concept">
+    <div class="sheet-head"><h2 id="concept">Concept</h2><span class="eyebrow">Sheet 01</span></div>
+    <div class="cols">
+      <div><h3>A crescent around water</h3><p>The sunroom, library and living room follow one curve around the koi pond. On the outside, thick rammed-earth walls give shelter, with small deep windows onto the gravel garden. On the inside, a continuous glass wall and a curved engawa open every room to the pond.</p></div>
+      <div><h3>Forms, not boxes</h3><p>A round tower with a spiral stair around a maple. A stadium-shaped east wing with a curved glass dining end. An oval bedroom pod, clad in timber, cantilevered over the crescent. Its roof sweeps like a leaf. Planted roofs and a curving roof terrace step down toward the garden.</p></div>
+      <div><h3>Nature inside</h3><p>Every main room looks onto a part of the garden made for it. The library looks onto the gravel garden and the pond, the living room onto the pond, the round dining room onto the pergola, the sunroom onto the jacarandas, and the bedroom onto the sunset and the city.</p></div>
+    </div>
+  </section>
+
+  <section class="sheet" aria-labelledby="site">
+    <div class="sheet-head"><h2 id="site">Site plan and garden</h2><span class="eyebrow">Sheet 02 · 1 : 400</span></div>
+    <div class="drawing" id="siteSvg"></div>
+    <div class="legend">
+      <span><i style="background:var(--water)"></i>Water (pool, koi pond)</span>
+      <span><i style="background:var(--green)"></i>Lawn and planting</span>
+      <span><i style="background:var(--stone)"></i>Stone, gravel and paths</span>
+      <span><i style="background:var(--wood)"></i>Timber decks</span>
+      <span><i style="background:var(--accent-soft)"></i>Jacaranda grove (purple)</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Garden zone</th><th>What it is for</th></tr></thead>
+      <tbody id="zones"></tbody>
+    </table>
+  </section>
+
+  <section class="sheet" aria-labelledby="plans">
+    <div class="sheet-head"><h2 id="plans">Floor plans</h2><span class="eyebrow">Sheet 03 · 1 : 100</span></div>
+    <div class="tabs" role="tablist" aria-label="Floor">
+      <button role="tab" id="tab-GF" aria-selected="true" data-f="GF">Ground floor ±0.00</button>
+      <button role="tab" id="tab-1F" aria-selected="false" data-f="1F">First floor +3.40</button>
+      <button role="tab" id="tab-2F" aria-selected="false" data-f="2F">Second floor +6.80</button>
+    </div>
+    <div class="drawing" id="planSvg"></div>
+    <table>
+      <thead><tr><th>Room</th><th>Size</th><th>Area</th><th>Furniture (real sizes)</th></tr></thead>
+      <tbody id="rooms"></tbody>
+    </table>
+  </section>
+
+  <section class="sheet" aria-labelledby="elev">
+    <div class="sheet-head"><h2 id="elev">South elevation</h2><span class="eyebrow">Sheet 04 · 1 : 200</span></div>
+    <div class="drawing" id="elevSvg"></div>
+    <p>This is the view from the garden, with the crescent unrolled into a flat silhouette. The crescent's planted roof rises toward the tower. The timber studio sits on top, and above it floats the oval bedroom pod under a leaf-shaped roof, with its curved glass balcony. The tower carries a glass crown. The rounded east wing has a curved glass dining end and a planted roof.</p>
+  </section>
+
+  <section class="sheet" aria-labelledby="mat">
+    <div class="sheet-head"><h2 id="mat">Materials, light and doors</h2><span class="eyebrow">Sheet 05</span></div>
+    <div class="swatches" id="swatches"></div>
+    <div class="cols">
+      <div>
+        <h3>Lighting (no more glare)</h3>
+        <ul class="clean">
+          <li>Light is baked in Blender (Cycles) for a soft sunset, real bounce light and real shadows in every room.</li>
+          <li>Indoor fixtures use warm 2700 K hidden cove light, wall washers and pendants with glowing shades. Only the small bulbs bloom, and their brightness is set per room, so nothing blinds her.</li>
+          <li>Only the orb and doors are lit live. The orb's glow is softened when it is close to the camera.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Doors that work</h3>
+        <ul class="clean">
+          <li><b>Front door:</b> a 1.2 m oak pivot door. Glass sliding doors to the engawa, the pergola, the terrace and the balcony.</li>
+          <li><b>Inside:</b> shoji sliders to the library and tea room, and oak doors to the bath, WC, studio, bedroom and wardrobe.</li>
+          <li><b>How they open:</b> each one opens smoothly as she walks up and closes behind her. While a door is open she can walk through it; while it is closed it is solid.</li>
+          <li>The round anniversary moon door stays sealed, with its note.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Real spacing, checked</h3>
+        <ul class="clean" id="checks"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" aria-labelledby="levels">
+    <div class="sheet-head"><h2 id="levels">Levels 3 and 4, and the fragment moment</h2><span class="eyebrow">Sheet 06 · gameplay</span></div>
+    <div class="cols">
+      <div>
+        <h3>Level 3 · Stars: “The Sky Remembers”</h3>
+        <ul class="clean">
+          <li><b>1. Melody:</b> a night lake with lily-pad stepping stones and seven floating star-lanterns. The orb hums a melody, and each star is one note. She walks to the stars in the order she heard them. There are three rounds of 3, 4 and 5 notes. It's a memory game played by ear, not by sight, so it's different from the gates level.</li>
+          <li><b>2. Bridge:</b> each melody she finishes lights part of a bridge of light across the water to the heart island. If she slips off a stone, she gently reappears on the last stone she was on.</li>
+          <li><b>3. The heart:</b> on the island she walks the nine heart stars in order, with the outline drawn on the ground. Then a shower of shooting stars, and the camera rises.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Level 4 · Petals: “The Storm”</h3>
+        <ul class="clean">
+          <li><b>Act 1:</b> she stays in the light along a blossom path, as it is now, but gentler.</li>
+          <li><b>Act 2, the wind:</b> gusts really push her sideways and petals hide the path. The light shrinks and weaves between stone lanterns and fallen branches she has to walk around.</li>
+          <li><b>Act 3, the storm:</b> the light splits in two, and only the true one hums. She follows it across a stream bridge to a giant sakura tree, which bursts into bloom.</li>
+          <li><b>Checkpoints:</b> each act has its own checkpoint, so failing only restarts that act. It's hard without being cruel.</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Fragment animation (every level)</h3>
+    <div class="story">
+      <div>The level-complete chime plays and the world holds still for a moment.</div>
+      <div>The fragment's code block (for H: <code>heart.connect(ayish)</code>…) types itself in glowing script in the air in front of her.</div>
+      <div>The lines fold into one bright letter, H.</div>
+      <div>The letter flies in an arc to the H·O·M·E bar, leaving a trail of sparkles.</div>
+      <div>The tile lights up with a pop, then the orb says its fragment line.</div>
+    </div>
+    <p class="note">The new levels need a few new orb lines. I'll draft them for your approval before writing them, as before.</p>
+  </section>
+
+  <section class="sheet" aria-labelledby="build">
+    <div class="sheet-head"><h2 id="build">How it gets built</h2><span class="eyebrow">Sheet 07</span></div>
+    <div class="cols">
+      <div>
+        <h3>Pipeline</h3>
+        <ul class="clean">
+          <li>These drawings come from one data file. The same file drives Blender, so the game is built to exactly this plan.</li>
+          <li>Blender builds the walls, the curved walls, the stairs, the windows and the joinery. Its scripts model the beds, kitchen, bath and toilet fixtures, since no free set has good ones.</li>
+          <li>The furniture, plants, trees and rocks are free CC0 models from Poly Haven. The floors, plaster, stone, fabric and tiles are CC0 textures from ambientCG.</li>
+          <li>Blender lays everything out and checks each piece against walls and other pieces, so nothing pokes through. Then it bakes the lighting and exports compressed files for the browser.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Budget</h3>
+        <table>
+          <tbody>
+            <tr><td>House + garden download</td><td class="num">≤ 60 MB, loaded only after the end card</td></tr>
+            <tr><td>Textures</td><td class="num">1k compressed (KTX2)</td></tr>
+            <tr><td>Baked light maps</td><td class="num">4 × 2048²</td></tr>
+            <tr><td>Draw calls</td><td class="num">≤ 400</td></tr>
+            <tr><td>Target</td><td class="num">60 fps on your RTX 4050 laptop</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Order of work</h3>
+        <ul class="clean">
+          <li>Blender pipeline and asset download</li>
+          <li>Building shell with baked light</li>
+          <li>Furniture and working doors</li>
+          <li>Garden, pool, pond and paths</li>
+          <li>The FINAL gaming room becomes the real studio</li>
+          <li>The new levels 3 and 4</li>
+          <li>The fragment animation</li>
+          <li>Performance pass and full replay</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" aria-labelledby="dec">
+    <div class="sheet-head"><h2 id="dec">What I need you to approve</h2><span class="eyebrow">Sheet 08</span></div>
+    <div class="decision"><b class="k">A</b><div><b>The house:</b> the layout on sheets 03 and 04, with the room uses and furniture shown.</div></div>
+    <div class="decision"><b class="k">B</b><div><b>The garden zones</b> on sheet 02, including the infinity pool facing the city and the jacaranda grove with the fire pit.</div></div>
+    <div class="decision"><b class="k">C</b><div><b>Updated:</b> the tea room is dropped. There's a glass sunroom full of plants at the end of the crescent, and a small powder room (WC) by the entrance.</div></div>
+    <div class="decision"><b class="k">D</b><div><b>The anniversary door</b> becomes a round moon door at the top of the tower, leading to a sealed rooftop moon deck.</div></div>
+    <div class="decision"><b class="k">E</b><div><b>Levels 3 and 4</b> as described on sheet 06, plus the fragment animation.</div></div>
+    <div class="decision"><b class="k">F</b><div><b>The void levels:</b> they stay dreamlike, since they happen inside his code, but get realistic materials (real water, stone, grass, sakura) so the jump to the realistic house doesn't feel jarring.</div></div>
+    <div class="decision"><b class="k">G</b><div><b>Install Blender on your laptop.</b> Type <code>! sudo pacman -S blender</code> in Claude Code. It asks for your password once.</div></div>
+  </section>
+</div>
+
+<script>
+// ---- the plan data (metres; x → east, z → south; angles in degrees, 0° = east, 90° = south) ----
+const T = 0.3;
+const POND = { x: -9, z: 12 };            // the crescent embraces the koi pond
+const TOWER = { x: 0, z: 0, r: 3.3 };
+const BAND = { r0: 9.5, r1: 17.5 };       // crescent: inner glass edge → outer earth wall
+const STAD = { x0: 2.5, x1: 14.5, z0: -4.5, z1: 3.5 }; // rounded east wing (stadium)
+const POD = { x: -10.5, z: -1.2, rx: 6.2, rz: 4.4, rot: -8 }; // the oval bedroom pod (2F)
+
+const floors = {
+  GF: {
+    label: 'Ground floor', y: 0,
+    rooms: [
+      { n: 'Sunroom', sec: [196, 218, 9.5, 15.5], tint: 'green', f: 'Glass on three sides · climbing plants and potted trees · two wicker armchairs and a small round table · watering bench' },
+      { n: 'Library', sec: [218, 258, 9.5, 17.5], tint: 'wood', f: 'Curved bookshelves 3.0 m high following the outer wall, with a brass rail and rolling ladder · reading table 2.0 × 0.9 with 4 chairs · 2 armchairs at the glass facing the pond · window seat looking out to the gravel garden' },
+      { n: 'Living', sec: [258, 299, 9.5, 17.5], f: 'Curved sectional 4.2 m following the glass · 2 lounge chairs · round coffee table Ø 1.1 · fireplace in the curved stone wall · rug 3.5 × 2.5 · daybed at the glass facing the pond' },
+      { n: 'Genkan', r: [-2, -9, 2, -3.0], f: 'Stone floor, then a 15 cm step up to oak · shoe cabinet 1.6 × 0.4 · bench 1.2 × 0.4 · coat closet · 1.2 m pivot front door' },
+      { n: 'WC', r: [2.2, -9, 4.8, -6.6], f: 'Powder room: toilet with muslim shower · basin · mirror' },
+      { n: 'Tower', circle: true, f: 'Spiral oak stair (2.0 m wide, 20 risers of 17 cm per floor) around a planter with a Japanese maple · skylight 3 floors up' },
+      { n: 'Kitchen', stad: [STAD.x0, STAD.z0, 8.6, STAD.z1], end: 'w', f: 'Counter along the curved west end 6.5 m · tall units for fridge and ovens on the north wall · island 3.0 × 1.1 with 3 stools · pantry cupboard wall · 1.2 m clear all around' },
+      { n: 'Dining', stad: [8.6, STAD.z0, STAD.x1, STAD.z1], end: 'e', f: 'Round oak table Ø 1.6 for 8 under a paper pendant, inside the curved glass end · sideboard · glass sliders to the pergola' },
+      { n: 'Laundry', r: [6.0, -7.4, 10.5, -4.5], f: 'Washer and dryer · utility sink · back door to the herb garden' }
+    ]
+  },
+  '1F': {
+    label: 'First floor', y: 3.4,
+    rooms: [
+      { n: 'Roof meadow', sec: [196, 218, 9.5, 15.5], terrace: true, green: true, f: 'Planted roof over the sunroom' },
+      { n: 'Terrace', sec: [218, 255, 9.5, 17.5], terrace: true, f: 'Timber deck curving around the pond side · 2 loungers · planters · steps of seating' },
+      { n: 'Our studio (work + games)', sec: [255, 299, 10, 17.5], tint: 'accent', f: 'Long curved desk 3.6 m at the window, facing the pond and the sunset, with her laptop and his · 2 gaming chairs · wall shelves for his toy cars (2.4 m, 6 shelves) · sofa 2.2 × 0.9 · 2 beanbags · plants · fairy lights' },
+      { n: 'Tower', circle: true, f: 'Stair continues' },
+      { n: 'Bathroom', stad: [STAD.x0, STAD.z0, 9.0, STAD.z1], end: 'w', f: 'Freestanding tub 1.8 × 0.85 in the curved window end · walk-in shower 2.0 × 1.2, glass · WC cubicle 1.2 × 1.8 with muslim shower · double vanity 2.0 × 0.55 with a wide mirror · bench · towel ladder · plants · skylight' },
+      { n: 'Roof meadow', stad: [9.0, STAD.z0, STAD.x1, STAD.z1], end: 'e', terrace: true, green: true, f: 'Planted roof over the dining room (not walkable)' }
+    ]
+  },
+  '2F': {
+    label: 'Second floor', y: 6.8,
+    rooms: [
+      { n: 'Bedroom', pod: true, tint: 'accent', f: 'King bed 2.1 × 2.3 with an upholstered curved headboard · nightstands with lamps on both sides · bench at the foot · lounge chair and ottoman at the sunset window · dresser · round rug Ø 3.5 · walk-in wardrobe behind the bed wall' },
+      { n: 'Bridge', r: [-4.6, -2.0, -3.0, -0.4], f: 'Short glass-walled bridge from the tower to the bedroom pod, looking down onto the pond' },
+      { n: 'Balcony', sec: [248, 284, 8.2, 10.6], terrace: true, f: 'Curved timber balcony over the pond · glass balustrade · 2 loungers · view to the sunset and the city' },
+      { n: 'Tower', circle: true, moon: true, f: 'Top landing · the sealed round moon door to the rooftop moon deck (“Locked until our anniversary.”)' }
+    ]
+  }
+};
+
+const zones = [
+  { k: 1, n: 'Moon gate and roji path', p: 'You arrive from the north through a round opening in a plaster garden wall. Stepping stones lead through moss, ferns and maples, past two stone lanterns, to the front door.' },
+  { k: 2, n: 'Raked gravel garden', p: 'Outside the library\'s outer windows: raked gravel, three boulders and moss islands, for quiet reading.' },
+  { k: 3, n: 'Engawa deck', p: 'A curved timber veranda along the inside of the crescent. Sit with your feet over the koi pond.' },
+  { k: 4, n: 'Koi pond and bridge', p: 'The heart of the garden, held by the curve of the house. Lotus, stepping stones and a small arched oak bridge.' },
+  { k: 5, n: 'Lawn', p: 'An open lawn between the pond and the pool, for picnics.' },
+  { k: 6, n: 'Infinity pool', p: 'A 16 × 4 m lap pool on a stone deck, with three loungers and a shade sail. Its far edge disappears toward the city and the sunset.' },
+  { k: 7, n: 'Jacaranda grove and fire pit', p: 'Purple jacaranda trees over a wildflower meadow beyond the sunroom, with a round fire pit and a curved bench for the sunset.' },
+  { k: 8, n: 'Pergola dining', p: 'An outdoor table for 8 under a vine pergola strung with fairy lights, right off the round dining room.' },
+  { k: 9, n: 'Kitchen garden', p: 'Raised herb and vegetable beds, a round herb spiral and three fruit trees, by the laundry\'s back door.' },
+  { k: 10, n: 'Garden loop and edges', p: 'One gravel path loops through every zone with low lights along it. Bamboo and hedges close the sides; the south edge stays open for the view.' }
+];
+
+// ---- geometry ------------------------------------------------------------
+const rad = (d) => (d * Math.PI) / 180;
+const polar = (r, a) => [POND.x + r * Math.cos(rad(a)), POND.z + r * Math.sin(rad(a))];
+function areaOf(room) {
+  if (room.circle) return Math.PI * (TOWER.r - T) ** 2;
+  if (room.sec) { const [a0, a1, r0, r1] = room.sec; return 0.5 * rad(a1 - a0) * (r1 * r1 - r0 * r0); }
+  if (room.pod) return Math.PI * POD.rx * POD.rz;
+  if (room.stad) { const [x0, z0, x1, z1] = room.stad; const h = z1 - z0; return (x1 - x0 - h / 2) * h + Math.PI * (h / 2) ** 2 / 2; }
+  return (room.r[2] - room.r[0]) * (room.r[3] - room.r[1]);
+}
+const fmt = (n) => n.toFixed(n < 10 ? 1 : 0);
+const css = (v) => `var(--${v})`;
+function sizeOf(room) {
+  if (room.circle) return `Ø ${((TOWER.r - T) * 2).toFixed(1)} m`;
+  if (room.sec) { const [a0, a1, r0, r1] = room.sec; return `${fmt(r1 - r0)} m deep, ${fmt(rad(a1 - a0) * (r0 + r1) / 2)} m along the curve`; }
+  if (room.pod) return `${fmt(POD.rx * 2)} × ${fmt(POD.rz * 2)} m oval`;
+  const b = room.stad ?? room.r;
+  return `${fmt(b[2] - b[0])} × ${fmt(b[3] - b[1])} m`;
+}
+function roomPath(room, X, Z, S) {
+  if (room.sec) {
+    const [a0, a1, r0, r1] = room.sec;
+    const [x0, z0] = polar(r1, a0), [x1, z1] = polar(r1, a1), [x2, z2] = polar(r0, a1), [x3, z3] = polar(r0, a0);
+    const large = a1 - a0 > 180 ? 1 : 0;
+    return `M ${X(x0)} ${Z(z0)} A ${r1 * S} ${r1 * S} 0 ${large} 1 ${X(x1)} ${Z(z1)} L ${X(x2)} ${Z(z2)} A ${r0 * S} ${r0 * S} 0 ${large} 0 ${X(x3)} ${Z(z3)} Z`;
+  }
+  if (room.stad) {
+    const [x0, z0, x1, z1] = room.stad;
+    const r = (z1 - z0) / 2;
+    if (room.end === 'w') return `M ${X(x1)} ${Z(z0)} L ${X(x0 + r)} ${Z(z0)} A ${r * S} ${r * S} 0 0 0 ${X(x0 + r)} ${Z(z1)} L ${X(x1)} ${Z(z1)} Z`;
+    return `M ${X(x0)} ${Z(z0)} L ${X(x1 - r)} ${Z(z0)} A ${r * S} ${r * S} 0 0 1 ${X(x1 - r)} ${Z(z1)} L ${X(x0)} ${Z(z1)} Z`;
+  }
+  const [x0, z0, x1, z1] = room.r;
+  return `M ${X(x0)} ${Z(z0)} H ${X(x1)} V ${Z(z1)} H ${X(x0)} Z`;
+}
+function labelAt(room) {
+  if (room.sec) { const [a0, a1, r0, r1] = room.sec; return polar((r0 + r1) / 2, (a0 + a1) / 2); }
+  if (room.pod) return [POD.x, POD.z];
+  const b = room.stad ?? room.r;
+  return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+}
+function fillOf(r) {
+  if (r.green) return css('green');
+  if (r.terrace) return css('wood');
+  if (r.tint === 'accent') return css('accent-soft');
+  if (r.tint === 'wood') return css('wood');
+  if (r.tint === 'green') return css('green');
+  return css('fill');
+}
+function podPath(X, Z, S) {
+  return `<ellipse cx="${X(POD.x)}" cy="${Z(POD.z)}" rx="${POD.rx * S}" ry="${POD.rz * S}" transform="rotate(${POD.rot} ${X(POD.x)} ${Z(POD.z)})"`;
+}
+
+function planSVG(key) {
+  const f = floors[key];
+  const S = 15;
+  const X0 = -28, X1 = 17, Z0 = -11, Z1 = 23;
+  const W = (X1 - X0) * S, H = (Z1 - Z0) * S;
+  const X = (x) => ((x - X0) * S).toFixed(1);
+  const Z = (z) => ((z - Z0) * S).toFixed(1);
+  let s = `<svg width="${W}" height="${H + 30}" viewBox="0 0 ${W} ${H + 30}" role="img" aria-label="${f.label} plan">`;
+  for (let x = Math.ceil(X0); x <= X1; x++) s += `<line x1="${X(x)}" y1="0" x2="${X(x)}" y2="${H}" stroke="${css('hair')}" stroke-width="${x % 5 === 0 ? 0.8 : 0.3}"/>`;
+  for (let z = Math.ceil(Z0); z <= Z1; z++) s += `<line x1="0" y1="${Z(z)}" x2="${W}" y2="${Z(z)}" stroke="${css('hair')}" stroke-width="${z % 5 === 0 ? 0.8 : 0.3}"/>`;
+  // the pond, for orientation
+  s += `<ellipse cx="${X(POND.x)}" cy="${Z(POND.z + 1)}" rx="${6.2 * S}" ry="${5 * S}" fill="${css('water')}" stroke="${css('line')}" stroke-width="0.6" stroke-dasharray="3 3"/>`;
+  s += `<text x="${X(POND.x)}" y="${Z(POND.z + 1)}" text-anchor="middle" font-size="11" class="dim">koi pond</text>`;
+  for (const r of f.rooms) {
+    if (r.circle) continue;
+    const dash = r.terrace ? ' stroke-dasharray="5 4"' : '';
+    if (r.pod) s += `${podPath(X, Z, S)} fill="${fillOf(r)}" stroke="${css('line')}" stroke-width="2.6"/>`;
+    else s += `<path d="${roomPath(r, X, Z, S)}" fill="${fillOf(r)}" stroke="${css('line')}" stroke-width="${r.terrace ? 1 : 2.2}"${dash}/>`;
+    // inner glass edge of the crescent rooms
+    if (r.sec && !r.terrace) {
+      const [a0, a1, r0] = r.sec;
+      const [x2, z2] = polar(r0, a1), [x3, z3] = polar(r0, a0);
+      s += `<path d="M ${X(x2)} ${Z(z2)} A ${r0 * S} ${r0 * S} 0 0 0 ${X(x3)} ${Z(z3)}" fill="none" stroke="${css('accent')}" stroke-width="3"/>`;
+    }
+    const [lx, lz] = labelAt(r);
+    s += `<text x="${X(lx)}" y="${Z(lz)}" text-anchor="middle" font-size="11.5" font-weight="600">${r.n}</text>`;
+    s += `<text x="${X(lx)}" y="${Z(lz) * 1 + 14}" text-anchor="middle" font-size="10" class="dim">${Math.round(areaOf(r))} m²</text>`;
+  }
+  // tower + spiral stair
+  const tr = TOWER.r * S;
+  s += `<circle cx="${X(0)}" cy="${Z(0)}" r="${tr}" fill="${css('stone')}" stroke="${css('line')}" stroke-width="5"/>`;
+  s += `<circle cx="${X(0)}" cy="${Z(0)}" r="${0.85 * S}" fill="${css('green-deep')}" stroke="${css('line')}"/>`;
+  const steps = 20, sweep = 2.95;
+  const a0 = key === 'GF' ? -2.0 : key === '1F' ? 1.2 : 4.4;
+  for (let i = 0; i <= steps; i++) {
+    const a = a0 + (sweep * i) / steps;
+    s += `<line x1="${X(Math.cos(a) * 0.95)}" y1="${Z(Math.sin(a) * 0.95)}" x2="${X(Math.cos(a) * 2.95)}" y2="${Z(Math.sin(a) * 2.95)}" stroke="${css('muted')}" stroke-width="0.8"/>`;
+  }
+  const wa = a0 + 0.1, wb = a0 + sweep;
+  s += `<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="${css('accent')}"/></marker></defs>`;
+  s += `<path d="M ${X(Math.cos(wa) * 1.95)} ${Z(Math.sin(wa) * 1.95)} A ${1.95 * S} ${1.95 * S} 0 0 1 ${X(Math.cos(wb) * 1.95)} ${Z(Math.sin(wb) * 1.95)}" fill="none" stroke="${css('accent')}" stroke-width="1.6" marker-end="url(#arr)"/>`;
+  if (f.rooms.some((r) => r.moon)) {
+    s += `<circle cx="${X(2.3)}" cy="${Z(-2.3)}" r="${0.6 * S}" fill="${css('accent')}" stroke="${css('line')}"/>`;
+    s += `<text x="${X(2.3)}" y="${Z(-3.5)}" text-anchor="middle" font-size="10" font-weight="600">moon door</text>`;
+  }
+  s += `<g transform="translate(${W - 34},26)"><circle r="14" fill="${css('sheet')}" stroke="${css('line')}"/><path d="M0,-12 L5,6 L0,2 L-5,6 Z" fill="${css('ink')}"/><text y="-17" text-anchor="middle" font-size="10" font-weight="600">N</text></g>`;
+  s += `<g transform="translate(14,${H + 18})"><rect width="${5 * S}" height="5" fill="${css('ink')}"/><rect x="${5 * S}" width="${5 * S}" height="5" fill="none" stroke="${css('ink')}"/><text x="0" y="-4" font-size="10" class="dim">0</text><text x="${5 * S}" y="-4" font-size="10" class="dim" text-anchor="middle">5</text><text x="${10 * S}" y="-4" font-size="10" class="dim" text-anchor="middle">10 m</text></g>`;
+  return s + '</svg>';
+}
+
+function siteSVG() {
+  const S = 7.5;
+  const X0 = -36, X1 = 32, Z0 = -24, Z1 = 40;
+  const W = (X1 - X0) * S, H = (Z1 - Z0) * S;
+  const X = (x) => ((x - X0) * S).toFixed(1);
+  const Z = (z) => ((z - Z0) * S).toFixed(1);
+  const rect = (x0, z0, x1, z1, fill, extra = '') => `<rect x="${X(x0)}" y="${Z(z0)}" width="${(x1 - x0) * S}" height="${(z1 - z0) * S}" fill="${fill}" ${extra}/>`;
+  const circ = (x, z, r, fill, extra = '') => `<circle cx="${X(x)}" cy="${Z(z)}" r="${r * S}" fill="${fill}" ${extra}/>`;
+  const ell = (x, z, rx, rz, fill, extra = '') => `<ellipse cx="${X(x)}" cy="${Z(z)}" rx="${rx * S}" ry="${rz * S}" fill="${fill}" ${extra}/>`;
+  const tag = (k, x, z) => `<g><circle cx="${X(x)}" cy="${Z(z)}" r="9" fill="${css('ink')}"/><text x="${X(x)}" y="${Z(z) * 1 + 4}" text-anchor="middle" font-size="10" font-weight="700" style="fill:var(--sheet)">${k}</text></g>`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Site plan">`;
+  s += rect(X0, Z0, X1, Z1, css('green'));
+  s += `<line x1="${X(X0)}" y1="${Z(-22)}" x2="${X(X1)}" y2="${Z(-22)}" stroke="${css('line')}" stroke-width="4"/>`;
+  s += circ(0, -22, 1.4, css('sheet'), `stroke="${css('line')}" stroke-width="3"`);
+  for (const x of [X0 + 0.5, X1 - 0.5]) s += `<line x1="${X(x)}" y1="${Z(-22)}" x2="${X(x)}" y2="${Z(30)}" stroke="${css('green-deep')}" stroke-width="7"/>`;
+  s += rect(-12, -21, 12, -9.5, css('green-deep'), 'opacity="0.55"');
+  for (let i = 0; i < 9; i++) s += circ(Math.sin(i * 1.4) * 0.8, -20.5 + i * 1.3, 0.45, css('stone'), `stroke="${css('line')}" stroke-width="0.6"`);
+  // gravel garden outside the library
+  s += rect(-30, -13, -18, -4, css('stone'));
+  for (let i = 0; i < 7; i++) s += `<path d="M ${X(-29.5)} ${Z(-12.4 + i * 1.2)} Q ${X(-24)} ${Z(-11.9 + i * 1.2)} ${X(-18.5)} ${Z(-12.4 + i * 1.2)}" fill="none" stroke="${css('muted')}" stroke-width="0.6"/>`;
+  s += circ(-26, -9.5, 1.1, css('muted')) + circ(-21.5, -6.4, 0.8, css('muted')) + circ(-23.5, -5, 0.5, css('muted'));
+  // engawa ring + pond inside the crescent
+  const ringPath = (r0, r1, a0, a1) => {
+    const p = (r, a) => [POND.x + r * Math.cos(rad(a)), POND.z + r * Math.sin(rad(a))];
+    const [x0, z0] = p(r1, a0), [x1, z1] = p(r1, a1), [x2, z2] = p(r0, a1), [x3, z3] = p(r0, a0);
+    return `M ${X(x0)} ${Z(z0)} A ${r1 * S} ${r1 * S} 0 0 1 ${X(x1)} ${Z(z1)} L ${X(x2)} ${Z(z2)} A ${r0 * S} ${r0 * S} 0 0 0 ${X(x3)} ${Z(z3)} Z`;
+  };
+  s += `<path d="${ringPath(8, 9.5, 196, 299)}" fill="${css('wood')}" stroke="${css('line')}" stroke-width="0.6"/>`;
+  s += ell(POND.x, POND.z + 1, 6.2, 5, css('water'), `stroke="${css('line')}" stroke-width="0.8"`);
+  s += rect(-9.6, 7.6, -8.4, 13.4, css('wood'), `stroke="${css('line')}" stroke-width="0.6"`);
+  // house footprint
+  for (const r of floors.GF.rooms) {
+    if (r.circle) continue;
+    s += `<path d="${roomPath(r, X, Z, S)}" fill="${css('sheet')}" stroke="${css('line')}" stroke-width="1.4"/>`;
+  }
+  s += circ(0, 0, TOWER.r, css('stone'), `stroke="${css('line')}" stroke-width="3"`);
+  // lawn, pool, deck
+  s += ell(6, 13, 7, 4.5, css('green-deep'), 'opacity="0.45"');
+  s += rect(1, 19.5, 21, 27.5, css('stone'));
+  s += rect(3, 21.5, 19, 25.5, css('water'), `stroke="${css('line')}" stroke-width="0.8"`);
+  for (const x of [6, 9, 12]) s += rect(x, 26, x + 0.8, 27.6, css('sheet'), `stroke="${css('line')}" stroke-width="0.5"`);
+  // jacaranda grove + fire pit
+  s += ell(-24, 25, 10, 8, css('accent-soft'));
+  for (const [x, z] of [[-31, 21], [-27, 31], [-17, 29], [-32, 28], [-19, 20], [-28, 18]]) s += circ(x, z, 2.2, css('accent'), 'opacity="0.55"');
+  s += circ(-24, 25, 3.4, css('stone'), `stroke="${css('line')}" stroke-width="0.6"`) + circ(-24, 25, 0.9, css('muted'));
+  // pergola + kitchen garden
+  s += rect(7, 4.5, 15, 10, css('wood'), `stroke="${css('line')}" stroke-width="0.6" stroke-dasharray="4 3"`);
+  s += circ(11, 7.2, 0.9, css('sheet'), `stroke="${css('line')}" stroke-width="0.6"`);
+  for (let i = 0; i < 6; i++) s += rect(17 + (i % 3) * 3.2, -10 + Math.floor(i / 3) * 4.2, 19.2 + (i % 3) * 3.2, -7.8 + Math.floor(i / 3) * 4.2, css('green-deep'), `stroke="${css('line')}" stroke-width="0.6"`);
+  s += circ(28, -4.5, 1.6, css('green-deep'), `stroke="${css('line')}" stroke-width="0.8"`);
+  for (const [x, z] of [[19, 1], [23, 2.5], [27, 1]]) s += circ(x, z, 1.4, css('green-deep'));
+  // path loop
+  const loop = `M ${X(0)} ${Z(-9)} C ${X(8)} ${Z(-10)}, ${X(16)} ${Z(-6)}, ${X(16.5)} ${Z(2)} S ${X(18)} ${Z(14)}, ${X(22)} ${Z(18)} S ${X(8)} ${Z(32)}, ${X(-6)} ${Z(31)} S ${X(-16)} ${Z(26)}, ${X(-18)} ${Z(21)} S ${X(-30)} ${Z(10)}, ${X(-29)} ${Z(0)} S ${X(-16)} ${Z(-15)}, ${X(0)} ${Z(-9)}`;
+  s += `<path d="${loop}" fill="none" stroke="${css('stone')}" stroke-width="10" stroke-linecap="round"/>`;
+  s += `<path d="${loop}" fill="none" stroke="${css('line')}" stroke-width="0.5" stroke-dasharray="2 3"/>`;
+  s += `<text x="${X(-2)}" y="${Z(38.6)}" text-anchor="middle" font-size="11" class="dim">↓ open edge · view to the city and the sunset (south-west)</text>`;
+  [[1, 3.5, -16], [2, -24, -14.5], [3, -16.5, 6], [4, -5.5, 15], [5, 6, 13], [6, 20, 23], [7, -24, 21], [8, 15.7, 7.5], [9, 21, -11.6], [10, 24, 16]].forEach(([k, x, z]) => { s += tag(k, x, z); });
+  s += `<g transform="translate(${W - 30},28)"><circle r="14" fill="${css('sheet')}" stroke="${css('line')}"/><path d="M0,-12 L5,6 L0,2 L-5,6 Z" fill="${css('ink')}"/><text y="-17" text-anchor="middle" font-size="10" font-weight="600">N</text></g>`;
+  return s + '</svg>';
+}
+
+function elevationSVG() {
+  // looking north from the garden; heights true, horizontal is the crescent's unrolled silhouette
+  const S = 12;
+  const X0 = -28, X1 = 16.5, Y0 = -1.2, Y1 = 14;
+  const W = (X1 - X0) * S, H = (Y1 - Y0) * S;
+  const X = (x) => ((x - X0) * S).toFixed(1);
+  const Y = (y) => ((Y1 - y) * S).toFixed(1);
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="South elevation">`;
+  s += `<rect x="0" y="${Y(0)}" width="${W}" height="${1.2 * S}" fill="${css('green')}"/>`;
+  // the crescent: a long curved earth-and-timber body whose roof rises toward the tower
+  s += `<path d="M ${X(-26)} ${Y(0)} L ${X(-26)} ${Y(2.6)} Q ${X(-18)} ${Y(3.9)} ${X(-12)} ${Y(4.2)} L ${X(-3.2)} ${Y(4.2)} L ${X(-3.2)} ${Y(0)} Z" fill="${css('stone')}" stroke="${css('line')}" stroke-width="1.4"/>`;
+  s += `<path d="M ${X(-24)} ${Y(0.6)} L ${X(-24)} ${Y(2.4)} Q ${X(-18)} ${Y(3.3)} ${X(-12)} ${Y(3.5)} L ${X(-4)} ${Y(3.5)} L ${X(-4)} ${Y(0.6)} Z" fill="${css('water')}" opacity="0.9"/>`;
+  for (let x = -23; x < -4; x += 2.2) s += `<line x1="${X(x)}" y1="${Y(0.6)}" x2="${X(x)}" y2="${Y(3.4)}" stroke="${css('line')}" stroke-width="0.7"/>`;
+  // planted roof over the crescent + the studio body on top
+  s += `<path d="M ${X(-26.4)} ${Y(2.7)} Q ${X(-18)} ${Y(4.05)} ${X(-12)} ${Y(4.35)} L ${X(-3)} ${Y(4.35)}" fill="none" stroke="${css('green-deep')}" stroke-width="5"/>`;
+  s += `<path d="M ${X(-16)} ${Y(4.2)} L ${X(-16)} ${Y(6.6)} Q ${X(-10)} ${Y(7.4)} ${X(-3.2)} ${Y(7.4)} L ${X(-3.2)} ${Y(4.2)} Z" fill="${css('wood')}" stroke="${css('line')}" stroke-width="1.4"/>`;
+  for (let x = -15.8; x < -3.3; x += 0.35) s += `<line x1="${X(x)}" y1="${Y(4.25)}" x2="${X(x)}" y2="${Y(6.9)}" stroke="${css('muted')}" stroke-width="0.45"/>`;
+  s += `<path d="M ${X(-14)} ${Y(4.8)} L ${X(-14)} ${Y(6.3)} Q ${X(-10)} ${Y(6.7)} ${X(-5)} ${Y(6.7)} L ${X(-5)} ${Y(4.8)} Z" fill="${css('water')}"/>`;
+  // the oval bedroom pod, cantilevered, with its curved balcony
+  s += `<ellipse cx="${X(-10.5)}" cy="${Y(8.9)}" rx="${7.0 * S}" ry="${1.9 * S}" fill="${css('wood')}" stroke="${css('line')}" stroke-width="1.6"/>`;
+  s += `<path d="M ${X(-15)} ${Y(8.9)} Q ${X(-10.5)} ${Y(10.2)} ${X(-6)} ${Y(8.9)} Q ${X(-10.5)} ${Y(7.8)} ${X(-15)} ${Y(8.9)} Z" fill="${css('water')}"/>`;
+  s += `<path d="M ${X(-17.8)} ${Y(10.9)} Q ${X(-10.5)} ${Y(12.2)} ${X(-3)} ${Y(10.9)}" fill="none" stroke="${css('ink')}" stroke-width="5" stroke-linecap="round"/>`;
+  s += `<rect x="${X(-14.2)}" y="${Y(8.0)}" width="${7.4 * S}" height="${1.0 * S}" fill="${css('water')}" opacity="0.45" stroke="${css('line')}" stroke-width="0.8" rx="6"/>`;
+  // tower with glass crown
+  s += `<rect x="${X(-3.3)}" y="${Y(11.4)}" width="${6.6 * S}" height="${11.4 * S}" fill="${css('stone')}" stroke="${css('line')}" stroke-width="1.4"/>`;
+  s += `<rect x="${X(-3.3)}" y="${Y(12.6)}" width="${6.6 * S}" height="${1.2 * S}" fill="${css('water')}" stroke="${css('line')}" stroke-width="1.2"/>`;
+  s += `<path d="M ${X(-4.2)} ${Y(12.6)} Q ${X(0)} ${Y(13.6)} ${X(4.2)} ${Y(12.6)}" fill="${css('ink')}"/>`;
+  for (const y of [1.2, 4.6, 8.0]) s += `<rect x="${X(-0.6)}" y="${Y(y + 1.8)}" width="${1.2 * S}" height="${1.8 * S}" fill="${css('water')}" stroke="${css('line')}" stroke-width="1"/>`;
+  // rounded east wing: kitchen/dining below, bathroom above, planted roofs
+  s += `<path d="M ${X(2.5)} ${Y(0)} L ${X(2.5)} ${Y(3.4)} L ${X(14.5)} ${Y(3.4)} Q ${X(15.9)} ${Y(1.7)} ${X(14.5)} ${Y(0)} Z" fill="${css('sheet')}" stroke="${css('line')}" stroke-width="1.4"/>`;
+  s += `<path d="M ${X(9)} ${Y(0.4)} L ${X(9)} ${Y(3.0)} L ${X(14.4)} ${Y(3.0)} Q ${X(15.4)} ${Y(1.7)} ${X(14.4)} ${Y(0.4)} Z" fill="${css('water')}"/>`;
+  s += `<rect x="${X(2.5)}" y="${Y(3.65)}" width="${12 * S}" height="${0.25 * S}" fill="${css('green-deep')}"/>`;
+  s += `<path d="M ${X(3.2)} ${Y(3.6)} L ${X(3.2)} ${Y(6.6)} L ${X(9)} ${Y(6.6)} L ${X(9)} ${Y(3.6)} Z" fill="${css('wood')}" stroke="${css('line')}" stroke-width="1.4"/>`;
+  for (let x = 3.4; x < 9; x += 0.35) s += `<line x1="${X(x)}" y1="${Y(3.65)}" x2="${X(x)}" y2="${Y(6.55)}" stroke="${css('muted')}" stroke-width="0.45"/>`;
+  s += `<path d="M ${X(2.6)} ${Y(6.6)} Q ${X(6.1)} ${Y(7.3)} ${X(9.6)} ${Y(6.6)}" fill="${css('green-deep')}" stroke="${css('line')}"/>`;
+  // pergola
+  for (const x of [7, 11, 15]) s += `<line x1="${X(x)}" y1="${Y(0)}" x2="${X(x)}" y2="${Y(2.7)}" stroke="${css('line')}" stroke-width="2"/>`;
+  s += `<line x1="${X(6.8)}" y1="${Y(2.7)}" x2="${X(15.2)}" y2="${Y(2.7)}" stroke="${css('line')}" stroke-width="3"/>`;
+  for (const [y, t] of [[0, '±0.00'], [3.4, '+3.40'], [6.8, '+6.80'], [10.2, '+10.20'], [12.6, '+12.60']]) s += `<text x="${X(15.3)}" y="${Y(y) * 1 + 4}" font-size="10" class="dim">${t}</text>`;
+  s += `<g transform="translate(${X(-1.5)},${Y(0)})"><circle cy="${-1.5 * S}" r="${0.12 * S}" fill="${css('ink')}"/><rect x="${-0.18 * S}" y="${-1.38 * S}" width="${0.36 * S}" height="${1.38 * S}" fill="${css('ink')}"/></g>`;
+  return s + '</svg>';
+}
+
+document.getElementById('siteSvg').innerHTML = siteSVG();
+document.getElementById('elevSvg').innerHTML = elevationSVG();
+document.getElementById('zones').innerHTML = zones.map((z) => `<tr><td class="num">${z.k}</td><td><b>${z.n}</b></td><td>${z.p}</td></tr>`).join('');
+let gfa = 0;
+for (const f of Object.values(floors)) for (const r of f.rooms) if (!r.terrace) gfa += areaOf(r);
+document.getElementById('gfa').textContent = `≈ ${Math.round(gfa)} m²`;
+function showFloor(key) {
+  document.getElementById('planSvg').innerHTML = planSVG(key);
+  document.getElementById('rooms').innerHTML = floors[key].rooms.filter((r) => r.f).map((r) =>
+    `<tr><td><b>${r.n}</b></td><td class="num">${sizeOf(r)}</td><td class="num">${Math.round(areaOf(r))} m²</td><td>${r.f}</td></tr>`).join('');
+  document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.f === key)));
+}
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => showFloor(b.dataset.f)));
+showFloor('GF');
+const checks = [
+  'Corridors and landings at least 1.2 m wide; interior doors 0.9 m; front door 1.2 m.',
+  'Stair: 17 cm risers, 28 cm treads on the walking line, 2.0 m wide, headroom over 2.1 m.',
+  'Curved rooms: furniture follows the curve, with 0.9 m walkways kept along the glass.',
+  'Kitchen: 1.2 m clear around the island; sink, hob and fridge in a work triangle under 7 m.',
+  'Dining: 0.9 m behind every chair at the round table.',
+  'Bed: 0.7 m clear on both sides and 0.9 m at the foot.',
+  'Bathroom: WC cubicle 1.2 × 1.8 m; 0.8 m clear in front of the tub and vanity.',
+  'Ceilings 3.0 m clear; windows 0.9 m above the floor except full-height glass.'
+];
+document.getElementById('checks').innerHTML = checks.map((c) => `<li>${c}</li>`).join('');
+const sw = [
+  ['Oak floor, natural oil', 'ambientCG · wood floor', 'wood'],
+  ['Rammed earth, warm lilac-grey', 'the curved outer walls', 'stone'],
+  ['Charred timber (yakisugi) slats', 'studio, bath and pod skins', 'ink'],
+  ['White lime plaster', 'inner walls', 'sheet'],
+  ['Granite plinth and stone deck', 'base, pool deck, genkan', 'stone'],
+  ['Wisteria linen', 'sofa, bed, cushions — her colour', 'accent-soft'],
+  ['Deep plum velvet', 'accent chairs, headboard', 'accent'],
+  ['Pool and pond water', 'with real reflections', 'water'],
+  ['Planted roofs, moss, ferns', 'roofs, north garden, tower tree', 'green-deep']
+];
+document.getElementById('swatches').innerHTML = sw.map(([n, d, c]) => `<div class="sw"><i style="background:var(--${c})"></i><span>${n}<small>${d}</small></span></div>`).join('');
+</script>
+
