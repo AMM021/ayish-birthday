@@ -61,13 +61,13 @@ Hint (60s): watch them again. i'll flash the first one for you.
 
 ## ROOM: COMPILE — orb lines (fix the code: she types one word per blank; each right answer lights a lantern)
 Intro: his code broke in a few places. i'll ask, you fill in the blank. one word each.
-Question 1: who was he trying to find before it all went wrong?
+Question 1: who's he looking for? you, princess. type the name you've been called since you were little.
 Answer 1: ayish
 Question 2: what goes lub dub?
 Answer 2: heart
-Question 3: he won't run it alone. how will he run it?
+Question 3: he can't run it alone. not apart, not one at a time… the two of you, ________.
 Answer 3: together
-Question 4: and how does he want to come back?
+Question 4: and how does he want to come home? ____ and sound.
 Answer 4: safe
 Correct 1: one.
 Correct 2: two.
