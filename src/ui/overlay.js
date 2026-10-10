@@ -129,9 +129,18 @@ function buildLetter({ text, photos = [], onSkip }, onClose) {
   const paper = document.createElement('div');
   paper.className = 'letter-paper';
   paper.style.backgroundImage = `url(${paperDataURL()})`;
+  // A hidden full copy reserves the final size, so the paper never grows
+  // while typing; the paper scrolls to follow the line being typed.
+  const sizer = document.createElement('div');
+  sizer.className = 'letter-text letter-sizer';
+  sizer.textContent = text;
   const body = document.createElement('div');
   body.className = 'letter-text';
-  paper.appendChild(body);
+  paper.append(sizer, body);
+  const follow = setInterval(() => {
+    const want = body.offsetHeight - paper.clientHeight + 64;
+    if (want > paper.scrollTop) paper.scrollTop = want;
+  }, 120);
   const skip = document.createElement('button');
   skip.className = 'letter-skip focus-ring';
   skip.type = 'button';
@@ -184,6 +193,7 @@ function buildLetter({ text, photos = [], onSkip }, onClose) {
     cleanup() {
       off();
       stopPhotos();
+      clearInterval(follow);
     }
   };
 }
