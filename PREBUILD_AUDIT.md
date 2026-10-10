@@ -4,7 +4,13 @@ This file records the planning repairs made before implementation. It supplement
 
 ## Current status
 
-**Planning updated with owner decisions — no game source code is included in this package. Do not start implementation until the owner explicitly approves the handoff.**
+**Handoff approved by the owner (2026-10-10). The full game is implemented (tags v0.2–v0.6). Remaining: owner media (music, video, photos), a real-laptop test pass, and deploy.**
+
+### Automated test record (headless Chrome 2026-10-10, SwiftShader WebGL, ~4–20 fps)
+
+Passed: passcode (wrong code, `0000` rejected without `?dev=true`, `1010`), dev gating in a production build (`?dev=1` gives nothing), save validation (malformed JSON, unknown room IDs), resume to HUB/FINAL/END; THRESHOLD note once per approach plus second approach; HUB intro ordering (Enter completes typing without dismissing; a separate Enter dismisses), second bubble, locked-gate line, ordered unlock, returning/all-done lines; TORII (no crossings during intro/playback, correct counts once, wrong resets the round, three rounds, save, portal); COMPILE (any lantern order, fixed line order, counters wait behind story, no bubble/card overlap, resolution, save); STARS (min distance 2.71, fast pass counts, wrong resets, heart reads front-on); PETALS (bounds, pause plus lost line, return beyond 30, completion); FINAL/REVEAL/END (letter Enter does not skip, keyboard Skip works, turn-around cannot fire before dismissal, refresh after the letter, 8 s turn assist, missing video gives fallback plus Continue, blocked autoplay gives Play then Enter plays, real playback reaches END, `seenReveal` only before END, refresh stays on END); out-of-bounds line plus pull-back; a 3 s main-thread hitch moves her only 0.45 units; adaptive quality steps 1.5 → 1.25 → 1.0 → bloom off; reduced motion types 2× faster; touch-only notice.
+
+Not testable headless; needs the real laptop: pointer lock and mouse look, real frame rate, adaptive-quality restore (> 45 fps), audio and mute with real tracks, fullscreen, headphones (QA 18, 19, 25).
 
 ## Decisions kept
 
@@ -79,8 +85,12 @@ Conflicts raised in the kickoff review, resolved by the owner and written into P
 - [x] Owner approves personal photos; count may vary. Place them in `src/assets/pics/`.
 - [ ] Listen to each of the three music previews (instrumental, no vocals, loops cleanly) and confirm the page URLs still work; they were not opened or heard during planning.
 - [ ] Record and compress the final reveal video; keep it 45–75 seconds and under 15 MB if possible.
-- [ ] Confirm or replace the draft locked-gate line in TEXT.md ("not that one yet. this one first.").
-- [ ] Explicitly approve the planning handoff so implementation can begin.
+- [x] Locked-gate line confirmed by the owner (TEXT.md).
+- [x] Planning handoff approved.
+- [ ] Download the three music tracks into `public/media/music/` (Pixabay blocks automated download).
+- [ ] Add photos and the reveal video + poster later (the game already handles their absence).
+- [ ] Decide on the Vite chunk-size warning (three.js alone is ~500 kB; the deploy skill wants a clean build, SPECS fixes vite.config).
+- [ ] Deploy to Netlify (needs the owner's Netlify login).
 
 ## Build gate / acceptance criteria
 

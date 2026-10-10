@@ -251,6 +251,10 @@ parallax, no edge, and it cannot be flown out of. Radius `SKY_RADIUS`
 `depthWrite: false` and `renderOrder = -1`. The sky is visible in every
 state except THRESHOLD (indoor room), where `world.sky.visible = false`.
 
+Also sets `scene.background` to deepIndigo explicitly: RenderPass turns
+autoClear off and would otherwise clear the HDR target with a colour cached
+in the screen's sRGB space, washing the void out to grey-purple.
+
 ## world/layers.js
 
 Named layers: `0` default, `1` glow tag. `enableBloom(obj, intensity =
@@ -263,7 +267,8 @@ It is idempotent: the base colour is stored once in
 repeated calls never compound. `disableBloom(obj)` restores the base.
 Shared glow materials (orb, portal, fragment) get their glow once in the
 registry. Objects that light up individually (lanterns, torii gates)
-take their own material from `registry.ownMaterial(key)`, so lighting
+take their own material from the registry (`assets.own(material)`; the
+cache itself is `assets.shared(key, factory)` in core/assets.js), so lighting
 one never lights the others; those materials are disposed with the
 room group. Layers are not used for rendering; bloom is by brightness
 (see core/composer.js).
@@ -324,7 +329,7 @@ player at `ORB_FOLLOW_DIST` with `ORB_FOLLOW_DAMP`. `say(line, opts)` calls
 Cached geometry: two pillars (BoxGeometry 0.4×4×0.4), top beam
 (BoxGeometry 4.4×0.5×0.5), upper beam (5×0.4×0.4). Material:
 `MeshStandardMaterial(vermillion, roughness 0.7)`, one per gate via
-`registry.ownMaterial` (see world/layers.js). `create(opts)` returns
+`assets.own` (see world/layers.js). `create(opts)` returns
 a Group. `setLit(bool)` toggles emissive intensity (lit = above the bloom
 threshold, so it glows).
 `flash(color, ms)` pulses emissive briefly. `setState(state)` for HUB
@@ -335,7 +340,7 @@ gates: `'locked'` (dark, no emissive), `'open'` (vermillion, soft glow),
 
 Cylinder (radius 0.5, height 0.8) `MeshStandardMaterial(paper, emissive
 gold, emissiveIntensity 0)`, one material per lantern via
-`registry.ownMaterial`. Ring caps top/bottom in ink.
+`assets.own`. Ring caps top/bottom in ink.
 `light()` animates emissiveIntensity 0→1.2 over 600ms and calls
 `enableBloom()` so the lit lantern crosses the bloom threshold, then
 plays the chime. (Gold is the palette's lantern light; a warmPurple
@@ -447,6 +452,7 @@ one that wasn't there before. A note is taped to it.
 
 Interaction (edge-triggered; do not run a proximity action every frame):
 - The first time she enters the 2-unit door radius, open the `note` overlay with TEXT.md door-note. Set `noteSeenThisVisit` before opening it so it cannot reopen while she remains in range. Enter/click finishes the typewriter and closes the note.
+- Indoors she moves at walking pace (speed 5) and the walls are solid.
 - After the note closes, arm the second approach only after she has left the door radius (distance >2.5 units). On the next entry into the 2-unit radius, play the portal flash and transition to `HUB`. Do not transition while the note is open. Reset these local flags only if THRESHOLD is intentionally restarted; a normal refresh returns to PASSCODE or HUB according to saved progress, not to an endless note loop.
 
 Ready cue: once the note has closed, the extra door's lavender rim glow
@@ -464,6 +470,10 @@ appear (see UI: prompts.js). `world.sky.visible = false` while in THRESHOLD
 (indoor room); it is shown again on leaving.
 
 ## Room: HUB
+
+Implementation notes: the next `open` gate pulses gently so she knows where
+to go; walking into a gate while a story bubble is still open waits until
+it is dismissed (the transition would otherwise cut the line off).
 
 Torii shrine floating in void. `world.sky`, 200 petals.
 Small bouquet on the shrine altar (objects/bouquet.js).
@@ -534,6 +544,15 @@ Use these nine ordered points in unit space (a symmetric heart; x right, y up, l
 
 `hintTargets()` returns only the next correct star position.
 
+Implementation notes (owner asked for gentle guidance): the next expected
+star's halo breathes slightly; re-entering a star already lit in this
+attempt is ignored rather than resetting (only an unlit, out-of-order star
+resets). The nine SPECS points alone read as a shield (stars 1 and 9 are
+the highest points), so the glowing outline is one smooth closed curve
+through the nine stars plus a notch point at (0, 0.42) between stars 9 and
+1; with it the finished shape reads clearly as a heart. Star positions are
+unchanged.
+
 ## Room: PETALS (challenge — follow the guide)
 
 Corridor ~80 units long and 20 wide, centred inside the standard 100-unit room bounds. 800 petals stream from the far end toward the player; use instancing. Soft wind streaks (dashed segments) in warmPurple. Orb drifts forward. If player is >15 units behind, the orb pauses; if >30 units behind, it returns toward the player. Reaching the corridor end opens the portal, shows the Complete line, and saves `petals` once. Walking through the portal returns to HUB (where the door-5 portal may now be open). All room geometry and waypoint targets must stay inside bounds.
@@ -552,7 +571,11 @@ canvas texture showing the letter title). Small bouquet
 (objects/bouquet.js) on the table next to the laptop. Portal
 (disabled) in front of the table, present from the start.
 
-Approach chair → lock movement, lower camera over 1.2s, then open the letter overlay (typewriter, floating polaroids from `src/assets/pics/`, music `letter`). The Skip control must be explicit and keyboard accessible. Only after typing completes or she deliberately skips: fade the overlay, save `seenLetter`, restore the chair-facing camera, and show the “turn around.” story bubble. Do not allow the reveal transition to arm during the camera move or while the letter is open. When the letter overlay has finished opening, start buffering the reveal video (see core/assets.js).
+She arrives off to the side of the table (not looking through the waiting
+portal). Approach chair → lock movement, lower camera over 1.2s, then open the letter overlay (typewriter, floating polaroids from `src/assets/pics/`, music `letter`). The Skip control must be explicit and keyboard accessible (Tab to it,
+Enter). Enter while the letter is typing does not skip it; once it has
+fully typed, Enter/click closes it. The paper reserves its full size and
+scrolls to follow the typing on short screens. Only after typing completes or she deliberately skips: fade the overlay, save `seenLetter`, restore the chair-facing camera, and show the “turn around.” story bubble. Do not allow the reveal transition to arm during the camera move or while the letter is open. When the letter overlay has finished opening, start buffering the reveal video (see core/assets.js).
 
 Arm the turn-around trigger only after the “turn around.” bubble has been dismissed with Enter/click and the camera is in its stable chair-facing pose. Then require a wrap-safe shortest-angle yaw change greater than 120° from that recorded baseline to enter `REVEAL`; ordinary movement before arming must not trigger it. Gentle backup: if she has not turned within `TURN_ASSIST_DELAY` (8 s) of arming, ease the camera's yaw 180° over `TURN_ASSIST_DURATION` (2.5 s, ease-in-out; mouse look ignored during it), then enter `REVEAL`. The timer pauses while the tab is hidden. Clear held keys and input repeat state at each transition.
 
@@ -645,6 +668,12 @@ DOM panel fixed top-right. Header row, status badge, monospace body.
 `resolve()` plays checkmark animation, swaps status to `resolved`,
 matcha color shift, and types out the resolution comment from TEXT.md.
 `reset()` clears.
+
+## UI: control labels
+
+Button labels not covered by TEXT.md are lowercase single words in the
+same voice as the `⏎ enter` hint: `skip` (letter), `play` (blocked
+autoplay), `continue` (reveal fallback).
 
 ## UI: devtools.js
 

@@ -86,6 +86,7 @@ let lowFor = 0;
 let highFor = 0;
 let settle = 2; // ignore the first 2 s after boot
 let level = 0; // 0 = full; steps below lower the ratio, then bloom
+let lastFps = 0;
 
 export function pauseQuality() {
   settle = 2;
@@ -103,6 +104,7 @@ export function updateQuality(rawDt) {
   winFrames++;
   if (winTime < WINDOW) return;
   const fps = winFrames / winTime;
+  lastFps = fps;
   const span = winTime;
   winTime = 0;
   winFrames = 0;
@@ -145,7 +147,7 @@ export function updateQuality(rawDt) {
   level = qualityBloomOff ? -1 : pixelRatio;
 }
 
-export const qualityState = () => ({ pixelRatio, bloom: bloomPass?.enabled, level });
+export const qualityState = () => ({ pixelRatio, bloom: bloomPass?.enabled, fps: Math.round(lastFps), lowFor: +lowFor.toFixed(1), settle: +settle.toFixed(2) });
 
 // dev/QA introspection only
 export const _debug = () => ({ composer, bloomPass });

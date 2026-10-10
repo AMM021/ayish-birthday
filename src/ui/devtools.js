@@ -3,6 +3,7 @@ import * as world from '../world/world.js';
 import * as composer from '../core/composer.js';
 import * as audio from '../core/audio.js';
 import * as save from '../core/save.js';
+import * as clock from '../core/clock.js';
 import { STATES } from '../state/states.js';
 
 // Developer panel. Only ever imported when ?dev=true (see main.js).
@@ -64,7 +65,7 @@ export function init({ machine }) {
   body.append(fpsEl, camEl, qEl);
   document.body.appendChild(panel);
 
-  world.onUpdate((dt) => update(dt));
+  world.onUpdate(() => update(clock.getRawDelta())); // real frame time, not the capped sim step
 }
 
 function label(t) {
