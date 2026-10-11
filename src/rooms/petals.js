@@ -17,19 +17,32 @@ import { TEXT } from '../ui/text.js';
 
 // PETALS — stay in the light (the last, hardest level). The orb drifts
 // down a long blossom avenue and casts a circle of light on the path. She
-// has to keep walking inside it while gusts of petals push the light
-// around. Outside the light for too long → it gently starts over.
+// has to keep walking inside it while gusts of petals push the light (and
+// her) around, and the avenue is in the way: fallen branches to jump,
+// low wisteria trellises to duck under, streams to leap and rocks to walk
+// round. The light eases a little just past each obstacle. Outside the
+// light for too long → it gently starts over.
 
 const HALF_LEN = 46;
 const HALF_W = 10;
 const START_Z = 40;
 const END_Z = -40;
 const LIGHT_R0 = 3.0; // circle radius at the start …
-const LIGHT_R1 = 2.1; // … and at the end
+const LIGHT_R1 = 2.4; // … and at the end
 const SPEED0 = 2.6; // light speed at the start (walking is 4.2) …
 const SPEED1 = 3.6; // … and at the end
-const OUT_LIMIT = 3.0; // seconds outside the light before a restart
+const OUT_LIMIT = 4.0; // seconds outside the light before a restart
 const ORB_Y = 2.6;
+const GUST_PUSH = 1.5; // m/s sideways on her while a gust blows
+const EASE_ZONE = [1, 4]; // light slows from 1 m before to 4 m past an obstacle
+const EASE_MULT = 0.78;
+// obstacles along the light's path (fraction k of the path)
+const COURSE = [
+  [0.1, 'log'], [0.18, 'trellis'], [0.27, 'stream', 1.8], [0.36, 'rocks'],
+  [0.45, 'log'], [0.49, 'trellis'], [0.57, 'stream', 2.3], [0.65, 'trellis'],
+  [0.73, 'stones'], [0.81, 'log'], [0.88, 'trellis'], [0.95, 'log']
+];
+const STREAM_DEPTH = 0.8; // she can jump back out if she falls in
 
 let group = null;
 let portal = null;
@@ -39,6 +52,7 @@ let poolMat = null;
 let path = null; // the curve the light follows
 let pathLen = 0;
 let solid = [];
+let obstacles = []; // { kind, z, w } (z along the avenue)
 const challenge = { done: false, progress: 0, total: 1 };
 let mode = 'wait'; // wait | ready | lead | restart | done
 let s = 0; // distance along the path
@@ -68,21 +82,32 @@ function makePath() {
 
 function build() {
   solid = [];
-  const floor = new THREE.Mesh(
-    new THREE.BoxGeometry(HALF_W * 2 + 2, 1, HALF_LEN * 2 + 2),
-    new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist })
-  );
-  floor.position.y = -0.5;
-  group.add(floor);
-  solid.push(floor);
-  // the stone path down the middle
-  const lane = new THREE.Mesh(
-    new THREE.PlaneGeometry(6, HALF_LEN * 2),
-    new THREE.MeshLambertMaterial({ color: PALETTE.moonlight, transparent: true, opacity: 0.55 })
-  );
-  lane.rotation.x = -Math.PI / 2;
-  lane.position.y = 0.01;
-  group.add(lane);
+  obstacles = COURSE.map(([k, kind, w]) => ({ kind, z: path.getPointAt(k).z, x: path.getPointAt(k).x, w: w || (kind === 'stones' ? 4.4 : 0) }));
+  // the ground, cut by the streams (each a shallow channel across the avenue)
+  const groundMat = new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist });
+  const cuts = obstacles.filter((o) => o.w).map((o) => [o.z + o.w / 2, o.z - o.w / 2]).sort((a, b) => b[0] - a[0]);
+  let top = HALF_LEN + 1;
+  const laneMat = new THREE.MeshLambertMaterial({ color: PALETTE.moonlight, transparent: true, opacity: 0.55 });
+  const piece = (z0, z1, y0, h) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 + 2, h, z0 - z1), groundMat);
+    m.position.set(0, y0 - h / 2, (z0 + z1) / 2);
+    group.add(m);
+    solid.push(m);
+    if (y0 === 0) {
+      // the stone path down the middle
+      const lane = new THREE.Mesh(new THREE.PlaneGeometry(6, z0 - z1), laneMat);
+      lane.rotation.x = -Math.PI / 2;
+      lane.position.set(0, 0.01, (z0 + z1) / 2);
+      group.add(lane);
+    }
+  };
+  for (const [z0, z1] of cuts) {
+    piece(top, z0, 0, 1);
+    piece(z0, z1, -STREAM_DEPTH, 1); // the channel bed
+    top = z1;
+  }
+  piece(top, -HALF_LEN - 1, 0, 1);
+  buildObstacles(groundMat);
 
   // blossom trees on both sides of the avenue
   for (let i = 0; i < 14; i++) {
@@ -159,6 +184,100 @@ function build() {
   portal.group.position.set(0, 1.9, END_Z - 3);
   portal.group.visible = false;
   group.add(portal.group);
+}
+
+// fallen branches, trellises, streams, rocks (all across or on the path)
+function buildObstacles(groundMat) {
+  const W = HALF_W * 2;
+  const wood = new THREE.MeshLambertMaterial({ color: PALETTE.walnut });
+  const bloom = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, emissive: PALETTE.lavender, emissiveIntensity: 0.25 });
+  const blossom = new THREE.MeshLambertMaterial({ color: PALETTE.softPink, flatShading: true });
+  const water = new THREE.MeshPhongMaterial({ color: PALETTE.dusk, specular: PALETTE.lavender, shininess: 80, transparent: true, opacity: 0.85 });
+  const stone = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, flatShading: true });
+  const strandGeo = new THREE.ConeGeometry(0.11, 0.55, 6);
+  strandGeo.rotateX(Math.PI);
+  const puffGeo = new THREE.IcosahedronGeometry(0.28, 0);
+  for (const o of obstacles) {
+    if (o.kind === 'log') {
+      // a fallen blossom branch: a 0.62 m box to jump, drawn as a round log
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, W, 12), wood);
+      log.rotation.z = Math.PI / 2;
+      log.position.set(0, 0.31, o.z);
+      group.add(log);
+      const col = physics.solidBox(W, 0.62, 0.62);
+      col.position.set(0, 0.31, o.z);
+      group.add(col);
+      solid.push(col);
+      const puffs = new THREE.InstancedMesh(puffGeo, blossom, 40);
+      const m4 = new THREE.Matrix4();
+      for (let i = 0; i < 40; i++) {
+        m4.makeTranslation(-HALF_W + (i + 0.5) * (W / 40), 0.55 + (i % 3) * 0.08, o.z + ((i * 7) % 5 - 2) * 0.07);
+        puffs.setMatrixAt(i, m4);
+      }
+      group.add(puffs);
+    } else if (o.kind === 'trellis') {
+      // a low wisteria trellis: beam 1.3–1.8 m (crouch), strands hanging
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(W, 0.5, 0.4), wood);
+      beam.position.set(0, 1.55, o.z);
+      group.add(beam);
+      solid.push(beam);
+      for (const x of [-HALF_W + 0.3, HALF_W - 0.3]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.8, 0.25), wood);
+        post.position.set(x, 0.9, o.z);
+        group.add(post);
+        solid.push(post);
+      }
+      const strands = new THREE.InstancedMesh(strandGeo, bloom, 70);
+      const m4 = new THREE.Matrix4();
+      for (let i = 0; i < 70; i++) {
+        const x = -HALF_W + (i + 0.5) * (W / 70);
+        m4.makeTranslation(x, 1.3 - 0.06 * ((i * 5) % 3), o.z + ((i % 2) - 0.5) * 0.24);
+        strands.setMatrixAt(i, m4);
+      }
+      group.add(strands);
+    } else if (o.kind === 'stream' || o.kind === 'stones') {
+      const w = new THREE.Mesh(new THREE.PlaneGeometry(W + 2, o.w), water);
+      w.rotation.x = -Math.PI / 2;
+      w.position.set(0, -0.35, o.z);
+      group.add(w);
+      if (o.kind === 'stones') {
+        // stepping stones in a wide stream (two 1.5 m hops): one on the
+        // light's line, others either side
+        o.stones = [];
+        for (const x of [-5.2, -2.6, 0, 2.6, 5.2]) {
+          o.stones.push(THREE.MathUtils.clamp(o.x + x, -HALF_W + 1, HALF_W - 1));
+          const st = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, STREAM_DEPTH + 0.05, 10), stone);
+          st.position.set(THREE.MathUtils.clamp(o.x + x, -HALF_W + 1, HALF_W - 1), -STREAM_DEPTH / 2 + 0.02, o.z);
+          group.add(st);
+          solid.push(st);
+        }
+      }
+    } else if (o.kind === 'rocks') {
+      // standing stones on the light's line: a slalom (channels ≥ 1.5 m)
+      o.rocks = [];
+      for (const [dx, dz, r, h] of [[0, 1.5, 0.8, 2.2], [-2.9, -1.2, 0.7, 1.7], [2.9, -1.2, 0.7, 1.9], [0, -3.9, 0.8, 2.0]]) {
+        o.rocks.push([o.x + dx, o.z + dz, r]);
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), stone);
+        rock.scale.set(1, h / (2 * r), 1);
+        rock.position.set(o.x + dx, h / 2, o.z + dz);
+        group.add(rock);
+        solid.push(rock);
+      }
+    }
+  }
+}
+
+function nearObstacle(z, m) {
+  return obstacles.some((o) => Math.abs(o.z - z) < m + (o.w || 0) / 2);
+}
+
+// near an obstacle the light waits a little for her
+function easeAt(z) {
+  for (const o of obstacles) {
+    const d = o.z - z; // > 0 once the light is past it (moving toward −z)
+    if (d > -EASE_ZONE[0] - (o.w || 0) / 2 && d < EASE_ZONE[1] + (o.w || 0) / 2) return EASE_MULT;
+  }
+  return 1;
 }
 
 const radiusAt = (k) => LIGHT_R0 + (LIGHT_R1 - LIGHT_R0) * k;
@@ -267,17 +386,20 @@ export default {
           hints.reset();
         }
       } else {
-        s += speedAt(k) * dt;
+        s += speedAt(k) * easeAt(light.z) * dt;
         challenge.progress = Math.min(0.99, s / pathLen);
         // gusts: the light is blown sideways for a moment
         nextGust -= dt;
-        if (!gust && nextGust <= 0 && k > 0.12) {
+        // (never while she is getting over something)
+        if (!gust && nextGust <= 0 && k > 0.12 && !nearObstacle(light.z, 6)) {
           gust = { t: 0, dur: 1.8, dir: light.x > 0 ? -1 : 1, off: 0, amp: 2.5 + k * 2.5 };
           audio.softPulse();
         }
         if (gust) {
           gust.t += dt;
           gust.off = gust.dir * gust.amp * Math.sin(Math.min(1, gust.t / gust.dur) * Math.PI);
+          // the wind leans on her too (against where the light goes)
+          world.player.velocity.x -= gust.dir * GUST_PUSH * Math.sin(Math.min(1, gust.t / gust.dur) * Math.PI) * dt * 6;
           if (gust.t >= gust.dur) {
             gust = null;
             nextGust = 5 + Math.random() * 3 - k * 2;
@@ -318,7 +440,7 @@ export default {
   },
 
   _debug() {
-    return { mode, s, pathLen, outT, light: light.toArray(), done: challenge.done, portal: portal.enabled, gust: !!gust };
+    return { mode, s, pathLen, outT, light: light.toArray(), done: challenge.done, portal: portal.enabled, gust: !!gust, obstacles };
   },
 
   devComplete() {

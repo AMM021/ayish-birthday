@@ -45,8 +45,30 @@ Detailed implementation specs. Grep by `##` heading.
      on throughout.
   If the avatars fail to load, steps 1–4 are skipped and his words show
   over the room. A refresh during REVEAL resumes at the turn-around beat.
-- **STARS / PETALS:** reworked for the new controls; see their v3 entries
-  below once built.
+- **STARS (v3, parkour):** the nine-star heart (`SCALE` 14) lies over a
+  twilight lake that is NOT solid. Each star floats `STAR_LIFT` 1.35 m over
+  its own platform (r 1.3, tops `HEIGHTS`); she spawns on an island in the
+  heart's top notch. The stretch to the next star rises out of the water
+  (1.1 s, then solid) when the previous star lights: spawn→1 stepping stones
+  (jumps), 1→2 two low gates (crouch: opening 1.3 m, the lintel cannot be
+  hopped), 2→3 stones rising (jump up), 3→4 a 3.4 m gap (only a running
+  jump clears it), 4→5 hedge–gate–hedge (hedges 0.62 m: jump), 5→6 zig-zag
+  stones, 6→7 a 0.32 m beam with a gate, 7→8 another 3.4 m gap, 8→9
+  gate–hedge–gate. Feet below −0.45 → a soft lavender fade and she is back
+  on the last lit star's platform facing on (the OUT OF BOUNDS line). Star
+  hits need her up on its platform. After the ninth: the outline glows, the
+  camera rises, and a bridge of light leads to the portal on the centre
+  island. Tested headless with an autopilot (all nine, no falls) and with
+  each move withheld (see PREBUILD_AUDIT).
+- **PETALS (v3, obstacles):** the light still leads down the avenue (same
+  radii, speeds, gusts, 3 s out → start over). Across the avenue, at
+  fractions of the light's path: fallen branches (0.62 m collider: jump),
+  low wisteria trellises (beam 1.3–1.8 m: crouch), streams (1.8 m and
+  2.3 m channels, 0.8 m deep so she can climb back out), a wide stream
+  with stepping stones, and standing stones on the line. The light slows
+  to ×0.78 from 1 m before to 4 m past each obstacle. Gusts also push her
+  sideways (~0.85 m/s) but never start within 6 m of an obstacle. With the
+  obstacles: `OUT_LIMIT` 4 s (was 3) and the end radius 2.4 (was 2.1).
 
 ## v2 redesign (2026-10-10) — read first; overrides older sections
 
