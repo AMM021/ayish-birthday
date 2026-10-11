@@ -167,55 +167,29 @@
 }
 .bubble-hint.still { animation: none; }
 
-/* reveal */
-.reveal {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
+/* his line (REVEAL): a paper bubble, not the orb's lavender */
+.bubble-him { background: var(--paper); border: 1px solid var(--lavender); font-size: 1.05rem; }
+
+/* his words over the hug (REVEAL); the scene keeps playing behind */
+.overlay-words {
   display: grid;
-  place-items: center;
-  background: var(--lacquer);
-  opacity: 0;
-  transition: opacity 1500ms ease;
-  contain: strict;
-  will-change: opacity;
-}
-.reveal.show { opacity: 1; }
-.reveal video, .reveal .poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.reveal .poster { background-size: cover; background-position: center; }
-.reveal .reveal-fallback {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  gap: 1.4rem;
+  align-items: end;
   justify-items: center;
-  padding: 2rem;
+  padding: 0 1.5rem 7vh;
+  background: linear-gradient(180deg, rgba(var(--deepIndigo-rgb), 0) 35%, rgba(var(--deepIndigo-rgb), 0.72) 100%);
+  cursor: default;
+}
+.words-box { display: grid; max-width: min(92vw, 820px); }
+.words-text {
+  grid-area: 1 / 1;
+  white-space: pre-line;
+  font: 400 clamp(1.35rem, 2.5vw, 2rem)/1.45 'Handwriting', 'Lora', Georgia, serif;
+  color: var(--paper);
+  text-shadow: 0 0 18px rgba(var(--deepIndigo-rgb), 0.95);
   text-align: center;
 }
-.reveal .reveal-fallback p {
-  margin: 0;
-  font: italic 400 clamp(1.6rem, 3.4vw, 2.6rem) 'Lora', Georgia, serif;
-  color: var(--paper);
-  text-shadow: 0 0 24px rgba(var(--lacquer-rgb), 0.9);
-}
-.reveal-btn {
-  padding: 0.7rem 1.6rem;
-  border: 1px solid var(--lavender);
-  border-radius: 999px;
-  background: rgba(var(--deepIndigo-rgb), 0.55);
-  color: var(--paper);
-  font: 400 1.05rem 'Lora', Georgia, serif;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-}
-.reveal-btn:hover, .reveal-btn:focus-visible { box-shadow: 0 0 22px rgba(var(--lavender-rgb), 0.6); }
-.reveal .reveal-play { position: relative; z-index: 2; }
+.words-sizer { visibility: hidden; }
+.overlay-words .enter-hint { justify-self: center; margin-top: 1rem; color: var(--lavender); }
 
 @media (prefers-reduced-motion: reduce) {
   .polaroid { animation: none; }

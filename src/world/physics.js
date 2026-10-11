@@ -64,20 +64,20 @@ export function groundAt(x, z, fromY) {
   return hit ? hit.point.y : null;
 }
 
-// Push a capsule (feet → eye) out of the collider. Mutates `eye` and
-// returns the push vector (shared; copy it to keep it).
+// Push a capsule (feet → eye, `height` tall) out of the collider. Mutates
+// `eye` and returns the push vector (shared; copy it to keep it).
 const seg = new THREE.Line3();
 const box = new THREE.Box3();
 const triPoint = new THREE.Vector3();
 const capPoint = new THREE.Vector3();
 const delta = new THREE.Vector3();
 const push = new THREE.Vector3();
-export function resolveCapsule(eye) {
+export function resolveCapsule(eye, height = EYE_HEIGHT) {
   push.set(0, 0, 0);
   if (!bvh) return push;
   const r = PLAYER_RADIUS;
   seg.start.set(eye.x, eye.y - 0.1, eye.z);
-  seg.end.set(eye.x, eye.y - EYE_HEIGHT + r, eye.z);
+  seg.end.set(eye.x, eye.y - height + r, eye.z);
   box.makeEmpty();
   box.expandByPoint(seg.start);
   box.expandByPoint(seg.end);

@@ -16,6 +16,9 @@ export const ROOM = { x0: -3.2, x1: 4.2, z0: -1.4, z1: 5.0, h: 3 };
 export const HER_SEAT = new THREE.Vector3(0, 1.18, 0.95);
 export const portalSpot = new THREE.Vector3(0.6, 1.5, 3.7);
 export const PORTAL_SCALE = 0.72; // the ring fits under the 3 m ceiling
+// REVEAL: where he stands when she turns around (facing her chair), with
+// room around the two of them for the hug's third-person camera
+export const HIM_SPOT = new THREE.Vector3(0.5, 0, 2.9);
 
 const CAR_COLORS = ['vermillion', 'gold', 'lavender', 'softPink', 'matcha', 'wisteria', 'blush', 'walnut'];
 

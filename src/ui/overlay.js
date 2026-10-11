@@ -5,12 +5,13 @@ import { paperDataURL } from '../core/assets.js';
 import { REDUCED_MOTION } from '../core/config.js';
 
 // DOM overlays over the canvas. `note` and `letter` are blocking (pause the
-// loop, release pointer lock). `endcard` releases pointer lock but keeps
-// the loop running (END renders petals behind it). `line` is a caption.
+// loop, release pointer lock). `endcard` and `words` release pointer lock
+// but keep the loop running (petals drift behind the end card; the hug
+// plays behind his words). `line` is a caption.
 
 const FADE_IN = 600;
 const FADE_OUT = 400;
-const BLOCKING = new Set(['note', 'letter', 'endcard']);
+const BLOCKING = new Set(['note', 'letter', 'endcard', 'words']);
 const PAUSING = new Set(['note', 'letter']);
 
 let current = null; // { type, el, close }
@@ -60,7 +61,7 @@ export function show(kind, opts = {}) {
   input.clearHeld();
   let finish;
   const done = new Promise((r) => { finish = r; });
-  let builder = kind === 'note' ? buildNote : kind === 'letter' ? buildLetter : buildEndcard;
+  const builder = { note: buildNote, letter: buildLetter, words: buildWords }[kind] || buildEndcard;
   const ctl = builder(opts, () => {
     closeCurrent();
     finish();
@@ -236,6 +237,46 @@ function startPolaroids(container, photos) {
     }, 700);
   }, 5000);
   return () => clearInterval(id);
+}
+
+// --- words (REVEAL: his words over the hug) ---------------------------------
+// Types out, then waits for Enter/click. Enter while typing completes it.
+function buildWords({ text }, onClose) {
+  const el = mount('words');
+  const box = document.createElement('div');
+  box.className = 'words-box';
+  const sizer = document.createElement('div');
+  sizer.className = 'words-text words-sizer';
+  sizer.textContent = text;
+  const body = document.createElement('div');
+  body.className = 'words-text';
+  box.append(sizer, body);
+  el.appendChild(box);
+  let tw = null;
+  let ready = false;
+  wait(FADE_IN).then(() => {
+    if (!el.isConnected) return;
+    tw = typewriter.run(body, text, { speed: 30 });
+    tw.then(() => {
+      if (!el.isConnected) return;
+      // flips after this turn, so the Enter that completed typing cannot close
+      setTimeout(() => {
+        ready = true;
+        enterHint(box);
+      }, 0);
+    });
+  });
+  const off = input.pushAction(() => {
+    if (!tw) return true;
+    if (!tw.isDone()) {
+      tw.finish();
+      return true;
+    }
+    if (ready) onClose();
+    return true;
+  });
+  el.addEventListener('click', () => input.dispatchAction('click'));
+  return { el, cleanup: off };
 }
 
 // --- endcard -----------------------------------------------------------

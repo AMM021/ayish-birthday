@@ -1,162 +1,156 @@
 import * as THREE from 'three';
-import { PALETTE, REVEAL_START_TIMEOUT } from '../core/config.js';
+import { PALETTE, REDUCED_MOTION } from '../core/config.js';
 import * as world from '../world/world.js';
 import * as save from '../core/save.js';
 import * as audio from '../core/audio.js';
-import * as assets from '../core/assets.js';
 import * as input from '../core/input.js';
-import * as clock from '../core/clock.js';
 import * as transitions from '../world/transitions.js';
 import * as machine from '../state/machine.js';
-import { buildScene, getPortal } from './final.js';
+import * as dialogue from '../ui/dialogue.js';
+import * as overlay from '../ui/overlay.js';
+import { buildScene } from './final.js';
 import * as models from '../house/models.js';
 import * as gamingRoom from '../house/gamingRoom.js';
+import * as avatars from '../house/avatars.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
-// REVEAL — his recorded video, full screen, with voice. Never traps her:
-// blocked autoplay → a calm Play control; error or no playback within
-// 8 s (or an 8 s stall) → poster + fallback line + Continue.
+// REVEAL — she turned around and he is there: home. He calls her over
+// ("come here my princess"), opens his arms, and she walks to him. The hug
+// cuts to a slow third-person shot of the two of them, and his words type
+// out over it. Then END. Without the avatars (failed load) his words still
+// show over the room.
 
-let root = null;
-let video = null;
-let timer = null;
-let offAction = null;
-let finished = false;
-let drift = null; // { t, from, to, fromQ, toQ }
-const listeners = [];
+const STAND_HEIGHT = 1.45; // her eye height (153 cm)
+const HUG_REACH = 1.05; // she is this close → the hug
+const WALK_ASSIST_DELAY = 10; // s after his line before the camera walks her
+const WALK_ASSIST_TIME = 2.5;
+const WORDS_DELAY = 2.5; // s into the hug before his words
+const SPOT = gamingRoom.HIM_SPOT;
+const ROOM_CENTER = new THREE.Vector3(0.5, 1.6, 1.8);
 
-function on(el, ev, fn) {
-  el.addEventListener(ev, fn);
-  listeners.push([el, ev, fn]);
+let group = null;
+let him = null;
+let her = null;
+let call = null; // bubble anchor above his head
+// rising | call | walk | assist | hugging | words | leaving
+let phase = 'rising';
+let t = 0;
+let from = null;
+let fromYaw = 0;
+let fromPitch = 0;
+let standAt = null;
+let standYaw = 0;
+let standPitch = 0;
+let orbit = null; // { mid, a }
+
+const shortest = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const ease = (x) => x * x * (3 - 2 * x);
+
+function faceYaw(fromPos, toPos) {
+  return Math.atan2(-(toPos.x - fromPos.x), -(toPos.z - fromPos.z));
 }
 
-function clearTimer() {
-  clearTimeout(timer);
-  timer = null;
+function look(yaw, pitch) {
+  world.player.yaw = yaw;
+  world.player.pitch = pitch;
+  world.camera.rotation.set(pitch, yaw, 0, 'YXZ');
 }
 
-function armTimeout() {
-  clearTimer();
-  timer = setTimeout(showFallback, REVEAL_START_TIMEOUT);
-}
-
-function button(label, cls, fn) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = `reveal-btn ${cls} focus-ring`;
-  b.textContent = label;
-  b.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fn();
-  });
-  return b;
-}
-
-function setAction(fn) {
-  offAction?.();
-  offAction = input.pushAction(() => {
-    fn();
-    return true;
-  });
-}
-
-function attemptPlay() {
-  armTimeout();
-  let p;
+async function placeThem() {
   try {
-    p = video.play();
+    await avatars.preload();
+    him = await avatars.create('him');
+    her = await avatars.create('ayish');
   } catch {
-    showPlayControl();
-    return;
+    him = her = null;
   }
-  if (p && p.catch) {
-    p.catch((e) => {
-      if (finished) return;
-      if (e && e.name === 'NotAllowedError') showPlayControl();
-      else showFallback();
-    });
+  if (!him || !her) {
+    him?.dispose();
+    her?.dispose();
+    him = her = null;
+    return false;
   }
+  him.root.position.copy(SPOT);
+  him.root.rotation.y = Math.atan2(gamingRoom.HER_SEAT.x - SPOT.x, gamingRoom.HER_SEAT.z - SPOT.z);
+  group.add(him.root);
+  him.play('idle');
+  her.root.visible = false; // she is the camera until the hug
+  group.add(her.root);
+  call = new THREE.Object3D();
+  call.position.set(SPOT.x, 1.95, SPOT.z);
+  group.add(call);
+  return true;
 }
 
-function showPlayControl() {
-  clearTimer();
-  if (finished || root.querySelector('.reveal-play')) return;
-  const b = button('play', 'reveal-play', () => {
-    b.remove();
-    attemptPlay();
+// her words-only ending (no avatars)
+function wordsOnly() {
+  phase = 'words';
+  world.setControls({ move: false, look: false });
+  showWords();
+}
+
+async function hisCall() {
+  phase = 'call';
+  await dialogue.say(call, TEXT.revealCall, { mode: 'story', speaker: 'him' });
+  if (phase !== 'call') return;
+  him.play('open_arms', { once: true }).then(() => {
+    if (phase === 'call' || phase === 'walk' || phase === 'assist') him.play('open_idle', { fade: 0.25 });
   });
-  root.appendChild(b);
-  b.focus({ preventScroll: true });
-  setAction(() => {
-    b.remove();
-    attemptPlay();
-  });
+  phase = 'walk';
+  t = 0;
+  world.setControls({ move: true, look: true });
+  input.clearHeld();
 }
 
-function showFallback() {
-  clearTimer();
-  if (finished || root.querySelector('.reveal-fallback')) return;
-  try {
-    video.pause();
-  } catch {
-    /* ignore */
-  }
-  video.style.display = 'none';
-  root.querySelector('.reveal-play')?.remove();
-  const poster = document.createElement('div');
-  poster.className = 'poster';
-  poster.style.backgroundImage = `url(${assets.posterURL()})`;
-  const box = document.createElement('div');
-  box.className = 'reveal-fallback';
-  const line = document.createElement('p');
-  line.textContent = TEXT.revealFallback;
-  const go = button('continue', 'reveal-continue', () => complete());
-  box.append(line, go);
-  root.append(poster, box);
-  go.focus({ preventScroll: true });
-  setAction(() => complete());
+async function hug() {
+  phase = 'hugging';
+  world.setControls({ move: false, look: false });
+  await transitions.fadeOut(450, PALETTE.lilacHaze);
+  if (phase !== 'hugging') return;
+  avatars.hugPartner(him, her);
+  her.root.visible = true;
+  // a soft warm fill from the camera's side, so their faces are not in the
+  // ceiling light's shadow (the room has one light; ≤ 4 in all)
+  const fill = new THREE.PointLight(PALETTE.sunlit, 2.2, 5, 1.6);
+  const off = new THREE.Vector3(Math.sin(ORBIT_A) * 1.2, 2.1, 0.2 + Math.cos(ORBIT_A) * 1.2).applyAxisAngle(THREE.Object3D.DEFAULT_UP, him.root.rotation.y);
+  fill.position.copy(him.root.position).add(off);
+  group.add(fill);
+  him.play('hug_in', { once: true, fade: 0.2 }).then(() => phase !== 'leaving' && him.play('hug', { fade: 0.6 }));
+  her.play('hug_in', { once: true, fade: 0 }).then(() => phase !== 'leaving' && her.play('hug', { fade: 0.6 }));
+  const mid = him.root.position.clone().lerp(her.root.position, 0.5);
+  orbit = { t: 0 };
+  placeOrbitCamera(0);
+  orb.hold(new THREE.Vector3(mid.x - 1.7, 2.25, mid.z - 1.1)); // in the background, out of the shot's centre
+  t = 0;
+  await new Promise((r) => setTimeout(r, 150));
+  await transitions.fadeIn(900);
 }
 
-async function complete() {
-  if (finished) return;
-  finished = true;
-  clearTimer();
-  offAction?.();
-  offAction = null;
-  // let any running transition settle so the END transition is not dropped
-  while (machine.isTransitioning()) await new Promise((r) => setTimeout(r, 50));
-  clock.resume('reveal');
-  root.style.transition = 'opacity 1000ms ease';
-  root.style.opacity = '0';
-  setTimeout(() => {
-    try {
-      video.pause();
-    } catch {
-      /* ignore */
-    }
-    root?.remove();
-    root = null;
-  }, 1000);
-
-  // glow the portal, ease the camera to face it and drift toward it
-  const portal = getPortal();
-  portal?.enable();
+// Over his left shoulder from behind her right: her face resting on his
+// shoulder, his head bowed over hers. Swings a little (not with reduced
+// motion). Angles are in the pair's frame (him facing +z, her at +HUG_D).
+const ORBIT_R = 1.45;
+const ORBIT_A = THREE.MathUtils.degToRad(65);
+const ORBIT_SWING = THREE.MathUtils.degToRad(12);
+const lp = new THREE.Vector3();
+function placeOrbitCamera(dt) {
+  orbit.t += dt;
+  const a = ORBIT_A + (REDUCED_MOTION ? 0 : Math.sin(orbit.t * 0.15) * ORBIT_SWING);
+  const r = him.root;
   const cam = world.camera;
-  const target = new THREE.Vector3();
-  portal?.group.getWorldPosition(target);
-  const m = new THREE.Matrix4().lookAt(cam.position, target, cam.up);
-  drift = {
-    t: 0,
-    from: cam.position.clone(),
-    to: cam.position.clone().lerp(target, 0.7),
-    fromQ: cam.quaternion.clone(),
-    toQ: new THREE.Quaternion().setFromRotationMatrix(m)
-  };
+  lp.set(Math.sin(a) * ORBIT_R, 1.58, 0.2 + Math.cos(a) * ORBIT_R).applyAxisAngle(THREE.Object3D.DEFAULT_UP, r.rotation.y);
+  cam.position.set(r.position.x + lp.x, lp.y, r.position.z + lp.z);
+  lp.set(0, 1.3, 0.2).applyAxisAngle(THREE.Object3D.DEFAULT_UP, r.rotation.y);
+  cam.lookAt(r.position.x + lp.x, lp.y, r.position.z + lp.z);
+  world.player.eye.copy(cam.position);
 }
 
-async function finishDrift() {
-  drift = null;
+async function showWords() {
+  phase = 'words';
+  await overlay.show('words', { text: TEXT.revealWords });
+  if (phase !== 'words') return;
+  phase = 'leaving';
   await transitions.portalFlash(PALETTE.moonlight, 900);
   save.setSeenReveal(); // immediately before END, never on entry
   machine.go('END', { fadeOut: 200, hold: 100, fadeIn: 800 });
@@ -166,74 +160,108 @@ export default {
   name: 'reveal',
 
   async enter() {
-    finished = false;
-    drift = null;
+    phase = 'rising';
+    t = 0;
+    orbit = null;
     // The FINAL set carries over; rebuild it if we were jumped here.
-    const g = world.getGroup('final');
-    if (!g.children.length) {
+    group = world.getGroup('final');
+    if (!group.children.length) {
       await models.preload(gamingRoom.MODELS);
       buildScene();
-      world.setAtmosphere('indoor', { fogDensity: 0.004 });
-      world.setPlayer(new THREE.Vector3(0, 1.18, 0.95), Math.PI, 0);
+      world.setPlayer(new THREE.Vector3(gamingRoom.HER_SEAT.x, gamingRoom.HER_SEAT.y, gamingRoom.HER_SEAT.z), Math.PI, 0);
     }
+    const u = group.userData;
+    u.room.visible = true;
+    u.voidSet.visible = false;
+    u.portal.group.parent.visible = false; // the code brought him home
     world.sky.visible = true;
+    world.setAtmosphere('indoor', { fogDensity: 0.004 });
+    world.setColliders(u.roomSolid);
+    world.setBounds(ROOM_CENTER, 6);
+    world.setStandHeight(STAND_HEIGHT);
+    world.setControls({ move: false, look: false });
     orb.setVisible(true);
-    world.setControls({ move: false, look: false }); // releases pointer lock
-    input.clearHeld();
-    audio.fadeOut(800);
-    clock.pause('reveal');
+    audio.play('letter'); // keeps playing if it already is
 
-    root = document.createElement('div');
-    root.className = 'reveal';
-    video = assets.revealVideo();
-    video.controls = false;
-    video.muted = false;
-    try {
-      video.currentTime = 0; // dev "Replay final reveal" starts from the top
-    } catch {
-      /* not loaded yet */
-    }
-    video.style.display = '';
-    root.appendChild(video);
-    document.getElementById('ui').appendChild(root);
-    assets.bufferRevealVideo(); // no-op if FINAL already started it
-    requestAnimationFrame(() => root?.classList.add('show'));
-
-    on(video, 'ended', () => complete());
-    on(video, 'error', () => showFallback());
-    on(video, 'playing', () => clearTimer());
-    on(video, 'timeupdate', () => {
-      if (!video.paused) clearTimer();
-    });
-    on(video, 'waiting', () => {
-      if (!finished) armTimeout();
-    });
-    on(video, 'stalled', () => {
-      if (!finished) armTimeout();
-    });
-    if (video.error) showFallback();
-    else attemptPlay();
+    const ok = await placeThem();
+    // she gets up from the chair, facing him
+    from = world.camera.position.clone();
+    fromYaw = world.player.yaw;
+    fromPitch = world.player.pitch;
+    standAt = new THREE.Vector3(gamingRoom.HER_SEAT.x + 0.05, STAND_HEIGHT, gamingRoom.HER_SEAT.z + 0.6);
+    standYaw = fromYaw + shortest(faceYaw(standAt, SPOT) - fromYaw);
+    standPitch = Math.atan2(1.5 - STAND_HEIGHT, Math.hypot(SPOT.x - standAt.x, SPOT.z - standAt.z));
+    if (!ok) phase = 'rising-only';
+    // he appears in a soft flash where the portal was
+    transitions.portalFlash(PALETTE.moonlight, 1000);
   },
 
   update(dt) {
-    if (!drift) return;
-    drift.t = Math.min(1, drift.t + dt / 3);
-    const e = drift.t * drift.t * (3 - 2 * drift.t);
-    world.camera.position.lerpVectors(drift.from, drift.to, e);
-    world.camera.quaternion.slerpQuaternions(drift.fromQ, drift.toQ, Math.min(1, e * 1.6));
-    if (drift.t >= 1) finishDrift();
+    him?.update(dt);
+    her?.update(dt);
+    if (phase === 'rising' || phase === 'rising-only') {
+      t = Math.min(1, t + dt / 1.4);
+      const e = ease(t);
+      world.camera.position.lerpVectors(from, standAt, e);
+      look(fromYaw + (standYaw - fromYaw) * e, fromPitch + (standPitch - fromPitch) * e);
+      if (t >= 1) {
+        world.setPlayer(standAt, standYaw, standPitch);
+        if (phase === 'rising') hisCall();
+        else wordsOnly();
+      }
+    } else if (phase === 'walk') {
+      const p = world.player.eye;
+      if (Math.hypot(p.x - SPOT.x, p.z - SPOT.z) < HUG_REACH) {
+        hug();
+        return;
+      }
+      if (!document.hidden) t += dt;
+      if (t >= WALK_ASSIST_DELAY) {
+        // gentle backup: walk her to him
+        phase = 'assist';
+        world.setControls({ move: false, look: false });
+        t = 0;
+        from = world.camera.position.clone();
+        fromYaw = world.player.yaw;
+        fromPitch = world.player.pitch;
+      }
+    } else if (phase === 'assist') {
+      t = Math.min(1, t + dt / WALK_ASSIST_TIME);
+      const e = ease(t);
+      const dir = new THREE.Vector3(SPOT.x - from.x, 0, SPOT.z - from.z);
+      const d = dir.length();
+      const to = from.clone().addScaledVector(dir.normalize(), Math.max(0, d - 0.8));
+      to.y = STAND_HEIGHT;
+      world.camera.position.lerpVectors(from, to, e);
+      const yaw = fromYaw + shortest(faceYaw(from, SPOT) - fromYaw) * e;
+      look(yaw, fromPitch + (0.04 - fromPitch) * e);
+      if (t >= 1) hug();
+    } else if ((phase === 'hugging' || phase === 'words') && orbit) {
+      placeOrbitCamera(dt);
+      if (phase === 'hugging') {
+        t += dt;
+        if (t >= WORDS_DELAY) showWords();
+      }
+    } else if (phase === 'leaving' && orbit) {
+      placeOrbitCamera(dt);
+    }
+  },
+
+  _debug() {
+    return { phase, avatars: !!him && !!her, t };
   },
 
   exit() {
-    clearTimer();
-    offAction?.();
-    offAction = null;
-    for (const [el, ev, fn] of listeners) el.removeEventListener(ev, fn);
-    listeners.length = 0;
-    clock.resume('reveal');
-    root?.remove();
-    root = null;
+    phase = 'leaving';
+    // the figures are the cached models: take them out before the group is
+    // disposed so they can be shown again
+    him?.dispose();
+    her?.dispose();
+    him = her = null;
+    call = null;
+    orbit = null;
     world.clearBounds();
     world.disposeGroup('final');
+    group = null;
   }
 };

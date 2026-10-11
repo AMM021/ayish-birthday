@@ -3,13 +3,14 @@
 // never advance two things.
 
 const MOVE_KEYS = new Set([
-  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight'
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyC', 'ShiftLeft', 'ShiftRight'
 ]);
 const NO_SCROLL = new Set([
   'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'
 ]);
 
 const held = new Set();
+const pressed = new Set(); // fresh (non-repeat) presses, consumed once
 const actionHandlers = [];
 const muteHandlers = [];
 let muteKey = true; // off while the FINAL laptop needs M for a fragment
@@ -76,6 +77,7 @@ function onKeyDown(e) {
   }
   if (MOVE_KEYS.has(e.code) && !inField) {
     if (!held.has(e.code)) for (const fn of moveListeners) fn(e.code);
+    if (!e.repeat) pressed.add(e.code);
     held.add(e.code);
   }
 }
@@ -119,8 +121,14 @@ export function onLockChange(fn) {
 // --- held state ------------------------------------------------------
 export const isDown = (code) => held.has(code);
 
+// true once per fresh keydown of `code` (Space to jump)
+export function consumePressed(code) {
+  return pressed.delete(code);
+}
+
 export function clearHeld() {
   held.clear();
+  pressed.clear();
   lookDX = 0;
   lookDY = 0;
 }

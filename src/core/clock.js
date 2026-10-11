@@ -28,8 +28,8 @@ export const getDelta = () => capped;
 export const getRawDelta = () => raw;
 export const getElapsed = () => elapsed;
 
-// Loop pause registry (PROJECT.md Rule 14): blocking overlays and the
-// REVEAL video pause the render loop; main.js resumes it.
+// Loop pause registry (PROJECT.md Rule 14): the note and the letter pause
+// the render loop; main.js resumes it.
 const pauseReasons = new Set();
 const resumeListeners = [];
 export function pause(reason) {

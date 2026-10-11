@@ -4,7 +4,6 @@ import * as world from '../world/world.js';
 import * as physics from '../world/physics.js';
 import * as save from '../core/save.js';
 import * as audio from '../core/audio.js';
-import * as assets from '../core/assets.js';
 import * as input from '../core/input.js';
 import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
@@ -18,6 +17,7 @@ import * as transitions from '../world/transitions.js';
 import * as props from '../house/props.js';
 import * as gamingRoom from '../house/gamingRoom.js';
 import * as models from '../house/models.js';
+import * as avatars from '../house/avatars.js';
 import { TEXT } from '../ui/text.js';
 
 // FINAL — the void: a table, a chair, his laptop. Seated, she types the
@@ -226,7 +226,7 @@ async function roomIntro() {
 
 async function openLetter() {
   phase = 'letter';
-  setTimeout(() => assets.bufferRevealVideo(), 650); // once the overlay has opened
+  avatars.preload(); // REVEAL needs them; they load while she reads
   await overlay.show('letter', { text: TEXT.letter, photos: PHOTOS });
   save.setSeenLetter();
   afterLetter();
@@ -274,7 +274,7 @@ export default {
       showSet('room');
       seatInRoom();
       audio.play('letter');
-      assets.bufferRevealVideo();
+      avatars.preload();
       afterLetter();
       return;
     }

@@ -1,5 +1,6 @@
 import { STATES, CHALLENGE_STATES } from './states.js';
 import * as transitions from '../world/transitions.js';
+import * as world from '../world/world.js';
 import * as input from '../core/input.js';
 import * as clock from '../core/clock.js';
 import * as hints from '../core/hints.js';
@@ -14,6 +15,7 @@ let busy = false;
 const listeners = [];
 
 export const isTransitioning = () => busy;
+export const room = () => current; // the live room module (dev tools, tests)
 export function onChange(fn) {
   listeners.push(fn);
 }
@@ -31,6 +33,7 @@ export async function go(name, { fadeOut = 400, hold = 200, fadeIn = 600 } = {})
     hints.reset();
     fragments.hide(); // rooms that show the H·O·M·E tiles turn them back on
     if (current) await current.exit(name);
+    world.setStandHeight(); // her usual eye height unless the room says otherwise
     const mod = (await STATES[name]()).default;
     current = mod;
     previousName = currentName;

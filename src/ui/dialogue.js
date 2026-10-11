@@ -26,9 +26,10 @@ export function setSafeZone(rect) {
   safeZone = rect;
 }
 
-export function say(orb, line, { mode = 'story', queue = false } = {}) {
+// speaker: 'orb' (default) or 'him' (REVEAL: his line, a paper bubble)
+export function say(orb, line, { mode = 'story', queue = false, speaker = 'orb' } = {}) {
   return new Promise((resolve) => {
-    const item = { orb, line, mode, resolve };
+    const item = { orb, line, mode, speaker, resolve };
     if (mode === 'story') {
       storyQ.push(item);
       if (active && active.mode !== 'story') dismiss(true);
@@ -67,7 +68,7 @@ export function clear() {
 
 function start(item) {
   const el = document.createElement('div');
-  el.className = `bubble bubble-${item.mode}`;
+  el.className = `bubble bubble-${item.mode} bubble-${item.speaker}`;
   const sizer = document.createElement('span');
   sizer.className = 'bubble-sizer';
   sizer.textContent = item.line;

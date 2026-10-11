@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PALETTE } from './config.js';
 
 // Textures (with procedural fallbacks), the shared geometry/material
-// registry, and the lazily-buffered reveal video.
+// registry, and lazily loaded GLB models.
 
 const BASE = import.meta.env.BASE_URL;
 const FILES = {
@@ -144,37 +144,9 @@ export function own(material) {
   return m;
 }
 
-// --- reveal video --------------------------------------------------------
-let video = null;
-export function revealVideo() {
-  if (!video) {
-    video = document.createElement('video');
-    video.preload = 'none';
-    video.playsInline = true;
-    video.setAttribute('playsinline', '');
-    video.poster = BASE + 'media/reveal/reveal-poster.webp';
-    video.src = BASE + 'media/reveal/reveal-video.mp4';
-  }
-  return video;
-}
-
-let buffering = false;
-export function bufferRevealVideo() {
-  const v = revealVideo();
-  if (buffering) return;
-  buffering = true;
-  v.preload = 'auto';
-  try {
-    v.load();
-  } catch {
-    /* fallback handled in REVEAL */
-  }
-}
-
-export const posterURL = () => BASE + 'media/reveal/reveal-poster.webp';
-
 // --- 3D models (lazy; GLB from public/models/) ----------------------------
-// model(path) → Promise<Object3D template>. Geometry is marked shared so
+// model(path) → Promise<Object3D template> (its clips on `.animations`).
+// Geometry is marked shared so
 // disposeGroup never frees it from under other clones; clone the template
 // (house/models.js does this) instead of adding it.
 const models = new Map();
@@ -190,6 +162,7 @@ export function model(path) {
       g.scene.traverse((o) => {
         if (o.geometry) o.geometry.userData.shared = true;
       });
+      g.scene.animations = g.animations;
       return g.scene;
     })().catch((e) => {
       console.warn('model failed', path, e?.message);

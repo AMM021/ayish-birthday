@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import {
   PALETTE, CAMERA_FAR, MOVE_SPEED, MOVE_DAMP, LOOK_SENS, ROOM_BOUNDS_RADIUS,
-  RUN_MULT, GRAVITY, FALL_RESPAWN_DEPTH, ATMOSPHERES, REDUCED_MOTION
+  RUN_MULT, GRAVITY, FALL_RESPAWN_DEPTH, ATMOSPHERES, REDUCED_MOTION, EYE_HEIGHT,
+  JUMP_SPEED, JUMP_COYOTE, JUMP_BUFFER, CROUCH_HEIGHT, CROUCH_MULT, CROUCH_TIME
 } from '../core/config.js';
 import * as input from '../core/input.js';
 import * as physics from './physics.js';
@@ -142,8 +143,8 @@ export function setFogEnabled(on) {
 export const isFogEnabled = () => fogEnabled;
 
 // --- player (walking) ------------------------------------------------------
-// She walks: WASD on the ground plane (from yaw only), Shift to jog, mouse
-// to look. Gravity pulls her onto whatever the room registered as solid
+// She walks: WASD on the ground plane (from yaw only), Shift to run, Space
+// to jump, C (held) to crouch, mouse to look. Gravity pulls her onto whatever the room registered as solid
 // (world/physics.js); she can never pass through floors or walls. Falling
 // far below her spawn puts her back at the spawn.
 export const player = {
@@ -158,6 +159,11 @@ export const player = {
   spawn: new THREE.Vector3(),
   spawnYaw: 0,
   grounded: false,
+  height: EYE_HEIGHT, // feet → eye; lower while crouching
+  standHeight: EYE_HEIGHT,
+  crouching: false,
+  airT: 0, // seconds since last grounded (coyote time)
+  jumpT: 0, // buffered jump press, seconds left
   bob: 0,
   moved: 0 // seconds spent actually moving (for the controls hint)
 };
@@ -176,7 +182,16 @@ export function setPlayer(pos, yaw = 0, pitch = 0) {
   player.pitch = pitch;
   player.velocity.set(0, 0, 0);
   player.bob = 0;
+  player.height = player.standHeight;
+  player.crouching = false;
+  player.jumpT = 0;
   applyLook();
+}
+
+// Standing eye height for the room (REVEAL: her own, 1.45).
+export function setStandHeight(h = EYE_HEIGHT) {
+  player.standHeight = h;
+  player.height = h;
 }
 
 // Rooms register what is solid. `null`/[] clears (no gravity then).
@@ -220,7 +235,18 @@ const right = new THREE.Vector3();
 const wish = new THREE.Vector3();
 const toCenter = new THREE.Vector3();
 const step = new THREE.Vector3();
+const probe = new THREE.Vector3();
 const MAX_STEP = 0.2; // sub-step length, so nothing thin is tunnelled through
+
+// Is there room to stand up from a crouch here?
+function roomToStand() {
+  const rise = player.standHeight - player.height;
+  if (rise <= 0) return true;
+  probe.copy(player.eye);
+  probe.y += rise;
+  const push = physics.resolveCapsule(probe, player.standHeight);
+  return push.y > -1e-4 && Math.hypot(push.x, push.z) < 0.02;
+}
 
 function updatePlayer(dt) {
   player.prev.copy(camera.position);
@@ -246,8 +272,21 @@ function updatePlayer(dt) {
   if (input.isDown('KeyS')) wish.sub(fwd);
   if (input.isDown('KeyD')) wish.add(right);
   if (input.isDown('KeyA')) wish.sub(right);
-  const running = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
-  if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(player.speed * (running ? RUN_MULT : 1));
+  const solid = physics.hasColliders();
+  // crouch (C held); she stays down while something is overhead
+  const wantCrouch = input.isDown('KeyC');
+  if (wantCrouch) player.crouching = true;
+  else if (player.crouching && (!solid || roomToStand())) player.crouching = false;
+  const target = player.crouching ? CROUCH_HEIGHT : player.standHeight;
+  if (player.height !== target) {
+    const rate = (player.standHeight - CROUCH_HEIGHT) / CROUCH_TIME;
+    const dh = Math.sign(target - player.height) * Math.min(Math.abs(target - player.height), rate * dt);
+    player.height += dh;
+    if (player.grounded || !solid) player.eye.y += dh; // feet stay on the ground
+  }
+  const running = !player.crouching && (input.isDown('ShiftLeft') || input.isDown('ShiftRight'));
+  const mult = player.crouching ? CROUCH_MULT : running ? RUN_MULT : 1;
+  if (wish.lengthSq() > 0) wish.normalize().multiplyScalar(player.speed * mult);
 
   // Frame-rate independent damping toward the wished horizontal velocity.
   const k = Math.pow(MOVE_DAMP, dt * 60);
@@ -255,7 +294,15 @@ function updatePlayer(dt) {
   v.x = v.x * k + wish.x * (1 - k);
   v.z = v.z * k + wish.z * (1 - k);
 
-  const solid = physics.hasColliders();
+  // jump (Space): buffered briefly, allowed just after leaving an edge
+  if (input.consumePressed('Space')) player.jumpT = JUMP_BUFFER;
+  else player.jumpT = Math.max(0, player.jumpT - dt);
+  player.airT = player.grounded ? 0 : player.airT + dt;
+  if (solid && player.jumpT > 0 && player.airT <= JUMP_COYOTE) {
+    v.y = JUMP_SPEED;
+    player.jumpT = 0;
+    player.airT = JUMP_COYOTE + 1; // no second jump until she lands
+  }
   if (solid) v.y -= GRAVITY * dt;
   else v.y = 0;
 
@@ -267,7 +314,7 @@ function updatePlayer(dt) {
     step.copy(v).multiplyScalar(dt / n);
     player.eye.add(step);
     if (!solid) continue;
-    const push = physics.resolveCapsule(player.eye);
+    const push = physics.resolveCapsule(player.eye, player.height);
     if (push.y > 1e-5 && push.y > Math.hypot(push.x, push.z) * 0.7) {
       player.grounded = true;
       if (v.y < 0) v.y = 0;
