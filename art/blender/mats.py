@@ -114,14 +114,14 @@ def emissive(name, hexcol, strength=8.0):
     return m
 
 
-def water(name='water'):
+def water(name='water', tint='#4f8aa0'):
     if (name,) in _mats:
         return _mats[(name,)]
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     nodes, links = m.node_tree.nodes, m.node_tree.links
     b = nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = hex_rgb('#4f8aa0')
+    b.inputs['Base Color'].default_value = hex_rgb(tint)
     b.inputs['Roughness'].default_value = 0.03
     b.inputs['Transmission Weight'].default_value = 0.6
     noise = nodes.new('ShaderNodeTexNoise')
@@ -180,4 +180,15 @@ def library():
         'paint_green': pbr('paint_green', tint='#3e8f62', rough=0.25, metal=0.6),
         'paint_black': pbr('paint_black', tint='#1a1a1e', rough=0.2, metal=0.6),
         'washi': pbr('washi', 'Fabric061', tile=0.4, tint='#fbf6ee', rough=0.9),
+        # the garden
+        'lotus_leaf': pbr('lotus_leaf', tint='#5d8b4c', rough=0.45),
+        'lotus_pink': pbr('lotus_pink', tint='#f2b6cf', rough=0.6),
+        'pool_tile': pbr('pool_tile', 'Tiles107', tile=0.6, tint='#c4e6ec'),
+        'pool_water': water('pool_water', '#86cad8'),
+        'flower_pink': pbr('flower_pink', tint='#f4a9c8', rough=0.7),
+        'flower_lav': pbr('flower_lav', tint='#c4a5e8', rough=0.7),
+        'flower_white': pbr('flower_white', tint='#fbf6ff', rough=0.7),
+        'leaf_green': pbr('leaf_green', tint='#5f8a45', rough=0.7),
+        'leaf_green2': pbr('leaf_green2', tint='#86a85a', rough=0.7),
+        'bamboo': pbr('bamboo', tint='#6f8a3e', rough=0.4),
     }

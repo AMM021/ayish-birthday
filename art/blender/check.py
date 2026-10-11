@@ -110,6 +110,8 @@ def run(put, rooms, tolerance=0.02):
                 continue
             if {pa.kind, pb.kind} == {'chair', 'table'}:
                 continue  # chairs tuck under tables
+            if pa.kind == 'plant' and pb.kind == 'plant':
+                continue  # rocks and plants may touch and lean
             if _sat(ha, hb):
                 problems.append(f'OVERLAP {keys[i]} × {keys[j]}')
     return problems

@@ -28,7 +28,10 @@ REVIEWED = {
     ('laundry_walls', 'window_frames'),               # frame sill on the wall's sill
     ('pod_roof', 'pod_walls'),                        # wall tops under the leaf roof
     ('pod_lining', 'pod_roof'),
+    ('genkan_oak', 'wc_partition'),                   # floor edge and partition end, inside the entry wall
+    ('bamboo', 'bamboo'),                             # culm segments meeting at the nodes
 }
+GROUNDS = ('ground', 'gravel_garden', 'roji_moss', 'meadow', 'path', 'fire_terrace', 'pergola_floor')
 EPS_TOUCH = 0.012   # parts closer than this touch
 EPS_PIERCE = 0.012  # deeper than this is a visible intersection
 SOFT = ('pillow', 'cushion', 'duvet', 'throw', 'fold', 'bag', 'mattress', 'seat', 'back', 'arm', 'rug', 'headboard', 'drop')
@@ -217,6 +220,12 @@ def run(house, put, rooms, garden=None):
                 continue  # parts of one piece may join
             if c.obj.name in door_names:
                 continue
+            if piece.kind == 'plant' and (not other or other[1].kind == 'plant') and c.obj.name in GROUNDS:
+                continue  # roots and rocks sit in the ground
+            if piece.kind == 'plant' and other and other[1].kind == 'plant':
+                continue  # crowns and fronds grow into each other
+            if piece.kind == 'plant' and not other and c.obj.name.startswith(('bamboo', 'pond_edge')):
+                continue  # a crown in the bamboo; shore rocks on the pond's rim
             if other:
                 # rugs carry furniture; soft things may press into each other a little
                 if other[1].kind == 'rug' or piece.kind == 'rug':
@@ -233,7 +242,7 @@ def run(house, put, rooms, garden=None):
 
     # --- ZFIGHT: coplanar overlapping faces facing the same way ----------------
     # (imported models share their mesh data; only our own meshes are checked)
-    zgeos = arch + [g for g in parts if g.obj.data is not None and g.obj.data.users == 1]
+    zgeos = arch + [g for g in parts if g.obj.data is not None and g.obj.data.users == 1] + extra
     allv, allp, owner = [], [], []
     for g in zgeos:
         off = len(allv)

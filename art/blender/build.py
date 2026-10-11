@@ -12,8 +12,8 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import importlib
-import geo, mats, house, furniture, assets, layout, check, audit  # noqa: E402
-for m in (geo, mats, house, furniture, assets, layout, check, audit):
+import geo, mats, house, furniture, assets, layout, check, audit, garden  # noqa: E402
+for m in (geo, mats, house, furniture, assets, layout, check, audit, garden):
     importlib.reload(m)
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -159,6 +159,15 @@ VIEWS = {
     'pod': ((-6.0, 8.5, 0.6), (-12.5, 7.6, -4.2)),
     'pod_glass': ((-10.5, 8.5, -3.5), (-11.0, 8.0, 3.5)),
     'bridge': ((-6.2, 8.6, -1.0), (-2.5, 8.2, -1.2)),
+    'g_roji': ((0.4, 1.6, -21.0), (0.0, 1.6, -9.0)),
+    'g_gate': ((0.0, 1.6, -12.0), (0.0, 1.4, -22.0)),
+    'g_pond': ((-6.4, 1.7, 16.5), (-9.0, 1.0, 6.0)),
+    'g_engawa': ((-12.5, 1.65, 3.0), (-6.0, 0.6, 12.0)),
+    'g_pool': ((1.5, 1.7, 20.0), (19.0, 0.6, 26.0)),
+    'g_grove': ((-14.0, 1.7, 22.0), (-26.0, 2.5, 26.0)),
+    'g_pergola': ((11.0, 1.7, 13.0), (11.0, 1.6, 6.0)),
+    'g_kitchen': ((15.0, 1.7, -1.0), (22.0, 0.6, -8.0)),
+    'g_gravel': ((-16.5, 1.7, -2.5), (-26.0, 0.4, -10.0)),
 }
 
 
@@ -202,16 +211,17 @@ def main():
     M = mats.library()
     arch = geo.collection('architecture')
     h = house.House(M, arch).build()
-    ground(M, geo.collection('site'))
     furn = geo.collection('furniture')
     put = layout.furnish(M, furn)
+    gd = garden.Garden(M, geo.collection('garden'), h).build()
+    put.update(gd.put)
     interior_lights(put, h)
     problems = check.run(put, layout.rooms())
     print('PLACEMENT CHECK:', len(problems), 'problem(s)')
     for p in problems:
         print('  ', p)
     if '--audit' in ARGS:
-        found = audit.run(h, put, layout.rooms())
+        found = audit.run(h, put, layout.rooms(), garden=gd.objs)
         print('AUDIT:', len(found), 'problem(s)')
         for p in found:
             print('  ', p)

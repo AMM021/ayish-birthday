@@ -24,9 +24,15 @@ def _stash_coll():
 _imported = {}
 
 
+LITE = os.path.join(os.path.dirname(__file__), '..', 'cache', 'lite')
+
+
 def _import(model_id):
     if model_id not in _imported:
         path = os.path.join(CACHE, model_id, f'{model_id}.gltf')
+        lite = os.path.join(LITE, model_id, f'{model_id}.gltf')
+        if os.path.exists(lite):
+            path = lite  # the game-weight version (art/blender/lite.py)
         before = set(bpy.data.objects)
         bpy.ops.import_scene.gltf(filepath=path)
         _imported[model_id] = [o for o in bpy.data.objects if o not in before]
