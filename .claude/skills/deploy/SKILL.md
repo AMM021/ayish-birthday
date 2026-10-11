@@ -10,7 +10,7 @@ description: Build the project and deploy to Netlify. Use when the user says "de
 
 ## Pre-deploy checklist
 
-- Confirm planning handoff is approved and the final reveal video and poster are in `public/media/reveal/`.
+- Confirm planning handoff is approved and both avatars are in `public/models/avatars/` (ayish.glb, him.glb).
 - Confirm `?dev=true` is the only way to enable developer controls/bypass.
 - Confirm the public build has no debug panel, developer bypass copy, secrets, or test media.
 - Confirm `noindex` is not being represented as privacy/security.
@@ -19,7 +19,7 @@ description: Build the project and deploy to Netlify. Use when the user says "de
 
 1. `npm run build` runs clean, no warnings
 2. All assets selected for the approved design are present in `public/` (music, images discovered from `src/assets/pics/`, video reveal, fonts; textures are optional thanks to procedural fallbacks)
-3. Final reveal video is compressed (<15MB, landscape MP4, faststart) and its failure fallback works (poster + fallback line + Continue)
+3. The final reveal works: he appears, the hug plays, his words type out, Continue leads to END; with the avatars missing, his words still show
 4. Photos upright, metadata-stripped (no GPS), resized (≤800px long edge, WebP recommended); the GitHub repository is private
 5. PROJECT.md, SPECS.md, TEXT.md, and PREBUILD_AUDIT.md agree
 6. The dev panel and bypass exist only behind `?dev=true`. Never put that URL in the QR code, card, or anything she sees. The public site is not private merely because it has a passcode or `noindex`.
@@ -60,7 +60,7 @@ npx netlify-cli deploy --prod --dir=dist
 2. Test `?dev=true` — dev panel appears, can jump states
 3. Open the plain link (no `?dev=true`) in a fresh private window →
    the passcode screen appears, no dev panel
-4. Confirm the owner-approved final reveal plays on the live URL, including its failure fallback
+4. Confirm the final reveal (him, the hug, his words) plays on the live URL
 5. Confirm music plays after passcode (first user gesture)
 6. Confirm localStorage saves progress
 7. Test in Chrome, Firefox, Edge

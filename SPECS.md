@@ -2,6 +2,52 @@
 
 Detailed implementation specs. Grep by `##` heading.
 
+## v3 (2026-10-11) — read first; overrides v2 and older sections
+
+- **Controls:** `world.js` adds jump and crouch. Space jumps when grounded
+  (`JUMP_SPEED` 6.6 → about 1 m apex at `GRAVITY` 22), with 0.1 s coyote time
+  and a 0.12 s jump buffer. C held crouches: the capsule height (feet → eye)
+  eases from `EYE_HEIGHT` 1.6 to `CROUCH_HEIGHT` 0.95 over 0.15 s, speed ×0.5,
+  no running; she stays crouched while something is overhead. The capsule
+  height is `player.height` (physics.resolveCapsule takes it). Rooms may set
+  a different standing height (`world.setStandHeight`; REVEAL uses 1.45, her
+  real eye height). Shift runs ×1.7 as before. Ctrl is never bound (Ctrl+W).
+- **Avatars:** `public/models/avatars/{ayish,him}.glb`, built by
+  `art/blender/avatars.py` (MPFB 2, game_engine rig, garments cut from each
+  body in `garments.py`/`outfits.py`, her hijab included), animated in
+  `anim.py` (IK poses baked to FK, 30 fps) and exported by
+  `export_avatars.py` (shape keys and masks applied, mouth interior dropped,
+  every base colour baked to one WebP texture per object). Clips: him
+  `idle`, `open_arms`, `open_idle`, `hug_in`, `hug`; her `idle`, `hug_in`,
+  `hug` (named `<key>|<clip>`). The hug layout: him at the origin facing +z,
+  her at z +0.42 facing −z. `house/avatars.js` loads them (GLTFLoader via
+  `assets.model`), sets cut-out materials to alpha-test, and plays clips with
+  one `AnimationMixer` each (cross-fades 0.35 s).
+- **FINAL → REVEAL (the ending):** the turn-around trigger is unchanged. FINAL
+  preloads the avatars once the letter opens (or on resume after it).
+  REVEAL keeps FINAL's group, removes the portal, and:
+  1. A soft moonlight flash; he stands at `HIM_SPOT` (where the portal was),
+     facing her, playing `idle`. She rises from the chair to standing
+     height in front of it (1.2 s).
+  2. His line (TEXT "FINAL REVEAL — his call") in a story bubble above his
+     head; on dismissal he plays `open_arms` → `open_idle`.
+  3. She walks to him (move + look on). Within `HUG_REACH` 1.05 m → the
+     hug. If she has not arrived 10 s after the bubble, the camera walks her
+     to him over 2.5 s.
+  4. The hug: a 450 ms `lilacHaze` fade to a third-person shot; her avatar
+     stands in his arms (hug layout), both play `hug_in` then `hug`; the
+     camera drifts slowly around them at chest height (none with reduced
+     motion).
+  5. 2.5 s into the hug, his words (TEXT "FINAL REVEAL — his words") type
+     out in the `words` overlay (translucent, handwriting font, does not
+     pause the loop). Enter completes typing; then the `continue` prompt.
+  6. Continue → moonlight flash → `seenReveal` → END. The letter music plays
+     on throughout.
+  If the avatars fail to load, steps 1–4 are skipped and his words show
+  over the room. A refresh during REVEAL resumes at the turn-around beat.
+- **STARS / PETALS:** reworked for the new controls; see their v3 entries
+  below once built.
+
 ## v2 redesign (2026-10-10) — read first; overrides older sections
 
 - **Player:** walking (see PROJECT.md → Locked Decisions). `world.js` drives
@@ -275,6 +321,9 @@ glow intensities by eye in dev mode (bloom toggle).
 Keyboard: `W A S D`, `Space` (up), `Shift` (down), `Esc` (release pointer lock), `Enter` (dialogue/typewriter actions), and `M` (toggle mute; the pointer is locked during play, so an on-screen icon alone could not be clicked). Use `event.code`; ignore repeated keydown events for one-shot actions; prevent Space/arrows from scrolling while the game has focus. Pointer lock is requested only after a deliberate canvas click. On `visibilitychange`, blur, pointer-lock loss, or any blocking overlay, clear all held-key state and zero movement velocity. Cap frame delta at 0.05 seconds after a tab return. One keydown may advance at most one dialogue action: if Enter completes typing, it must not also dismiss that line. If a device appears touch-only (coarse pointer with no fine pointer), show the keyboard-first notice from TEXT.md; do not pretend touch controls exist. Mouse sensitivity `LOOK_SENS`, damping `MOVE_DAMP`, and per-room bounds are configurable.
 
 ## core/assets.js
+
+(v3: the reveal video below is gone; `assets.model()` also loads the avatars.)
+
 
 Texture loader with cache. Methods: `get(key)`, `preload(keys[])`, `dispose(key)`. Keys map to `public/textures/`. Audio via `Audio()` elements, lazy. The reveal video (`public/media/reveal/reveal-video.mp4`, poster
 `reveal-poster.webp`) is a single `<video>` element created with
@@ -682,7 +731,7 @@ Arm the turn-around trigger only after the “turn around.” bubble has been di
 
 On enter, save `reachedFinal`. If `seenLetter` is already true after a refresh, restore the chair-facing view and replay the “turn around.” beat without showing the letter again, and start buffering the reveal video immediately.
 
-## Room: REVEAL (video + voice — decided)
+## Room: REVEAL (superseded 2026-10-11 by v3: avatars, the hug, his words; the video below is no longer used)
 
 The final reveal is the owner's recorded full-screen video with voice. There is no audio-only variant and nothing to configure. Files: `public/media/reveal/reveal-video.mp4` and `public/media/reveal/reveal-poster.webp`.
 

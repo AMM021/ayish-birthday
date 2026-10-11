@@ -113,7 +113,7 @@ Claude Code shares one limit with claude.ai).
 
 ## Git workflow
 
-Keep the GitHub repository **private**: it will contain your photos, the letter and the reveal video.
+Keep the GitHub repository **private**: it will contain your photos and the letter.
 
 If VS Code already initialised this folder and linked it to GitHub, skip
 ahead (check with `git remote -v` and `git status`). Otherwise:
@@ -185,27 +185,12 @@ with the same names (`petal.png`, `star.png`, `paper.jpg`, `shoji.png`).
 For `paper.jpg`, CC0 paper textures from ambientCG.com or Poly Haven work
 well (resize to ≤1024px, JPEG quality 80).
 
-## Final reveal media (video + voice selected)
+## Final reveal (no media to record)
 
-The owner selected video + voice. Record the spoken reveal script in `TEXT.md`; the separate on-screen letter remains text and should not be read word-for-word in the video. Aim for 45–75 seconds. Use the guidance below.
-
-- **Landscape** (horizontal), not vertical. Laptop screen is landscape.
-- Quiet room. Natural light or a soft warm lamp. No harsh overheads.
-- Frame: upper body, hands visible, room to lean in toward camera.
-- Speak slowly. Warm. Like you're right there in front of her.
-- 45–75 seconds.
-- Say the script from TEXT.md, or improvise close to it.
-- Transfer to laptop. Compress with HandBrake:
-  - Format: MP4
-  - Video encoder: H.264
-  - Quality: RF 26 (constant quality)
-  - Audio: AAC 128k
-  - **Check "Web Optimized"**
-- Target <15MB.
-- Save as `public/media/reveal/reveal-video.mp4`.
-- Make the poster frame (fallback if the selected video ever fails to load):
-  `sudo pacman -S ffmpeg`, then
-  `ffmpeg -i public/media/reveal/reveal-video.mp4 -frames:v 1 -vf scale=1280:-1 public/media/reveal/reveal-poster.webp`
+The owner dropped the video on 2026-10-11. The reveal is built from the
+avatars (`public/models/avatars/*.glb`, made with `art/blender/avatars.py`,
+`anim.py` and `export_avatars.py`; see ASSET_CREDITS.md) and his words in
+TEXT.md. Nothing needs to be recorded.
 
 ## Music sourcing and selected instrumental tracks
 

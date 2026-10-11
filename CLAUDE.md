@@ -18,6 +18,6 @@
   tag milestones as listed in `SPECS.md` → Git.
 - `PREBUILD_AUDIT.md` tracks known risks, fixes, and unresolved human decisions. Keep it aligned with the other documents.
 - Before implementation, check that the planning handoff is explicitly approved. Until then, only audit and edit planning files.
-- If the spec is ambiguous, or you think it is wrong, stop and report the conflict before changing it. The final reveal is the approved video + voice; never substitute an audio-only version.
+- If the spec is ambiguous, or you think it is wrong, stop and report the conflict before changing it. The final reveal is his avatar, the hug and his words as typed text (owner, 2026-10-11: the video was dropped); do not bring back a video or an audio-only version.
 - Do not expose the dev bypass in user-facing copy. `0000` is valid only when the exact `?dev=true` query parameter is active.
 - Test keyboard input, dialogue ordering, room bounds, save/resume transitions, and reduced-motion behavior as specified; do not claim tests passed unless actually run.

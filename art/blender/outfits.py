@@ -3,7 +3,9 @@
 Ayish: a flowing purple dress (one colour, modest: high neckline, long
 sleeves, ankle-length A-line skirt) with fine lilac embroidery at the
 neckline, down the front, at the cuffs, the waist and the hem — after
-Maldivian kasabu embroidery, kept minimal.
+Maldivian kasabu embroidery, kept minimal. A matching hijab frames her face
+(embroidered edge), covers her head, ears and neck with her hair tucked in,
+and drapes over her shoulders, chest and upper back.
 
 Him: a white linen shirt, open collar, sleeves rolled to the elbow, tucked
 into slightly loose cream chinos with a leather belt.
@@ -54,7 +56,7 @@ def dress_ayish(B, coll):
     mat = G.fabric('dress_purple', DRESS, tile=0.3, rough=0.8, sheen=0.5, trim_img=img, metal_thread=0.15)
 
     def keep_top(p, dom):
-        if not dom or dom.startswith(HANDS) or dom in ('head',) or dom.startswith(('thigh', 'calf', 'foot', 'ball')):
+        if not dom or dom.startswith(HANDS) or dom in ('head',) or dom.startswith(('calf', 'foot', 'ball')):
             return False
         if dom == 'neck_01' and p.z > neck_z + 0.04:
             return False
@@ -95,8 +97,183 @@ def dress_ayish(B, coll):
         cuts.append((h + (t - h) * 0.97, t - h))
     top = G.make_garment(B, 'ayish.dress_top', keep_top, off_top, mat, coll, trim=trim_top, cuts=cuts, relax=22)
     skirt = make_skirt(B, coll, mat, z_top=hip_cut + 0.07)
-    n = G.cover_body(B, lambda p, d: keep_top(p, d) or (p.z < hip_cut + 0.06 and p.z > 0.09 and not d.startswith(HANDS) and not d.startswith('lowerarm')), margin=0.012)
-    return [top, skirt], n
+    scarf, under_scarf = hijab(B, coll, img)
+    n = G.cover_body(B, lambda p, d: keep_top(p, d) or under_scarf(p, d) or (p.z < hip_cut + 0.06 and p.z > 0.09 and not d.startswith(HANDS) and not d.startswith('lowerarm')), margin=0.012)
+    return [top, skirt, scarf], n
+
+
+HIJAB = '#9572c4'  # a shade lighter than the dress, same hue
+
+
+def hijab(B, coll, trim_img):
+    """Wrapped hijab: an oval opening for the face (just above the brows to
+    under the chin, cheeks in), everything else of the head, the ears and the
+    neck covered with room for the tucked hair (a soft fullness at the back),
+    falling over the shoulders to mid-chest in front and a little lower at the
+    back. Returns (object, covered(p, dom)) for masking the body under it."""
+    mw = B.body.matrix_world
+    bm = B.evaluated_bmesh()
+    dl = bm.verts.layers.deform.active
+    allp = [(mw @ v.co, B.dominant(v[dl])) for v in bm.verts]
+    bm.free()
+    head = [p for p, d in allp if d == 'head']
+    eyes = next(o for o in B.rig.children if o.name.endswith('low-poly'))
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = eyes.evaluated_get(dg)
+    me = ev.to_mesh()
+    ep = [ev.matrix_world @ v.co for v in me.vertices]
+    ev.to_mesh_clear()
+    eye_z = sum(p.z for p in ep) / len(ep)
+    eye_y = min(p.y for p in ep)
+    top_z = max(p.z for p in head)
+    back_y = max(p.y for p in head)
+    chin_z = min(p.z for p in head if abs(p.x) < 0.015 and p.y < eye_y + 0.03)
+    neck_z = B.head('neck_01').z
+    sh_z = B.head('upperarm_l').z
+    spine = B.head('spine_03')
+    # face opening: an oval in the x/z plane, front-facing surfaces only
+    cz = eye_z - 0.02
+    ax, a_top, a_bot = 0.061, 0.066, cz - chin_z + 0.004
+
+    def in_face(p, n=None):
+        dz = p.z - cz
+        az = a_top if dz > 0 else a_bot
+        if (p.x / ax) ** 2 + (dz / az) ** 2 >= 1.0:
+            return False
+        return n.y < -0.15 if n is not None else p.y < eye_y + 0.035
+
+    # hem: a soft curve, mid-chest at the front, a little lower at the back,
+    # rising to rest on top of the shoulders (no flaps on the arms)
+    z_f, z_b = sh_z - 0.19, sh_z - 0.23
+
+    def hem_z(p):
+        a = math.atan2(p.y - spine.y, p.x - spine.x)
+        drop = (z_f if p.y < spine.y else z_b) - (sh_z - 0.035)
+        return sh_z - 0.035 + drop * abs(math.sin(a)) ** 1.4
+
+    def above_hem(p):
+        return p.z > hem_z(p)
+
+    def keep(p, dom, n=None):
+        if not dom or dom.startswith(HANDS) or dom.startswith(('lowerarm', 'thigh', 'calf', 'foot', 'ball', 'pelvis')):
+            return False
+        if dom == 'head':
+            return not in_face(p, n)
+        if dom == 'neck_01':
+            return True
+        return above_hem(p)
+
+    bun = Vector((0, back_y - 0.035, eye_z + 0.035))
+    face_c = Vector((0, eye_y, cz))
+
+    def offset(p, dom, e):
+        if dom == 'head':
+            o = 0.02 + 0.02 * G.smooth(eye_z - 0.02, top_z, p.z)
+            o += 0.035 * math.exp(-((p - bun).length / 0.06) ** 2)  # the tucked hair at the back
+            if p.z < eye_z - 0.03:
+                o += 0.012 * G.smooth(eye_z - 0.03, chin_z - 0.01, p.z)  # falls away under the jaw
+            if p.z > chin_z - 0.01:
+                o = 0.002 + (o - 0.002) * G.smooth(0.0, 0.035, e)  # snug around the face
+            return o
+        if dom == 'neck_01':
+            return 0.03 + 0.012 * G.smooth(neck_z + 0.05, sh_z, p.z)
+        # the drape: sits on the shoulders, hangs a little away toward the hem
+        return 0.024 + 0.016 * G.smooth(sh_z, z_f, p.z)
+
+    FACE_BAND, HEM_BAND = 0.014, 0.035
+
+    def trim(p, e, dom):
+        if dom == 'head' and e < FACE_BAND and p.z > chin_z - 0.02:
+            u = math.atan2(p.z - cz, p.x) * 0.075 / FACE_BAND
+            return 1.0, u, e / FACE_BAND
+        if e < HEM_BAND and p.z < sh_z - 0.03:
+            return 1.0, _cyl_u(p, spine, Vector((0, 0, 1)), HEM_BAND), e / HEM_BAND
+        return 0.0, 0.0, 0.0
+
+    # below the jaw the cloth falls straight to the shoulders (no neck
+    # shape): a cone between the jaw outline and the shoulder outline
+    SEG = 48
+    ncx, ncy = 0.0, B.head('neck_01').y
+
+    def ang_bin(p):
+        return int((math.atan2(p.y - ncy, p.x - ncx) + math.pi) / (2 * math.pi) * SEG) % SEG
+
+    def ring(points, pad):
+        r = [0.0] * SEG
+        for p in points:
+            i = ang_bin(p)
+            r[i] = max(r[i], math.hypot(p.x - ncx, p.y - ncy))
+        for _ in range(6):
+            r = [r[i] or max(r[i - 1], r[(i + 1) % SEG]) for i in range(SEG)]
+        r = [max(r[i - 1], r[i], r[(i + 1) % SEG]) for i in range(SEG)]
+        return [x + pad for x in r]
+
+    jaw_z = chin_z + 0.015
+    r_jaw = ring([p for p, d in allp if d == 'head' and chin_z - 0.005 < p.z < chin_z + 0.045 and not in_face(p)], 0.016)
+    r_sh = ring([p for p, d in allp if sh_z - 0.03 < p.z < sh_z + 0.015 and d.startswith(('spine_03', 'clavicle', 'neck', 'upperarm'))], 0.03)
+
+    def smooth_opening(bm, world, edist, dom):
+        mwl = B.body.matrix_world
+        inv_l = mwl.inverted()
+        pushed = []
+        for v in bm.verts:
+            p = mwl @ v.co
+            if not (sh_z - 0.05 < p.z < jaw_z + 0.01) or edist[v] < 0.012:
+                continue
+            i = ang_bin(p)
+            t = max(0.0, min(1.0, (jaw_z - p.z) / (jaw_z - sh_z)))
+            want = r_jaw[i] * (1 - t) + r_sh[i] * t
+            d = Vector((p.x - ncx, p.y - ncy, 0))
+            if d.length < want and d.length > 1e-4:
+                k = G.smooth(0.012, 0.04, edist[v])
+                p2 = p + d.normalized() * (want - d.length) * k
+                v.co = inv_l @ p2
+                pushed.append(v)
+        for _ in range(4):
+            bmesh.ops.smooth_vert(bm, verts=[v for v in pushed if not v.is_boundary], factor=0.5,
+                                  use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        # the face edge comes from face-centre tests; even it out along itself,
+        # and round the hem's corners
+        edge = [v for v in bm.verts if v.is_boundary and (mwl @ v.co).z > chin_z - 0.03]
+        hem = [v for v in bm.verts if v.is_boundary and (mwl @ v.co).z < sh_z]
+        for vs, passes in ((edge, 6), (hem, 25)):
+            for _ in range(passes):
+                new = {}
+                for v in vs:
+                    nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+                    if len(nb) == 2:
+                        new[v] = v.co * 0.5 + (nb[0].co + nb[1].co) * 0.25
+                for v, c in new.items():
+                    v.co = c
+        for _ in range(3):
+            bmesh.ops.smooth_vert(bm, verts=[v for v in bm.verts if not v.is_boundary and (mwl @ v.co).z < sh_z + 0.02],
+                                  factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        bm.normal_update()
+
+    mat = G.fabric('hijab_purple', HIJAB, tile=0.22, rough=0.95, sheen=0.25, trim_img=trim_img, metal_thread=0.08, texture_var=0.4)
+    o = G.make_garment(B, 'ayish.hijab', keep, offset, mat, coll, trim=trim, extra=smooth_opening,
+                       relax=30, keep_normal=True)
+    # the drape rests on her shoulders: raising her arms (the hug) must not
+    # lift it, so arm weights go to the upper spine (clavicles mostly too)
+    gi = {g.name: g.index for g in o.vertex_groups}
+    up = o.vertex_groups['spine_03']
+    for v in o.data.vertices:
+        moved = 0.0
+        for g in list(v.groups):
+            n = o.vertex_groups[g.group].name
+            share = 1.0 if n.startswith('upperarm') else 0.7 if n.startswith('clavicle') else 0.0
+            if share and g.weight > 0:
+                moved += g.weight * share
+                g.weight *= 1 - share
+        if moved:
+            cur = next((g.weight for g in v.groups if g.group == gi['spine_03']), 0.0)
+            up.add([v.index], cur + moved, 'REPLACE')
+
+    def covered(p, dom):
+        # the head and neck are never masked: the cloth stands well off them,
+        # and skin under the face edge means no see-through gap there
+        return dom.startswith(('spine_03', 'clavicle')) and p.z > hem_z(p) + 0.03
+    return o, covered
 
 
 def make_skirt(B, coll, mat, z_top, z_hem=0.035, rings=26, seg=72, flare=0.17, band=0.075):

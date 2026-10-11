@@ -168,7 +168,10 @@ Which is you.
 
 — Yours, always
 
-## FINAL REVEAL — spoken video script (record this; warm, natural, 45–75 seconds)
+## FINAL REVEAL — his call (speech bubble above him, after she turns around; the owner's words)
+come here my princess
+
+## FINAL REVEAL — his words (typed out over the hug; the owner's script)
 Feels good doesn't it my love? I knew you could do it. I'm so proud
 of youuuu. Thank you for saving me, the same way you've always shown
 up for me. I hope you enjoy this little game I made — which ended up
@@ -176,9 +179,6 @@ with me being teleported here hehe. Next time I hope the next door I
 open is to see you. In sha Allah, aameen. Happy birthday to my one
 and only forever, my lub dub, my home and my heart — which is you,
 Ayish.
-
-## FINAL REVEAL — fallback copy (use only if the video cannot play)
-I'm here. Always.
 
 ## END card
 Happy Birthday, Ayish.

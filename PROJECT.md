@@ -7,7 +7,7 @@
 
 ## Vision
 
-A single-page browser 3D experience, designed first for a laptop with keyboard + mouse. It opens directly at the passcode gate (no timer lock). She walks through four Japanese-themed light-purple levels guided by a glowing orb, earning one fragment per level: H, O, M, E. At the laptop in the void she types the four fragments in, lands in his work/gaming room, reads the handwritten letter, turns around for his personal video reveal with voice, sees a soft end card, and then wakes in the finished world: a garden and a three-story house to explore.
+A single-page browser 3D experience, designed first for a laptop with keyboard + mouse. It opens directly at the passcode gate (no timer lock). She walks through four Japanese-themed light-purple levels guided by a glowing orb, earning one fragment per level: H, O, M, E. At the laptop in the void she types the four fragments in, lands in his work/gaming room, reads the handwritten letter and turns around: he is there, home. He calls her over, she walks into his arms, and while they hug his words appear as text. Then a soft end card, and then wakes in the finished world: a garden and a three-story house to explore.
 
 Tone: dreamy, playful, romantic, warm, cute. Light purple, never eerie. Not scary. Not static.
 Philosophy: she shouldn't just click and read. She should walk through
@@ -34,9 +34,11 @@ The orb is his last act of love.
 - Passcode: `1010`
 - No timer lock: the experience opens straight on the passcode screen
 - Device: laptop, keyboard + mouse, pointer lock
-- Movement: walking with gravity — WASD on the ground, Shift to jog, mouse
-  look. Floors and walls are solid (capsule vs. a static BVH per room); she
-  can never pass through the ground. No flying, no jump.
+- Movement: walking with gravity — WASD on the ground, Shift to run, Space
+  to jump, C to crouch (held), mouse look. Floors and walls are solid
+  (capsule vs. a static BVH per room); she can never pass through the
+  ground. No flying. (Jump and crouch: owner, 2026-10-11; C, not Ctrl,
+  because Ctrl+W closes the tab.)
 - Levels: 4 challenges, strictly linear: TORII → COMPILE → STARS → PETALS →
   FINAL. Each level's portal leads to the next; there is no way back and no
   replay. Each level grants a fragment (H, O, M, E), shown top-left.
@@ -46,7 +48,15 @@ The orb is his last act of love.
   the void blooms into the garden with a glimpse of the house.
 - PETALS is "stay in the light" and is the hardest level.
 - FINAL: at the laptop she presses H, O, M, E (each types its code block),
-  then lands in his work/gaming room for the letter → "turn around." → video.
+  then lands in his work/gaming room for the letter → "turn around." → he is
+  there → "come here my princess" → she walks to him → the hug (third
+  person) → his words as typed text → END.
+- Avatars: realistic avatars of both of them (MPFB/MakeHuman, built in
+  Blender, `public/models/avatars/{ayish,him}.glb`). She wears a hijab that
+  matches her dress, her hair fully tucked in. She stays first person
+  everywhere except the hug.
+- Final reveal: no video (owner, 2026-10-11). The reveal is his avatar, the
+  hug animation and his words typed out (TEXT.md "FINAL REVEAL").
 - THRESHOLD is the entry hall of their planned dream house; the gaming room
   and the house share its style.
 - After END (12 s) she wakes in EXPLORE: the garden, a sunset city and the
@@ -119,7 +129,7 @@ WIFES_BIRTHDAY/
 │   ├── models/kenney/*.glb   # Furniture Kit (CC0), see ASSET_CREDITS.md
 │   └── media/
 │       ├── music/{hub.mp3, challenge.mp3, letter.mp3}
-│       └── reveal/{reveal-video.mp4, reveal-poster.webp}
+│   └── models/avatars/{ayish,him}.glb   # baked in Blender (art/blender/export_avatars.py)
 └── src/
     ├── assets/pics/       # any number of personal photos; auto-discovered by Vite
     ├── main.js
@@ -158,15 +168,13 @@ WIFES_BIRTHDAY/
 11. Every room's `exit()` calls `world.disposeGroup(name)`. Approved
     exception: FINAL keeps its group when the next state is REVEAL (REVEAL
     reuses it and disposes it on exit).
-12. Assets lazy-load via `core/assets.js`. The reveal video starts with
-    `preload="none"`; it switches to `preload="auto"` only in FINAL: once
-    the letter is open, or immediately when FINAL resumes after the letter
-    was already seen (see SPECS → core/assets.js).
+12. Assets lazy-load via `core/assets.js`. The avatars load in FINAL (they
+    are first needed in REVEAL), never at boot.
 13. Overlays use `contain: strict; will-change: opacity;`.
 14. rAF pauses when a blocking overlay is open (not for `dialogue` or
-    `line`) and while the opaque REVEAL video is playing. Exception: the
-    END `endcard` does not pause, because sky + drifting petals render
-    behind its translucent gradient.
+    `line`). Exceptions: REVEAL's `words` overlay (the hug animates behind
+    it) and the END `endcard` do not pause, because the scene renders
+    behind their translucent gradients.
 15. Distant objects use `MeshBasicMaterial`/`MeshLambertMaterial`.
 16. Adaptive quality: measure a rolling FPS average. If FPS remains below 30 for 5 seconds, lower renderer pixel ratio in small steps down to 1.0; if still below 30, disable bloom. Do not change gameplay logic or challenge timing to improve FPS. Restore bloom/pixel ratio only after FPS remains above 45 for 10 seconds, and never exceed the initial pixel ratio. Avoid quality oscillation with these separate thresholds.
 
@@ -207,7 +215,7 @@ replays from the top.
 Refresh in FINAL after the letter but before the reveal completes → FINAL resumes at the chair-facing view and replays the “turn around.” beat; the letter is not repeated.
 Refresh after the reveal → EXPLORE.
 
-Flags are set at: `reachedFinal` on entering FINAL; `seenLetter` only after the letter finishes or is deliberately skipped; `seenReveal` when the reveal video finishes, or its fallback has been shown and she continues, immediately before END. Do not set `seenReveal` merely because the reveal state was entered.
+Flags are set at: `reachedFinal` on entering FINAL; `seenLetter` only after the letter finishes or is deliberately skipped; `seenReveal` when his words have been typed out and she continues, immediately before END. Do not set `seenReveal` merely because the reveal state was entered.
 
 ## Dev Mode (`?dev=true`)
 
@@ -228,8 +236,8 @@ Day 1
 
 Day 2
 1. Morning — `TORII` (tutorial), `COMPILE` (exploration + fragments).
-2. Midday — `STARS` (sequence), `PETALS` (follow). Compress the reveal video and make its poster frame once it is recorded.
-3. Afternoon — `FINAL`, letter overlay, `REVEAL` video overlay, `END`.
+2. Midday — `STARS` (sequence), `PETALS` (follow).
+3. Afternoon — `FINAL`, letter overlay, `REVEAL` (avatars, hug, his words), `END`.
 4. Evening — Music in, end-to-end test, compress photos, deploy, QR.
 
 Must ship: passcode, free-fly, all four challenge rooms, letter + final reveal, deployed link, dev mode. The story copy promises four rooms/four pieces, so do not cut a challenge room without first asking the owner and revising the story/specs together.
@@ -239,11 +247,10 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 ## Open Items (human must fill before build completes)
 
 - [x] Passcode `1010` confirmed
-- [x] Final reveal format: video + voice
+- [x] Final reveal format: his avatar + the hug + his words as text (video dropped 2026-10-11)
 - [x] COMPILE resolution comment approved as written
 - [x] Instrumental music choices selected in SETUP.md; verify previews and record credits before shipping
 - [ ] Add personal photos to `src/assets/pics/` (any number; see SETUP.md)
-- [ ] Record and prepare the final reveal video
 - [x] v2 copy (fragments, COMPILE blanks, controls, restart) approved 2026-10-10
 - [x] Laptop code blocks for H, O, M, E approved
 - [x] The home is their planned dream house (not a real apartment)
@@ -253,7 +260,7 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 - No WebGL → full-page message: "This experience needs WebGL.
   Try Chrome, Firefox, or Edge on a laptop." No 3D.
 - Audio blocked → silent, no error, no console spam.
-- Reveal video errors, or is not playable within 8 s → show `reveal-poster.webp` plus the fallback line from TEXT.md and a Continue prompt (Enter/click) that leads to END.
+- Avatars fail to load → REVEAL skips him and the hug; his words still type out over the gaming room, then Continue leads to END.
 - localStorage blocked → in-memory only, warn once in console.
 - Reduced motion (`prefers-reduced-motion`) → disable petal drift,
   slow portal pulse, no bloom animation, no star twinkle or shooting

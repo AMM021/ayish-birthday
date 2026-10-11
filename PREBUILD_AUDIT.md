@@ -4,7 +4,7 @@ This file records the planning repairs made before implementation. It supplement
 
 ## Current status
 
-**Handoff approved by the owner (2026-10-10). The full game is implemented (tags v0.2–v0.6). Remaining: owner media (music, video, photos), a real-laptop test pass, and deploy.**
+**Handoff approved by the owner (2026-10-10). The full game is implemented (tags v0.2–v0.6). Music and photos are in (2026-10-11). In progress (owner, 2026-10-11): avatars + hug ending, jump/crouch, STARS parkour, PETALS obstacles, house v3. Then a real-laptop test pass and deploy.**
 
 ### Automated test record (headless Chrome 2026-10-10, SwiftShader WebGL, ~4–20 fps)
 
@@ -20,7 +20,7 @@ Not testable headless; needs the real laptop: pointer lock and mouse look, real 
 - The game is laptop-first with keyboard + mouse; a touch-only device gets a clear notice rather than pretending touch controls are implemented.
 - Story copy in `TEXT.md` is not to be paraphrased.
 - Passcode `1010` is confirmed.
-- The final reveal is **video + voice**. Keep the state name `REVEAL`; do not implement an audio-only variant.
+- The final reveal is **his avatar + the hug + his words as typed text** (owner, 2026-10-11; replaces the earlier video + voice). Keep the state name `REVEAL`; no video, no audio-only variant.
 - Personal photos are variable-count and belong in `src/assets/pics/`; use Vite build-time discovery, not a fixed 3–5 list.
 
 ## Technical requirements now made explicit
@@ -94,20 +94,29 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 26. **Furniture looked bland → Kenney Furniture Kit (CC0)**, recoloured to the palette and credited in ASSET_CREDITS (credit not required). **Free roam:** END now fades into EXPLORE (the finished world) after 12 s, and a refresh after the reveal resumes there. **THRESHOLD stairs removed** (the owner saw the handrail clipping through the steps).
 27. **COMPILE questions clarified** (owner-approved): answers finish familiar phrases ("princess", "lub dub", "not apart… together", "safe and sound").
 
+## Owner decisions — 2026-10-11 (avatars, the hug, harder levels)
+
+28. **TORII:** while a sequence plays, the camera lifts to frame all nine gates, then returns her exactly where she stood ("matches how you see it for the first time").
+29. **Avatars:** realistic avatars of both of them (MPFB 2 + MakeHuman CC0/CC BY assets, credited). Ayish 153 cm, him 163 cm, both Maldivian (she slightly lighter). Her: a modest purple dress with kasabu-style embroidery, **a matching hijab with her hair fully tucked in**, purple glasses, white trainers. Him: wolf cut, sunglasses resting on his hair, white rolled-sleeve linen shirt, cream chinos, the same trainers. She stays first person except during the hug.
+30. **The ending (video dropped):** after "turn around." he is standing in the gaming room. He says "come here my princess" (his words, TEXT.md), opens his arms, and she walks to him. The hug cuts to third person (hug_in, then a slow swaying hug), and his script types out as text over it. Then END. This replaces the recorded video + voice and its poster/fallback; `seenReveal` is set when she continues after his words.
+31. **Controls:** Space jumps, Shift runs, C crouches (held). The owner asked for Ctrl; C was chosen together because Ctrl+W (crouch while walking forward) closes the browser tab and a page cannot block it. This lifts the "no jump" rule.
+32. **STARS → parkour:** jumping, ducking and running between the stars (it was too easy).
+33. **PETALS → real obstacles:** the light still leads, but the path has things in the way (it felt like walking forward with nothing stopping her).
+34. **Pending owner approval:** the controls hint copy that mentions Space and C (drafted, not shown in the game until approved).
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
-- [x] Final reveal chosen: video + voice.
+- [x] Final reveal chosen: video + voice → changed 2026-10-11 to avatars + hug + his words as text.
 - [x] COMPILE resolution comment approved as written.
 - [x] Three instrumental music candidates selected in `SETUP.md`; listen to previews, download, and record dates/credits before shipping.
 - [x] Owner approves personal photos; count may vary. Place them in `src/assets/pics/`.
 - [ ] Listen to each of the three music previews (instrumental, no vocals, loops cleanly) and confirm the page URLs still work; they were not opened or heard during planning.
-- [ ] Record and compress the final reveal video; keep it 45–75 seconds and under 15 MB if possible.
 - [x] Locked-gate line confirmed by the owner (no longer used after v2: there is no hub).
 - [x] H/O/M/E laptop code blocks approved.
 - [x] Planning handoff approved.
-- [ ] Download the three music tracks into `public/media/music/` (Pixabay blocks automated download).
-- [ ] Add photos and the reveal video + poster later (the game already handles their absence).
+- [x] Music tracks added by the owner (2026-10-11).
+- [x] Photos added (2026-10-11). No video is needed any more.
 - [ ] Decide on the Vite chunk-size warning (three.js alone is ~500 kB; the deploy skill wants a clean build, SPECS fixes vite.config).
 - [ ] Deploy to Netlify (needs the owner's Netlify login).
 

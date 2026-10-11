@@ -2,8 +2,8 @@
 
     blender -b -P art/blender/avatars.py -- [--preview] [--save]
 
-Ayish: 153 cm, textured bob with bangs, purple glasses, a modest purple
-outfit. Him: 163 cm, wolf cut, sunglasses resting on his hair, rolled-sleeve
+Ayish: 153 cm, purple glasses, a modest purple outfit with a matching
+hijab (her hair is tucked in, so no hair mesh is built). Him: 163 cm, wolf cut, sunglasses resting on his hair, rolled-sleeve
 shirt, cream chinos. Matching white trainers. Both use the game_engine rig
 (the hug and idle animations are keyed on it in anim.py).
 """
@@ -30,7 +30,7 @@ PEOPLE = {
                       'race': {'asian': 0.55, 'african': 0.2, 'caucasian': 0.25}},
         'skin': 'skins/young_asian_female/young_asian_female.mhmat',
         'skin_tone': '#a87a60',
-        'hair': 'hair/o4saken_chinesebob01/o4saken_chinesebob01.mhclo',
+        'hair': '',  # under the hijab (outfits.hijab)
         'glasses': 'clothes/spamrakuen_tbm_glasses_frames_01/spamrakuen_tbm_glasses_frames_01.mhclo',
         'frame_tint': '#7a4bb0',
         'hair_tint': '#2a1d18',
@@ -181,7 +181,7 @@ def build_person(key):
                 recolour(child, p['frame_tint'])
             if p.get('glasses_on_head'):
                 lift_onto_head(child, body)
-        elif 'hair' in n or p['hair'].split('/')[1] in n or 'brow' in n or 'lash' in n:
+        elif 'hair' in n or (p['hair'] and p['hair'].split('/')[1] in n) or 'brow' in n or 'lash' in n:
             tint_material(child, p['hair_tint'])
             for slot in child.material_slots:
                 b = next((x for x in slot.material.node_tree.nodes if x.type == 'BSDF_PRINCIPLED'), None)

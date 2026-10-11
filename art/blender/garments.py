@@ -67,13 +67,14 @@ class Body:
         return (p - h).dot(d) / d.length_squared
 
 
-def make_garment(B, name, keep, offset, mat, coll, trim=None, extra=None, cuts=(), relax=0, hug=None, trim_by_face=False):
+def make_garment(B, name, keep, offset, mat, coll, trim=None, extra=None, cuts=(), relax=0, hug=None, trim_by_face=False, keep_normal=False):
     """keep(p, dom) → bool, tested at each face centre (world p). offset(p,
     dom, edge) → metres outward; `edge` is the distance to the garment's
     open edge. cuts: [(point, normal)] planes sliced first, so hems, cuffs
     and necklines are clean lines. relax: smoothing passes that let the
     cloth drape over the body's detail. hug: offset at the open edges (the
-    cloth closes onto the skin there)."""
+    cloth closes onto the skin there). keep_normal: keep also gets the
+    face's world normal (keep(p, dom, n))."""
     bm = B.evaluated_bmesh()
     mw = B.body.matrix_world
     mwi = mw.inverted()
@@ -88,7 +89,8 @@ def make_garment(B, name, keep, offset, mat, coll, trim=None, extra=None, cuts=(
     for f in bm.faces:
         doms = [dom[v] for v in f.verts]
         d = max(set(doms), key=doms.count)
-        if not keep(mw @ f.calc_center_median(), d):
+        args = (mw @ f.calc_center_median(), d) + (((mw.to_3x3() @ f.normal).normalized(),) if keep_normal else ())
+        if not keep(*args):
             dead.append(f)
     bmesh.ops.delete(bm, geom=dead, context='FACES_ONLY')
     loose = [v for v in bm.verts if not v.link_faces]
