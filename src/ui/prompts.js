@@ -47,8 +47,9 @@ export function initPrompts() {
   input.onLockChange(update);
 }
 
-export function showControls() {
-  if (controlsState !== 'hidden') return;
+// `again` shows it once more after it was dismissed (STARS: first jumps)
+export function showControls({ again = false } = {}) {
+  if (controlsState === 'shown' || (controlsState === 'done' && !again)) return;
   controlsState = 'shown';
   movedAtShow = player.moved;
   controls.classList.add('show');

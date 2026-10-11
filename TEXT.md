@@ -189,5 +189,5 @@ it's all yours now. go look around.
 
 ## UI hints (small, non-blocking)
 Look hint: click to look around
-Controls hint: W A S D to walk · Shift to run · mouse to look
+Controls hint: W A S D to walk · Shift to run · Space to jump · C to crouch · mouse to look
 Keyboard-first notice (if touch-only device detected): this experience is designed for a laptop with a keyboard and mouse. Please open it on a laptop for the intended experience.

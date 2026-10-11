@@ -12,6 +12,7 @@ import * as portalObj from '../objects/portal.js';
 import { enableBloom } from '../world/layers.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
+import * as prompts from '../ui/prompts.js';
 import { TEXT } from '../ui/text.js';
 
 // STARS — a heart of nine stars over a twilight lake, and a path of
@@ -501,7 +502,10 @@ export default {
     orb.place();
     audio.play('challenge');
     stars.forEach((s) => { s.inside = false; });
-    dialogue.say(orb.anchor, TEXT.stars.intro, { mode: 'story' }).then(() => { introDone = true; });
+    dialogue.say(orb.anchor, TEXT.stars.intro, { mode: 'story' }).then(() => {
+      introDone = true;
+      prompts.showControls({ again: true });
+    });
   },
 
   update(dt) {
