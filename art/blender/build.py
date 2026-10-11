@@ -12,8 +12,8 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import importlib
-import geo, mats, house, furniture, assets, layout, check  # noqa: E402
-for m in (geo, mats, house, furniture, assets, layout, check):
+import geo, mats, house, furniture, assets, layout, check, audit  # noqa: E402
+for m in (geo, mats, house, furniture, assets, layout, check, audit):
     importlib.reload(m)
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -55,9 +55,18 @@ def world_light(sc):
     sc.collection.objects.link(o)
 
 
-def interior_lights(put):
-    """A real light inside every washi lamp + soft hidden cove light per room."""
+def interior_lights(put, h):
+    """A real light inside every washi lamp + soft hidden cove light per room,
+    plus the house's own fixtures (sconces, small rooms)."""
     import mathutils
+    for name, (x, z), y, watts, radius in h.lights:
+        L = bpy.data.lights.new(name, 'POINT')
+        L.energy = watts
+        L.color = (1.0, 0.82, 0.6)
+        L.shadow_soft_size = radius
+        lo = bpy.data.objects.new(name, L)
+        lo.location = geo.P(x, z, y)
+        bpy.context.scene.collection.objects.link(lo)
     for key, (room, piece) in put.items():
         if piece.kind != 'light':
             continue
@@ -93,6 +102,7 @@ def interior_lights(put):
         L.energy = energy
         L.color = (1.0, 0.86, 0.68)
         o = bpy.data.objects.new('cove_' + name, L)
+        o.visible_camera = False  # hidden cove: light, never a glowing panel
         o.location = geo.P(x, z, y)
         bpy.context.scene.collection.objects.link(o)
 
@@ -124,22 +134,37 @@ VIEWS = {
     # name: (eye x, y, z), (target x, y, z)  — plan coords, y up
     'ext_garden': ((-4, 2.2, 30), (-6, 4, 2)),
     'ext_pond': ((-14, 1.7, 22), (-8, 3.5, 4)),
-    'ext_north': ((6, 2.0, -24), (0, 4, -2)),
+    'ext_north': ((1.5, 1.7, -19), (0, 3.0, -6)),
+    'ext_east': ((26, 2.5, 6), (8, 3.5, -1)),
     'ext_aerial': ((24, 26, 34), (-4, 2, 2)),
     'living': ((-6.2, 1.6, 1.8), (-12.5, 1.0, -2.8)),
     'living_fire': ((-9.6, 1.6, 0.6), (-4.6, 1.0, -4.3)),
     'library': ((-17.0, 1.6, 4.4), (-19.5, 1.6, -3.0)),
-    'tower': ((0.5, 1.6, 3.2), (-0.5, 4.5, -2.5)),
-    'kitchen': ((14.2, 1.65, 2.0), (7.5, 1.0, -2.5)),
+    'library_shoji': ((-15.5, 1.6, 3.0), (-11.0, 1.4, -2.5)),
     'sunroom': ((-17.6, 1.6, 3.6), (-21.0, 1.0, 8.0)),
+    'genkan': ((0.6, 1.65, -4.6), (-0.2, 1.2, -9.4)),
+    'genkan_in': ((0.0, 1.65, -8.6), (0.0, 1.6, -2.0)),
+    'wc': ((2.5, 1.65, -6.2), (3.6, 1.0, -9.0)),
+    'kitchen': ((13.6, 1.65, 0.5), (6.0, 1.0, -2.5)),
+    'dining': ((6.0, 1.65, -1.0), (14.0, 1.0, 1.0)),
+    'laundry': ((7.0, 1.65, -5.1), (9.8, 1.0, -6.6)),
+    'tower': ((2.8, 1.6, 1.2), (-0.5, 5.0, -1.0)),
+    'tower_up': ((0.2, 1.4, 3.0), (0.0, 11.0, 0.0)),
+    'tower_2f': ((-2.9, 8.6, 1.4), (3.4, 8.0, -2.0)),
     'studio': ((-6.5, 5.15, -3.8), (-10.6, 4.4, 1.9)),
     'studio_desk': ((-8.4, 5.2, -0.6), (-9.0, 4.3, 2.0)),
+    'studio_shelves': ((-9.0, 5.2, 0.5), (-11.5, 5.0, -5.5)),
+    'bath': ((5.6, 5.15, -2.6), (9.6, 4.2, 1.0)),
+    'bath_vanity': ((7.0, 5.15, -1.5), (8.6, 4.9, 3.3)),
     'pod': ((-6.0, 8.5, 0.6), (-12.5, 7.6, -4.2)),
-    'bath': ((5.0, 5.15, 2.0), (9.5, 4.2, -2.0)),
+    'pod_glass': ((-10.5, 8.5, -3.5), (-11.0, 8.0, 3.5)),
+    'bridge': ((-6.2, 8.6, -1.0), (-2.5, 8.2, -1.2)),
 }
 
 
 def render(sc, samples=64, res=(1280, 720)):
+    if '--quick' in ARGS:
+        samples, res = 40, (800, 450)
     sc.render.engine = 'CYCLES'
     prefs = bpy.context.preferences.addons['cycles'].preferences
     for dev_type in ('OPTIX', 'CUDA'):
@@ -180,11 +205,16 @@ def main():
     ground(M, geo.collection('site'))
     furn = geo.collection('furniture')
     put = layout.furnish(M, furn)
-    interior_lights(put)
+    interior_lights(put, h)
     problems = check.run(put, layout.rooms())
     print('PLACEMENT CHECK:', len(problems), 'problem(s)')
     for p in problems:
         print('  ', p)
+    if '--audit' in ARGS:
+        found = audit.run(h, put, layout.rooms())
+        print('AUDIT:', len(found), 'problem(s)')
+        for p in found:
+            print('  ', p)
     world_light(sc)
     if '--save' in ARGS:
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'house.blend'))

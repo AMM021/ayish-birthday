@@ -256,9 +256,9 @@ def cabinet(coll, M, w, h, d, name='cabinet', front='oak', top=None, doors=2):
 def rug(coll, M, w, d, mat='linen_white', name='rug', round_=False):
     r = Piece(name, coll, 'rug', solid=False)
     if round_:
-        r.cyl(w / 2, 0.012, 0, 0, 0.0, M[mat], segs=72, name='rug')
+        r.cyl(w / 2, 0.012, 0, 0, 0.002, M[mat], segs=72, name='rug')
     else:
-        r.box(w, 0.012, d, 0, 0, 0.0, M[mat], r=0.004, name='rug')
+        r.box(w, 0.012, d, 0, 0, 0.002, M[mat], r=0.004, name='rug')
     return r
 
 
@@ -369,7 +369,7 @@ def toilet(coll, M, name='wc'):
     w.box(0.16, 0.012, 0.08, 0, -0.27, 0.95, M['chrome'], r=0.003, name='flush')
     # muslim shower on the right
     w.box(0.04, 0.12, 0.06, 0.42, -0.42, 0.72, M['chrome'], r=0.01, name='bracket')
-    w.tube([(0.42, 0.74, -0.36), (0.45, 0.82, -0.32)], 0.018, M['chrome'], 'spray')
+    w.tube([(0.42, 0.74, -0.395), (0.45, 0.82, -0.32)], 0.018, M['chrome'], 'spray')
     w.tube([(0.42, 0.7, -0.38), (0.48, 0.3, -0.36), (0.42, 0.18, -0.4), (0.36, 0.4, -0.43)], 0.008, M['chrome'], 'hose')
     w.cyl(0.03, 0.04, 0.36, -0.43, 0.38, M['chrome'], name='valve')
     return w
@@ -379,20 +379,27 @@ def vanity(coll, M, w=2.0, name='vanity'):
     v = Piece(name, coll)
     v.box(w, 0.4, 0.52, 0, 0, 0.45, M['oak'], r=0.006, name='cabinet')
     v.box(w + 0.02, 0.03, 0.55, 0, 0.0, 0.85, M['marble'], r=0.004, name='top')
-    for x in (-w / 4, w / 4):
+    for x in ((-w / 4, w / 4) if w >= 1.2 else (0.0,)):
         v.cyl(0.2, 0.13, x, 0.02, 0.88, M['ceramic'], segs=40, bevel=0.02, name='basin')
         v.tube([(x, 0.88, -0.22), (x, 1.15, -0.22), (x, 1.15, -0.1)], 0.01, M['brass'], 'tap')
     v.box(w - 0.1, 0.9, 0.025, 0, -0.25, 1.2, M['chrome'], r=0.01, name='mirror')
-    v.box(w - 0.2, 0.02, 0.03, 0, -0.23, 2.12, M['warm_light'], name='mirror_light')
+    v.box(w - 0.2, 0.02, 0.035, 0, -0.2425, 2.1, M['warm_light'], name='mirror_light')
     return v
 
 
 def shower(coll, M, w=2.0, d=1.2, name='shower'):
     s = Piece(name, coll, solid=False)
     s.box(w, 0.04, d, 0, 0, 0.0, M['travertine'], r=0.005, name='tray')
-    s.box(0.012, 2.0, d * 0.6, w / 2 - 0.01, d * 0.2, 0.04, M['glass'], name='screen')
+    # a fixed glass screen in a slim black frame, wall to the open side
+    gz0, gz1 = -d / 2, d / 2 - 0.45
+    s.box(0.01, 2.0, gz1 - gz0, w / 2 - 0.03, (gz0 + gz1) / 2, 0.04, M['glass'], name='screen')
+    s.box(0.03, 0.03, gz1 - gz0 - 0.01, w / 2 - 0.03, (gz0 + gz1) / 2 - 0.005, 2.04, M['metal_black'], name='screen_top')
+    s.box(0.03, 2.03, 0.03, w / 2 - 0.03, gz1 - 0.01, 0.035, M['metal_black'], name='screen_edge')
+    s.box(0.03, 0.02, gz1 - gz0 - 0.01, w / 2 - 0.03, (gz0 + gz1) / 2 - 0.005, 0.04, M['metal_black'], name='screen_shoe')
+    # rain head on a rod from the ceiling (ceiling 3.0 m above the floor)
     s.box(0.3, 0.012, 0.3, -w / 4, 0, 2.2, M['chrome'], r=0.01, name='rainhead')
-    s.box(0.5, 0.1, 0.3, -w / 2 + 0.3, -d / 2 + 0.2, 0.5, M['oak'], r=0.01, name='bench')
+    s.cyl(0.012, 0.8, -w / 4, 0, 2.21, M['chrome'], segs=12, name='rod')
+    s.box(0.5, 0.1, 0.3, -w / 2 + 0.3, -d / 2 + 0.15, 0.5, M['oak'], r=0.01, name='bench')
     return s
 
 
@@ -401,15 +408,15 @@ def curved_shelves(coll, M, cx, cz, r, a0, a1, h=3.0, depth=0.38, name='shelves'
     """Oak shelving following an arc (front at r, back at r + depth)."""
     s = Piece(name, coll)
     O = M['walnut']
-    s.prism(geo.sector_pts(cx, cz, r + depth - 0.03, r + depth, a0, a1, 1.0), 0.0, h, O, 'back')
+    s.prism(geo.sector_pts(cx, cz, r + depth - 0.03, r + depth, a0, a1, 1.0), 0.0, h - 0.025, O, 'back')
     rows = 7
     for i in range(rows + 1):
         y = 0.08 + (h - 0.12) * i / rows
-        s.prism(geo.sector_pts(cx, cz, r, r + depth, a0, a1, 1.0), y, y + 0.03, O, f'shelf{i}')
+        s.prism(geo.sector_pts(cx, cz, r + 0.005, r + depth - 0.01, a0, a1, 1.0), y, y + 0.03, O, f'shelf{i}')
     nup = max(2, round(math.radians(a1 - a0) * r / 0.9))
     for i in range(nup + 1):
         a = a0 + (a1 - a0) * i / nup
-        s.prism([polar(cx, cz, r, a - 0.06), polar(cx, cz, r + depth, a - 0.06), polar(cx, cz, r + depth, a + 0.06), polar(cx, cz, r, a + 0.06)], 0.0, h, O, f'upright{i}')
+        s.prism([polar(cx, cz, r, a - 0.06), polar(cx, cz, r + depth - 0.005, a - 0.06), polar(cx, cz, r + depth - 0.005, a + 0.06), polar(cx, cz, r, a + 0.06)], 0.0, h, O, f'upright{i}')
     if books:
         import random
         rnd = random.Random(7)

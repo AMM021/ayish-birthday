@@ -80,7 +80,8 @@ class Builder:
 
     def obj(self, name, mat=None, coll=None, uv=1.0):
         bm = self.bm
-        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+        # every prism stays its own closed shell (no merging with its
+        # neighbours), so outward normals are certain
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         box_uv(bm, uv)
         me = bpy.data.meshes.new(name)
@@ -95,15 +96,18 @@ class Builder:
 
 
 # --- walls ------------------------------------------------------------------
-def _spans(h, openings, t0, t1):
+def _spans(h, openings, t0, t1, foot=0.0):
     """Solid vertical spans of a wall segment [t0,t1] given openings."""
-    cuts = [(0.0, h)]
+    cuts = [(-foot, h)]
     for o in openings:
         if o['t1'] <= t0 or o['t0'] >= t1:
             continue
         nxt = []
+        # a doorway's sill (y0 = 0) stops 1 cm under the floor surface, so
+        # the wall's foundation never shows through the floor
+        y0 = o['y0'] - 0.01 if foot > 0 and abs(o['y0']) < 1e-6 else o['y0']
         for a, b in cuts:
-            lo, hi = max(a, o['y0']), min(b, o['y1'])
+            lo, hi = max(a, y0), min(b, o['y1'])
             if lo >= hi:
                 nxt.append((a, b))
                 continue
@@ -115,7 +119,7 @@ def _spans(h, openings, t0, t1):
     return cuts
 
 
-def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0):
+def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0, foot=0.0):
     """Curved wall centred on radius r (inner r-thick/2 … outer r+thick/2)
     from angle a0 to a1 (degrees). Openings use arc length t along the
     wall from a0: {t0, t1, y0, y1}. Segments split at every opening edge."""
@@ -137,7 +141,7 @@ def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0):
         if t1 - t0 < 1e-4:
             continue
         mid = (t0 + t1) / 2
-        spans = _spans(h, [o for o in openings if o['t0'] <= mid <= o['t1']], t0, t1)
+        spans = _spans(h, [o for o in openings if o['t0'] <= mid <= o['t1']], t0, t1, foot)
         d0 = a0 + math.degrees(t0 / r)
         d1 = a0 + math.degrees(t1 / r)
         quad = [polar(cx, cz, ri, d0), polar(cx, cz, ro, d0), polar(cx, cz, ro, d1), polar(cx, cz, ri, d1)]
@@ -146,7 +150,7 @@ def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0):
     return length
 
 
-def line_wall(b, x0, z0, x1, z1, y, h, thick, openings=(), extend=0.0):
+def line_wall(b, x0, z0, x1, z1, y, h, thick, openings=(), extend=0.0, foot=0.0):
     """Straight wall from (x0,z0) to (x1,z1); openings by distance t from
     start. `extend` lengthens both ends (closes corners)."""
     length = math.hypot(x1 - x0, z1 - z0)
@@ -162,7 +166,7 @@ def line_wall(b, x0, z0, x1, z1, y, h, thick, openings=(), extend=0.0):
         if t1 - t0 < 1e-4:
             continue
         mid = (t0 + t1) / 2
-        spans = _spans(h, [o for o in openings if o['t0'] <= mid <= o['t1']], t0, t1)
+        spans = _spans(h, [o for o in openings if o['t0'] <= mid <= o['t1']], t0, t1, foot)
         a = (x0 + ux * t0, z0 + uz * t0)
         c = (x0 + ux * t1, z0 + uz * t1)
         quad = [(a[0] - nx, a[1] - nz), (a[0] + nx, a[1] + nz), (c[0] + nx, c[1] + nz), (c[0] - nx, c[1] - nz)]
@@ -234,11 +238,11 @@ def offset_poly(pts, d):
         nx = n1[0] / l1 + n2[0] / l2
         nz = n1[1] / l1 + n2[1] / l2
         ln = math.hypot(nx, nz) or 1
-        out.append((p1[0] - sgn * d * nx / ln, p1[1] - sgn * d * nz / ln))
+        out.append((p1[0] + sgn * d * nx / ln, p1[1] + sgn * d * nz / ln))
     return out
 
 
-def ring_wall(b, pts, y, h, thick, openings=(), closed=True):
+def ring_wall(b, pts, y, h, thick, openings=(), closed=True, foot=0.0):
     """Walls following a polygon outline (centre line), with openings
     measured as distance along the outline from its first point."""
     segs = list(zip(pts, pts[1:] + ([pts[0]] if closed else [])))
@@ -246,6 +250,103 @@ def ring_wall(b, pts, y, h, thick, openings=(), closed=True):
     for (x0, z0), (x1, z1) in segs:
         L = math.hypot(x1 - x0, z1 - z0)
         local = [{**o, 't0': o['t0'] - t, 't1': o['t1'] - t} for o in openings if o['t1'] > t and o['t0'] < t + L]
-        line_wall(b, x0, z0, x1, z1, y, h, thick, local, extend=thick / 2 if L > 1.0 else 0.02)
+        line_wall(b, x0, z0, x1, z1, y, h, thick, local, extend=thick / 2 if L > 1.0 else 0.02, foot=foot)
         t += L
     return t
+
+
+def clip_half(poly, fn):
+    """Sutherland–Hodgman: keep the part of a polygon where fn(x, z) >= 0
+    (fn linear, e.g. lambda x, z: z + 7.8)."""
+    out = []
+    n = len(poly)
+    for i in range(n):
+        p, q = poly[i], poly[(i + 1) % n]
+        fp, fq = fn(*p), fn(*q)
+        if fp >= 0:
+            out.append(p)
+        if (fp >= 0) != (fq >= 0):
+            t = fp / (fp - fq)
+            out.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+    return out
+
+
+def point_at(pts, d):
+    """The point at distance d along a polyline."""
+    acc = 0.0
+    for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+        L = math.hypot(x1 - x0, z1 - z0)
+        if acc + L >= d:
+            t = (d - acc) / L if L else 0.0
+            return (x0 + (x1 - x0) * t, z0 + (z1 - z0) * t)
+        acc += L
+    return pts[-1]
+
+
+def length(pts):
+    return sum(math.hypot(x1 - x0, z1 - z0) for (x0, z0), (x1, z1) in zip(pts, pts[1:]))
+
+
+def arc(cx, cz, r, a0, a1, step=0.25):
+    """Points on an arc from a0 to a1 (degrees, either direction), spaced
+    about `step` metres."""
+    n = max(2, math.ceil(abs(math.radians(a1 - a0)) * r / step))
+    return [polar(cx, cz, r, a0 + (a1 - a0) * i / n) for i in range(n + 1)]
+
+
+def band_wall(b, pts, y, h, thick, openings=(), foot=0.0):
+    """A wall following an open polyline as one continuous band (mitred
+    joints, no overlapping segments); openings by distance along it."""
+    n = len(pts)
+    seg = [math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) for i in range(n - 1)]
+    acc = [0.0]
+    for L in seg:
+        acc.append(acc[-1] + L)
+    total = acc[-1]
+
+    def normal_at(i):
+        def nrm(k):
+            dx, dz = pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1]
+            L = math.hypot(dx, dz) or 1
+            return (-dz / L, dx / L)
+        if i == 0:
+            return nrm(0), 1.0
+        if i == n - 1:
+            return nrm(n - 2), 1.0
+        a, c = nrm(i - 1), nrm(i)
+        mx, mz = a[0] + c[0], a[1] + c[1]
+        L = math.hypot(mx, mz) or 1
+        mx, mz = mx / L, mz / L
+        return (mx, mz), 1.0 / max(0.3, mx * c[0] + mz * c[1])
+
+    def point(d):
+        for i in range(n - 1):
+            if d <= acc[i + 1] + 1e-9:
+                t = (d - acc[i]) / (seg[i] or 1)
+                p = (pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t)
+                (nx, nz), _ = normal_at(i) if t < 1e-9 else ((( -(pts[i + 1][1] - pts[i][1]) / (seg[i] or 1), (pts[i + 1][0] - pts[i][0]) / (seg[i] or 1))), 1.0)
+                return p, (nx, nz), 1.0
+        return pts[-1], normal_at(n - 1)[0], 1.0
+
+    marks = sorted({0.0, total, *[max(0.0, min(total, o['t0'])) for o in openings], *[max(0.0, min(total, o['t1'])) for o in openings]})
+    half = thick / 2
+    for k in range(len(marks) - 1):
+        d0, d1 = marks[k], marks[k + 1]
+        if d1 - d0 < 1e-4:
+            continue
+        mid = (d0 + d1) / 2
+        spans = _spans(h, [o for o in openings if o['t0'] <= mid <= o['t1']], d0, d1, foot)
+        left, right = [], []
+        stations = [(d0, None)] + [(acc[i], i) for i in range(1, n - 1) if d0 < acc[i] < d1] + [(d1, None)]
+        for d, vi in stations:
+            if vi is not None:
+                (nx, nz), sc = normal_at(vi)
+                p = pts[vi]
+            else:
+                p, (nx, nz), sc = point(d)
+            left.append((p[0] + nx * half * sc, p[1] + nz * half * sc))
+            right.append((p[0] - nx * half * sc, p[1] - nz * half * sc))
+        poly = left + right[::-1]
+        for lo, hi in spans:
+            b.prism(poly, y + lo, y + hi)
+    return total
