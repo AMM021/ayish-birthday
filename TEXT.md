@@ -184,8 +184,19 @@ Ayish.
 Happy Birthday, Ayish.
 Come back on our anniversary.
 
-## AFTER END — orb line (she wakes in the finished world)
-it's all yours now. go look around.
+## AFTER END — orb goodbye (she wakes in the studio beside him; 4 beats, one bubble each, Enter to continue; then the orb leaves; approved 2026-10-12)
+1. you did it. he's home — and so are you.
+
+2. this is what he was really making. all of it. for you.
+
+3. i have to go now. but if anything ever goes wrong, i'll come find you —
+he's already giving me more power-ups for next time.
+
+4. one more thing, love. he made me shine like you — his little star. it
+was always him, talking to you through me.
+
+## AFTER END — his line (speech bubble above him at his laptop, once the orb has gone; the owner's words)
+take a look around the house and explore my love!
 
 ## UI hints (small, non-blocking)
 Look hint: click to look around

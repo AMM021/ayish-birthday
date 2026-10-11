@@ -664,7 +664,8 @@ class Garden:
                                 w2 = polar(tx, tz, L * 0.42, a_ + 11)
                                 droop = self.rnd.uniform(0.08, 0.2)
                                 yl = ty + j * 0.006  # each leaf its own height: no two share a plane
-                                v = [bm.verts.new(P(tx, tz, yl)), bm.verts.new(P(*w1, yl - droop * 0.3)), bm.verts.new(P(*tip, yl - droop)), bm.verts.new(P(*w2, yl - droop * 0.3))]
+                                jit = lambda: self.rnd.uniform(-0.02, 0.02)  # each leaf its own tilt: never two in one plane
+                                v = [bm.verts.new(P(tx, tz, yl + jit())), bm.verts.new(P(*w1, yl - droop * 0.3 + jit())), bm.verts.new(P(*tip, yl - droop + jit())), bm.verts.new(P(*w2, yl - droop * 0.3 + jit()))]
                                 bm.faces.new(v)
                 z += 0.33
         self.add(culms, 'bamboo', M['bamboo'])

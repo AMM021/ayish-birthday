@@ -155,8 +155,14 @@ export function model(path) {
   if (!models.has(path)) {
     models.set(path, (async () => {
       if (!gltf) {
-        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+        const [{ GLTFLoader }, { DRACOLoader }] = await Promise.all([
+          import('three/examples/jsm/loaders/GLTFLoader.js'),
+          import('three/examples/jsm/loaders/DRACOLoader.js')
+        ]);
         gltf = new GLTFLoader();
+        const draco = new DRACOLoader();
+        draco.setDecoderPath(BASE + 'draco/'); // the house is Draco-compressed
+        gltf.setDRACOLoader(draco);
       }
       const g = await gltf.loadAsync(BASE + path);
       g.scene.traverse((o) => {

@@ -7,7 +7,8 @@ Poses are written as world-space intentions — "lean the spine forward 6°",
 game only has to play bone rotations.
 
 Clips (30 fps):
-  him:   idle (loop), open_arms (once, holds), open_idle (loop), hug_in (once), hug (loop)
+  him:   idle (loop), open_arms (once, holds), open_idle (loop), hug_in (once), hug (loop),
+         sit_type (loop), sit_look (once, holds), sit_look_idle (loop) — at his laptop
   ayish: idle (loop), hug_in (once), hug (loop)
 The hug is played with both rigs in this file's layout: him at the origin
 facing -Y, Ayish facing him at (0, -HUG_D, 0).
@@ -103,6 +104,13 @@ class Poser:
         for k in (1, 2, 3):
             self.local(f'thumb_0{k}_{s}', 'X', -thumb * 25)
 
+    def move(self, name, world_delta):
+        """Translate a bone by a world-space offset (only the pelvis moves)."""
+        pb = self.rig.pose.bones[name]
+        d = self.rig.matrix_world.inverted().to_3x3() @ Vector(world_delta)
+        pb.location = pb.location + pb.bone.matrix_local.to_3x3().inverted() @ d
+        bpy.context.view_layer.update()
+
     def reset(self):
         for pb in self.rig.pose.bones:
             pb.rotation_quaternion = (1, 0, 0, 0)
@@ -117,6 +125,7 @@ class Poser:
         goals = pose(self) or {}
         for pb in self.rig.pose.bones:
             pb.keyframe_insert('rotation_quaternion', frame=frame)
+        self.rig.pose.bones['pelvis'].keyframe_insert('location', frame=frame)
         for s, (tgt, pole, c) in self.goals.items():
             g = goals.get(s)
             c.influence = 1.0 if g else 0.0
@@ -160,6 +169,7 @@ class Poser:
         # wipe the authoring keys for the next clip
         for pb in rig.pose.bones:
             pb.rotation_quaternion = (1, 0, 0, 0)
+            pb.location = (0, 0, 0)
         for s, (tgt, pole, c) in self.goals.items():
             tgt.animation_data_clear()
             pole.animation_data_clear()
@@ -302,6 +312,49 @@ def hug_pose_her(k, sway, him):
     return f
 
 
+SEAT = 0.54   # the studio's gaming chair: seat top above the floor
+DESK = 0.76   # the desk top
+KEYS = 0.36   # the keyboard, forward of his hips (m)
+
+
+def sit_pose(t, look=0.0):
+    """Seated at the desk, hands on the laptop's keys, typing; `look`
+    (0 → 1) turns his head and shoulders to his left, toward her."""
+    def f(P):
+        hip = P.bone_head('thigh_l').z
+        P.move('pelvis', (0, 0, SEAT + 0.1 - hip))
+        for s in 'lr':
+            P.turn('thigh_' + s, (1, 0, 0), -88)
+            P.turn('calf_' + s, (1, 0, 0), 84)
+            P.turn('foot_' + s, (1, 0, 0), 4)
+        P.turn('thigh_l', (0, 0, 1), 6)
+        P.turn('thigh_r', (0, 0, 1), -6)
+        P.turn('spine_01', (1, 0, 0), 6)
+        P.turn('spine_02', (1, 0, 0), 5)
+        a = math.sin(2 * math.pi * t)
+        P.turn('spine_03', (1, 0, 0), 2 - 0.8 * a)
+        P.turn('spine_03', (0, 0, 1), 14 * look)   # to his left, where she stands
+        P.turn('neck_01', (0, 0, 1), 22 * look)
+        P.turn('head', (0, 0, 1), 30 * look)
+        P.turn('neck_01', (1, 0, 0), 10 * (1 - look))
+        P.turn('head', (1, 0, 0), 9 * (1 - look) - 2 * look)
+        g = {}
+        fwd = face_dir(P)
+        left = (P.rig.matrix_world.to_3x3() @ V(1, 0, 0)).normalized()
+        base = P.rig.matrix_world.translation
+        for s, sx, ph in (('l', 1, 0.0), ('r', -1, 0.37)):
+            # fingertips on the keys: small, quick, out-of-step taps while typing
+            tap = 0.0 if look > 0.5 else max(0.0, math.sin(2 * math.pi * (t * 6 + ph))) * 0.012
+            tgt = base + fwd * KEYS + left * (sx * 0.12) + V(0, 0, DESK + 0.035 + tap)
+            sh = P.bone_head('upperarm_' + s)
+            pole = sh + fwd * 0.1 + left * (sx * 0.45) + V(0, 0, -0.45)
+            g[s] = (tgt, pole)
+            g['aim_' + s] = (tgt + fwd * 0.15 + V(0, 0, -0.02), 1.0)
+            P.curl(s, 0.35, thumb=0.3)
+        return g
+    return f
+
+
 def ease(x):
     return x * x * (3 - 2 * x)
 
@@ -331,6 +384,11 @@ def build_clips(rigs):
         clips[('ayish', name)] = her.bake(name, f0, f1)
         clips[('him', name)] = him.bake(name, f0, f1)
 
+    # at his laptop in the house (EXPLORE): typing (4 s loop), turning to
+    # her (0.8 s, holds), and looking at her while she listens (loop)
+    clip(him, 'sit_type', [(f, sit_pose(f / 120)) for f in range(0, 121, 4)], None)
+    clip(him, 'sit_look', [(f, sit_pose(f / 120, ease(f / 24))) for f in range(0, 25, 4)], None)
+    clip(him, 'sit_look_idle', [(f, sit_pose(f / 120, 1.0)) for f in range(0, 121, 10)], None)
     hug_clip('hug_in', [(f, ease(f / 48), 0.0) for f in range(0, 49, 6)])
     hug_clip('hug', [(f, 1.0, math.sin(2 * math.pi * f / 180)) for f in range(0, 181, 15)])
     him.finish()
@@ -385,6 +443,29 @@ def preview(rigs, clips):
         sc.frame_set(frame)
 
     os.makedirs(OUT, exist_ok=True)
+    if '--sit' in ARGS:
+        for o in rigs['ayish'].children_recursive:
+            o.hide_render = True
+        import bmesh
+        def box(name, c, size):
+            me = bpy.data.meshes.new(name)
+            bm = bmesh.new()
+            bmesh.ops.create_cube(bm, size=1.0)
+            bmesh.ops.scale(bm, vec=V(*size), verts=bm.verts)
+            bmesh.ops.translate(bm, vec=V(*c), verts=bm.verts)
+            bm.to_mesh(me)
+            bm.free()
+            o = bpy.data.objects.new(name, me)
+            sc.collection.objects.link(o)
+        box('seat', (0, 0.1, SEAT - 0.05), (0.54, 0.52, 0.1))
+        box('back', (0, 0.38, SEAT + 0.35), (0.5, 0.1, 0.78))
+        box('desk', (0, -0.55, DESK - 0.02), (1.6, 0.8, 0.04))
+        box('laptop', (0, -KEYS - 0.02, DESK + 0.008), (0.32, 0.22, 0.015))
+        for name, frame, tag in (('sit_type', 30, 'type'), ('sit_look', 24, 'look')):
+            play('him', name, frame)
+            shot(os.path.join(OUT, f'anim_sit_{tag}_side.png'), (2.6, -0.3, 1.0), (0, -0.2, 0.75))
+            shot(os.path.join(OUT, f'anim_sit_{tag}_front.png'), (-1.2, -2.6, 1.4), (0, -0.1, 0.9))
+        return
     # him opening his arms (her hidden), then the hug from two sides
     for o in rigs['ayish'].children_recursive:
         o.hide_render = True

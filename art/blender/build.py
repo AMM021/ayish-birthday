@@ -12,8 +12,8 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import importlib
-import geo, mats, house, furniture, assets, layout, check, audit, garden  # noqa: E402
-for m in (geo, mats, house, furniture, assets, layout, check, audit, garden):
+import geo, mats, house, furniture, assets, layout, check, audit, garden, export_house  # noqa: E402
+for m in (geo, mats, house, furniture, assets, layout, check, audit, garden, export_house):
     importlib.reload(m)
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -50,8 +50,9 @@ def world_light(sc):
     sun.color = (1.0, 0.78, 0.58)
     sun.angle = math.radians(1.5)
     o = bpy.data.objects.new('sun', sun)
-    # low in the south-west (plan +z south, -x west) → Blender (-x, -y)
-    o.rotation_euler = (math.radians(72), 0, math.radians(-135))
+    # low in the south-west, 18° up (plan +z south, -x west → Blender -x, -y);
+    # the game's sunset sky puts its sun at the same place (config sunDir)
+    o.rotation_euler = (math.radians(72), 0, math.radians(-45))
     sc.collection.objects.link(o)
 
 
@@ -231,6 +232,8 @@ def main():
     if '--preview' in ARGS:
         render(sc)
     print('objects', len(bpy.data.objects), 'solids', len(h.solids))
+    if '--export' in ARGS:
+        export_house.export(h, put, gd)
 
 
 main()

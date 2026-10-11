@@ -169,7 +169,8 @@ export const TEXT = {
   revealCall: body('FINAL REVEAL — his call'),
   revealWords: prose(section('FINAL REVEAL — his words')),
   endcard: section('END card').map((l) => l.trim()).filter(Boolean),
-  afterEnd: body('AFTER END — orb line'),
+  afterEnd: numbered('AFTER END — orb goodbye'),
+  afterEndHim: body('AFTER END — his line'),
   lookHint: ui['Look hint'],
   controlsHint: ui['Controls hint'],
   touchNotice: ui['Keyboard-first notice (if touch-only device detected)']

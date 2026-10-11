@@ -15,6 +15,9 @@ The owner's personal photos are in `src/assets/pics/` (WebP, max 800 px, metadat
 | Asset | Creator | Source URL | License / terms | Attribution required | Download date | Notes |
 |---|---|---|---|---|---|---|
 | Furniture Kit 2.0 (`public/models/kenney/*.glb`) | Kenney | https://kenney.nl/assets/furniture-kit | CC0 1.0 (licence copied to `public/models/kenney/LICENSE-kenney-furniture-kit.txt`) | Not required (courtesy: "Furniture by Kenney, www.kenney.nl") | 2026-10-11 | Materials are remapped to PALETTE at load time (`house/models.js`). |
+| Poly Haven models inside `public/models/house/house.glb`: mid_century_lounge_chair, modern_arm_chair_01, modern_wooden_cabinet, side_table_01, wooden_bowl_01, rubber_duck_toy, potted_plant_01/02/04, calathea_orbifolia_01, pachira_aquatica_01, anthurium_botany_01, planter_box_01, stone_fire_pit, fern_02, boulder_01, rock_moss_set_01, tree_small_02, island_tree_02, jacaranda_tree | Poly Haven contributors | https://polyhaven.com/models | CC0 1.0 | Not required (courtesy: "Models from Poly Haven") | 2026-10-11 | Fetched by `art/fetch-assets.mjs`; trees and rocks slimmed for the browser by `art/blender/lite.py` (the jacaranda's leaves recoloured to blossom). |
+| Sky light: kloppenheim_06_puresky (HDRI) | Poly Haven | https://polyhaven.com/a/kloppenheim_06_puresky | CC0 1.0 | Not required | 2026-10-11 | Used only to light the Blender bake. |
+| Materials in the house: WoodFloor051, Wood049/051/092, Plaster001/003, Concrete034, Fabric030/061, Leather037, Marble012, Travertine009, Tiles107, Terrazzo013, Gravel023/043, PavingStones146, Grass004, Ground037, Rock064 | ambientCG (Lennart Demes) | https://ambientcg.com | CC0 1.0 | Not required (courtesy: "Materials from ambientCG.com") | 2026-10-11 | 1K sets, tinted and baked into the game textures by `art/blender/export_house.py`. |
 
 ## Avatars
 

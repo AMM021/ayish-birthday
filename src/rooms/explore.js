@@ -1,82 +1,186 @@
 import * as THREE from 'three';
-import { PALETTE, REDUCED_MOTION } from '../core/config.js';
+import { PALETTE } from '../core/config.js';
 import * as world from '../world/world.js';
 import * as audio from '../core/audio.js';
+import * as save from '../core/save.js';
+import * as input from '../core/input.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as prompts from '../ui/prompts.js';
 import * as sakura from '../objects/sakura.js';
-import * as house from '../house/house.js';
-import * as models from '../house/models.js';
-import { bakeStatic } from '../house/bake.js';
+import * as farewell from '../objects/farewell.js';
+import * as tsuki from '../house/tsuki.js';
+import * as city from '../house/city.js';
+import * as koi from '../house/koi.js';
+import * as note from '../house/note.js';
+import * as avatars from '../house/avatars.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
-// EXPLORE — the finished world, after the end card: the garden, the city
-// in a forever sunset, and the dream house to walk through at her own
-// pace. Nothing to solve. The anniversary door waits on the top floor.
+// EXPLORE — the finished world, after the end card. She wakes in the
+// studio of Tsuki House; he is at his desk, working on his laptop. The orb
+// says goodbye and leaves in a burst of light; he looks up and tells her
+// to go and explore. Then the house, the garden and the city below in a
+// forever sunset are hers to walk through. The moon door at the top of
+// the tower stays sealed, with its note.
+//
+// On later visits (seenGoodbye) the orb is gone; he is at his laptop, and
+// says his line once when she comes to him.
 
-const DOOR_RADIUS = 2.4;
-const REARM = 5;
+const STAND_HEIGHT = 1.45;
+const NEAR_HIM = 2.2;
 
 let group = null;
+let house = null;
+let him = null;
+let call = null;
 let petals = null;
-let rim = null;
-let atDoor = false;
-let t = 0;
+let fish = null;
+let phase = 'free'; // goodbye | farewell | him | free
+let greeted = false;
+
+function chairFrame(c) {
+  const f = new THREE.Vector3(Math.cos(THREE.MathUtils.degToRad(c.face)), 0, Math.sin(THREE.MathUtils.degToRad(c.face)));
+  const left = new THREE.Vector3(f.z, 0, -f.x); // his left, facing f
+  return { f, left, seat: new THREE.Vector3(c.pos[0], c.y, c.pos[1]) };
+}
+
+async function placeHim() {
+  try {
+    await avatars.preload();
+    him = await avatars.create('him');
+  } catch {
+    him = null;
+  }
+  if (!him || !house?.chair) return;
+  const { f, seat } = chairFrame(house.chair);
+  // hips just forward of the seat's centre (his hands then reach the keys)
+  him.root.position.copy(seat).addScaledVector(f, 0.18);
+  him.root.rotation.y = Math.atan2(f.x, f.z);
+  group.add(him.root);
+  him.play('sit_type');
+  call = new THREE.Object3D();
+  call.position.copy(seat).add(new THREE.Vector3(0, 1.62, 0));
+  group.add(call);
+}
+
+async function hisLine() {
+  if (!him) return;
+  await him.play('sit_look', { once: true, fade: 0.3 });
+  him.play('sit_look_idle', { fade: 0.2 });
+  await dialogue.say(call, TEXT.afterEndHim, { mode: 'story', speaker: 'him' });
+  him?.play('sit_type', { fade: 0.9 });
+}
+
+async function goodbye() {
+  phase = 'goodbye';
+  world.setControls({ move: false, look: true });
+  for (const line of TEXT.afterEnd) {
+    await dialogue.say(orb.anchor, line, { mode: 'story' });
+    if (phase !== 'goodbye') return;
+  }
+  phase = 'farewell';
+  const eye = world.camera.position;
+  const dir = new THREE.Vector3();
+  world.camera.getWorldDirection(dir);
+  dir.y = 0;
+  dir.normalize();
+  const from = eye.clone().addScaledVector(dir, 2.4).add(new THREE.Vector3(0, 0.25, 0)); // far enough that its glow never fills her view
+  const toward = new THREE.Vector3(-9, eye.y, 12); // over the pond, toward the sunset
+  await farewell.play(orb, group, { from, toward });
+  save.setSeenGoodbye();
+  if (phase !== 'farewell') return;
+  phase = 'him';
+  await hisLine();
+  greeted = true;
+  if (phase !== 'him') return;
+  phase = 'free';
+  world.setControls({ move: true, look: true });
+  input.clearHeld();
+  prompts.showControls?.();
+}
 
 export default {
   name: 'explore',
 
   async enter() {
-    await models.preload(house.MODELS);
     group = world.getGroup('explore');
-    const { solids, dynamic } = house.build(group);
-    rim = dynamic.rim;
-    // colliders first (they read the meshes in place), then merge the
-    // static set into a few draw calls
+    house = await tsuki.build(group);
     world.clearBounds();
-    world.setColliders(solids);
-    rim.userData.dynamic = true;
-    bakeStatic(group);
-    petals = sakura.create(260, { x: [-30, 30], y: [0, 16], z: [-10, 40] }, { wind: new THREE.Vector3(0.35, 0, -0.2), fall: 0.5, size: 1.3 });
+    if (house) world.setColliders([house.colliders]);
+    group.add(city.create());
+    fish = koi.create();
+    group.add(fish.group);
+    petals = sakura.create(220, { x: [-34, 30], y: [0, 14], z: [-20, 34] }, { wind: new THREE.Vector3(0.35, 0, -0.2), fall: 0.5, size: 1.3 });
     group.add(petals.mesh);
+    if (house) {
+      note.create(TEXT.sealedNote, house.moonFace).then((m) => group?.add(m));
+      await placeHim();
+    }
 
     world.sky.visible = true;
     world.setAtmosphere('sunset');
-    world.setPlayer(house.SPAWN, 0, 0.02);
-    world.setControls({ move: true, look: true });
-    orb.setVisible(true);
-    orb.setColor(PALETTE.lavender);
-    orb.follow();
-    orb.place();
-    atDoor = false;
-    t = 0;
+    world.setStandHeight(STAND_HEIGHT);
+    greeted = false;
+    if (house?.chair) {
+      // she wakes in the studio, standing at his left by the end of the
+      // desk, where she sees his face when he turns to her
+      const { f, left, seat } = chairFrame(house.chair);
+      const at = seat.clone().addScaledVector(left, 1.35).addScaledVector(f, 0.1);
+      const head = seat.clone().addScaledVector(f, 0.1).add(new THREE.Vector3(0, 1.1, 0));
+      const eye = at.clone().setY(seat.y + STAND_HEIGHT);
+      const yaw = Math.atan2(-(head.x - eye.x), -(head.z - eye.z));
+      const pitch = Math.atan2(head.y - eye.y, Math.hypot(head.x - eye.x, head.z - eye.z));
+      world.setPlayer(eye, yaw, pitch);
+    } else {
+      const at = house ? house.spawn : new THREE.Vector3(-6, 0, 21.5);
+      world.setPlayer(new THREE.Vector3(at.x, at.y + STAND_HEIGHT, at.z), 0, 0.02);
+    }
     audio.play('hub', { volume: 0.3 });
-    dialogue.say(orb.anchor, TEXT.afterEnd, { mode: 'story' }).then(() => prompts.showControls?.());
+    if (!save.load().seenGoodbye) {
+      orb.setVisible(true);
+      orb.setColor(PALETTE.lavender);
+      orb.follow();
+      orb.place();
+      goodbye();
+    } else {
+      orb.setVisible(false);
+      phase = 'free';
+      world.setControls({ move: true, look: true });
+    }
   },
 
   update(dt) {
-    t += dt;
     petals?.update(dt);
-    if (rim && !REDUCED_MOTION) rim.material.opacity = 0.3 + 0.2 * Math.sin(t * 2);
+    fish?.update(dt);
+    farewell.update(dt);
+    him?.update(dt);
+    if (!house) return;
     const p = world.camera.position;
-    const d = p.distanceTo(house.ANNIVERSARY_DOOR);
-    if (d < DOOR_RADIUS && !atDoor) {
-      atDoor = true;
-      dialogue.say(orb.anchor, TEXT.house.sealed, { mode: 'ambient' });
-    } else if (d > REARM) {
-      atDoor = false;
+    house.update(dt, p);
+    // a later visit: he greets her once when she comes to him
+    if (phase === 'free' && !greeted && him && house.chair) {
+      const s = house.chair.pos;
+      if (Math.hypot(p.x - s[0], p.z - s[1]) < NEAR_HIM && Math.abs(p.y - house.chair.y - STAND_HEIGHT) < 1) {
+        greeted = true;
+        hisLine();
+      }
     }
   },
 
   _debug() {
-    return { pos: world.camera.position.toArray(), meshes: group?.children.length };
+    return { pos: world.camera.position.toArray(), loaded: !!house, phase, him: !!him, doors: house?.doors.map((d) => +d.open.toFixed(2)) };
   },
 
   exit() {
+    phase = 'free';
+    him?.dispose();
+    him = null;
+    call = null;
     world.clearBounds();
     world.disposeGroup('explore');
     group = null;
-    rim = null;
+    house = null;
+    petals = null;
+    fish = null;
   }
 };

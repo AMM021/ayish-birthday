@@ -6,7 +6,8 @@ const DEFAULTS = () => ({
   roomsDone: [],
   reachedFinal: false,
   seenLetter: false,
-  seenReveal: false
+  seenReveal: false,
+  seenGoodbye: false // the orb said goodbye in the house (EXPLORE): only once
 });
 
 let memory = null;
@@ -26,6 +27,7 @@ function validate(raw) {
   s.reachedFinal = raw.reachedFinal === true;
   s.seenLetter = raw.seenLetter === true;
   s.seenReveal = raw.seenReveal === true;
+  s.seenGoodbye = raw.seenGoodbye === true;
   if (Array.isArray(raw.roomsDone)) {
     s.roomsDone = ROOM_ORDER.filter((id) => raw.roomsDone.includes(id));
   }
@@ -70,6 +72,7 @@ export const setUnlocked = () => patch((s) => { s.unlocked = true; });
 export const setReachedFinal = () => patch((s) => { s.reachedFinal = true; });
 export const setSeenLetter = () => patch((s) => { s.seenLetter = true; });
 export const setSeenReveal = () => patch((s) => { s.seenReveal = true; });
+export const setSeenGoodbye = () => patch((s) => { s.seenGoodbye = true; });
 export function setRoomDone(name) {
   patch((s) => {
     if (!s.roomsDone.includes(name)) s.roomsDone.push(name);

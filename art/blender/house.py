@@ -533,20 +533,20 @@ class House:
         top = FFL[2] + 3.25
         self.glazing('tower_crown', geo.circle_pts(tx, tz, rc, 48) + [geo.circle_pts(tx, tz, rc, 48)[0]], top, top + 1.1, mullion=1.0)
         b = Builder()
-        b.prism(geo.sector_pts(tx, tz, 1.1, TR + 0.6, 0, 360, 4), top + 1.1, top + 1.35)
+        geo.ring_prism(b, tx, tz, 1.1, TR + 0.6, top + 1.1, top + 1.35, 4)
         self.add(b, 'tower_roof', M['charred'], bottom=M['ceiling'])
         b = Builder()
         b.prism(geo.circle_pts(tx, tz, 1.16, 48), top + 1.35, top + 1.37)
         self.add(b, 'tower_oculus_glass', M['glass'])
         b = Builder()
-        b.prism(geo.sector_pts(tx, tz, 1.1, 1.22, 0, 360, 6), top + 1.35, top + 1.42)
+        geo.ring_prism(b, tx, tz, 1.1, 1.22, top + 1.35, top + 1.42, 6)
         self.add(b, 'tower_oculus_frame', M['metal_black'], solid=False)
         # galleries at 1F and 2F (ring walkways inside the tower); the rail
         # opens exactly where the stair's treads meet the gallery
         self.spiral_stair()
         for k, y in enumerate(FFL[1:], 1):
             b = Builder()
-            b.prism(geo.sector_pts(tx, tz, 2.45, rc - 0.15, 0, 360, 4), y - 0.3, y)
+            geo.ring_prism(b, tx, tz, 2.45, rc - 0.15, y - 0.3, y, 4)
             self.add(b, f'gallery_{k}', M['floor_oak'], side=M['oak'])
             g0, g1 = self.landing[k]
             self.glazing(f'gallery_rail_{k}', self.arc_pts(tx, tz, 2.5, g1, g0 + 360, 6), y, y + 1.05, mullion=1.0)
@@ -556,7 +556,7 @@ class House:
         self.add(b, 'tower_floor', M['stone'])
         # the tree planter: stone ring, soil just below its rim
         b = Builder()
-        b.prism(geo.sector_pts(tx, tz, 0.72, 0.85, 0, 360, 6), FFL[0], FFL[0] + 0.45)
+        geo.ring_prism(b, tx, tz, 0.72, 0.85, FFL[0], FFL[0] + 0.45, 6)
         self.add(b, 'planter', M['stone'])
         b = Builder()
         b.prism(geo.circle_pts(tx, tz, 0.73, 40), FFL[0], FFL[0] + 0.40)

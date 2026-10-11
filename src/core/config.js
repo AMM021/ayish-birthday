@@ -77,7 +77,7 @@ export const ATMOSPHERES = {
     top: PALETTE.lilacSky, horizon: PALETTE.peach, bottom: PALETTE.blush,
     clouds: PALETTE.softPink, fog: PALETTE.peach, fogDensity: 0.004,
     stars: 0, nebula: 0, hemi: [PALETTE.sunlit, PALETTE.blush, 0.95], ambient: 0.42, sun: 1.25,
-    sunDir: [0.12, 0.09, 1]
+    sunDir: [-0.67, 0.31, 0.67] // low in the south-west, as baked (art/blender/build.py)
   },
   indoor: {
     top: PALETTE.lilacSky, horizon: PALETTE.lilacHaze, bottom: PALETTE.lilacMist,

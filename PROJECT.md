@@ -59,10 +59,13 @@ The orb is his last act of love.
   hug animation and his words typed out (TEXT.md "FINAL REVEAL").
 - THRESHOLD is the entry hall of their planned dream house; the gaming room
   and the house share its style.
-- After END (12 s) she wakes in EXPLORE: the garden, a sunset city and the
-  three-story dream house to walk through freely; the sealed anniversary
-  door is on the top floor. Furniture is the Kenney Furniture Kit (CC0),
-  recoloured to PALETTE at load.
+- After END (12 s) she wakes in EXPLORE: Tsuki House (a crescent of rooms
+  around a koi pond, a round tower with a spiral stair, a rounded east wing,
+  an oval bedroom pod), its garden and the city below in a forever sunset,
+  to walk through freely; the sealed round moon door is at the top of the
+  tower. It is built and checked in Blender (`art/blender/`, the glitch
+  audit must report zero problems), lit by a Cycles bake and exported to
+  `public/models/house/` (CC0 Poly Haven models and ambientCG materials).
 - Companion: glowing orb, gold core, lavender halo, soft trail
 - No Cinnamoroll: the orb is the companion (decided, nothing to build)
 - Text: story dialogue types out and waits for Enter; ambient lines never interrupt story dialogue
@@ -138,7 +141,7 @@ WIFES_BIRTHDAY/
     ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end,explore}.js
     ├── state/{machine,states}.js
-    ├── house/{props,models,structure,bake,gamingRoom,house}.js   # dream house: props, Kenney kit loader, walls/stairs, draw-call baking
+    ├── house/{props,models,structure,gamingRoom,avatars,tsuki,city}.js   # gaming room (Kenney kit), the avatars, Tsuki House loader (doors), the city
     ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments,laptop}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor
     └── styles/{base,overlay,devtools,issuecard}.css
 ```
@@ -194,7 +197,7 @@ update(dt), exit() }` (the four challenge rooms also have
 Scene/Camera/Renderer/Composer.
 
 Save key: `localStorage['ayish.progress']`
-Shape: `{ unlocked:bool, roomsDone:string[], reachedFinal:bool, seenLetter:bool, seenReveal:bool }`. Treat absent or malformed values as defaults; validate `roomsDone` against the four known room IDs.
+Shape: `{ unlocked:bool, roomsDone:string[], reachedFinal:bool, seenLetter:bool, seenReveal:bool, seenGoodbye:bool }` (`seenGoodbye`: the orb's goodbye in the house has played; it plays once). Treat absent or malformed values as defaults; validate `roomsDone` against the four known room IDs.
 
 ## Resume Logic
 

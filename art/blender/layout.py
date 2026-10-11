@@ -168,9 +168,11 @@ def furnish(M, coll):
     st.root.location.z = y1
     put['studio_desk'] = ('studio', st)
     for i, (a, shell) in enumerate(((271.5, 'linen_lav'), (280.5, 'linen_blush'))):
-        x, z = pol(11.95, a)
+        # close enough to work at: the chair just behind the desk's edge
+        # (r 11.15), the laptop near the front of the desk
+        x, z = pol(11.55, a)
         put[f'gchair{i}'] = ('studio', F.gaming_chair(coll, M, 'linen_lav' if i == 0 else 'velvet_plum', f'gchair{i}').place(x, z, y1, toward(a)))
-        x, z = pol(10.78, a)
+        x, z = pol(10.93, a)
         lp = F.laptop(coll, M, shell, f'laptop{i}')
         lp.place(x, z, y1 + 0.76, a)
         put[f'laptop{i}'] = ('studio', lp)

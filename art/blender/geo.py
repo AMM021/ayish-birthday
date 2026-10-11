@@ -34,6 +34,48 @@ def collection(name, parent=None):
     return c
 
 
+def wrap_uv(bm, wraps, size=1.0):
+    """Curved walls: map their upright faces along the curve (u = distance
+    along it, v = height), so the texture runs on without a seam at every
+    facet (a box projection would restart it facet by facet)."""
+    if not wraps:
+        return
+    uv = bm.loops.layers.uv.verify()
+    bm.faces.ensure_lookup_table()
+    for first, end, curve in wraps:
+        for i in range(first, min(end, len(bm.faces))):
+            f = bm.faces[i]
+            if abs(f.normal.z) > 0.5:
+                continue
+            us = []
+            for l in f.loops:
+                x, z = l.vert.co.x, -l.vert.co.y
+                if curve[0] == 'arc':
+                    _, cx, cz, r = curve
+                    us.append(math.atan2(z - cz, x - cx) * r)
+                else:
+                    us.append(_along(curve[1], x, z))
+            if curve[0] == 'arc':  # keep a face on one side of the ±π seam
+                period = 2 * math.pi * curve[3]
+                ref = us[0]
+                us = [u + period * round((ref - u) / period) for u in us]
+            for l, u in zip(f.loops, us):
+                l[uv].uv = (u / size, l.vert.co.z / size)
+
+
+def _along(pts, x, z):
+    best, acc, bd = 0.0, 0.0, 1e9
+    for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+        dx, dz = x1 - x0, z1 - z0
+        L = math.hypot(dx, dz) or 1e-9
+        t = max(0.0, min(1.0, ((x - x0) * dx + (z - z0) * dz) / (L * L)))
+        d = math.hypot(x - (x0 + dx * t), z - (z0 + dz * t))
+        if d < bd:
+            bd, best = d, acc + L * t
+        acc += L
+    return best
+
+
 def box_uv(bm, size=1.0):
     """World-space box projection, so textures keep their real scale."""
     uv = bm.loops.layers.uv.verify()
@@ -56,6 +98,7 @@ class Builder:
 
     def __init__(self):
         self.bm = bmesh.new()
+        self.wraps = []  # (first face, end face, curve) — wall faces mapped along their curve
 
     def prism(self, pts2d, y0, y1):
         """Closed vertical prism over a plan polygon [(x, z), …] (CCW or CW)."""
@@ -84,6 +127,7 @@ class Builder:
         # neighbours), so outward normals are certain
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         box_uv(bm, uv)
+        wrap_uv(bm, self.wraps, uv)
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
         bm.free()
@@ -136,6 +180,7 @@ def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0, foot=0.0)
             pts.append(marks[i] + seg * k / n)
     pts.append(length)
     ri, ro = r - thick / 2, r + thick / 2
+    first = len(b.bm.faces)
     for i in range(len(pts) - 1):
         t0, t1 = pts[i], pts[i + 1]
         if t1 - t0 < 1e-4:
@@ -147,6 +192,7 @@ def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0, foot=0.0)
         quad = [polar(cx, cz, ri, d0), polar(cx, cz, ro, d0), polar(cx, cz, ro, d1), polar(cx, cz, ri, d1)]
         for lo, hi in spans:
             b.prism(quad, y + lo, y + hi)
+    b.wraps.append((first, len(b.bm.faces), ('arc', cx, cz, r)))
     return length
 
 
@@ -330,6 +376,7 @@ def band_wall(b, pts, y, h, thick, openings=(), foot=0.0):
 
     marks = sorted({0.0, total, *[max(0.0, min(total, o['t0'])) for o in openings], *[max(0.0, min(total, o['t1'])) for o in openings]})
     half = thick / 2
+    first = len(b.bm.faces)
     for k in range(len(marks) - 1):
         d0, d1 = marks[k], marks[k + 1]
         if d1 - d0 < 1e-4:
@@ -349,4 +396,14 @@ def band_wall(b, pts, y, h, thick, openings=(), foot=0.0):
         poly = left + right[::-1]
         for lo, hi in spans:
             b.prism(poly, y + lo, y + hi)
+    b.wraps.append((first, len(b.bm.faces), ('poly', pts)))
     return total
+
+
+def ring_prism(b, cx, cz, r0, r1, y0, y1, step=6.0):
+    """An annulus as a ring of small convex prisms (one polygon with a slit
+    triangulates and bakes badly)."""
+    n = max(8, math.ceil(360 / step))
+    for i in range(n):
+        a0, a1 = 360 * i / n, 360 * (i + 1) / n
+        b.prism([polar(cx, cz, r1, a0), polar(cx, cz, r1, a1), polar(cx, cz, r0, a1), polar(cx, cz, r0, a0)], y0, y1)
