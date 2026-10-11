@@ -26,6 +26,12 @@ const LIT_MS = 0.6;
 const GAP_MS = 0.3;
 const DEBOUNCE = 0.6;
 const WRONG_PAUSE = 0.8;
+// While a sequence plays, the camera lifts to one view that frames all nine
+// gates (her first view cannot hold the whole arc), then returns her.
+const VIEW_POS = new THREE.Vector3(0, 8, 16);
+const VIEW_AT = new THREE.Vector3(0, 1, -6);
+const VIEW_IN = 1.1;
+const VIEW_OUT = 0.9;
 
 let group = null;
 let gates = [];
@@ -40,6 +46,11 @@ let wrongT = 0;
 let pulseFirst = false; // set by the 60 s hint: pulse the round's first gate after replay
 let leaving = false;
 const tmp = new THREE.Vector3();
+// camera move around playback: { mode: 'in'|'hold'|'out', t, pos, quat, yaw, pitch }
+let view = null;
+const viewQuat = new THREE.Quaternion();
+const va = new THREE.Vector3();
+const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
 
 function makeRounds() {
   const r = [];
@@ -124,16 +135,67 @@ function startPlayback() {
   step = 0;
   phase = 'playback';
   play = { i: 0, t: 0, lit: false };
+  if (!view) {
+    const cam = world.camera;
+    view = { mode: 'in', t: 0, pos: world.player.eye.clone(), quat: cam.quaternion.clone(), yaw: world.player.yaw, pitch: world.player.pitch };
+    world.setControls({ move: false });
+    world.player.canLook = false; // keep pointer lock; mouse deltas are dropped
+  } else {
+    view.mode = view.mode === 'out' ? 'in' : view.mode; // replay while returning: go back up
+    view.t = 0;
+  }
 }
 
 function endPlayback() {
-  phase = 'input';
+  phase = 'returning';
   play = null;
   orb.follow();
+  view.mode = 'out';
+  view.t = 0;
+}
+
+function giveBack() {
+  const p = world.player;
+  p.eye.copy(view.pos);
+  p.prev.copy(view.pos);
+  p.yaw = view.yaw;
+  p.pitch = view.pitch;
+  world.camera.position.copy(view.pos);
+  world.camera.rotation.set(view.pitch, view.yaw, 0, 'YXZ');
+  view = null;
+  world.player.canLook = true;
+  world.setControls({ move: true });
+  phase = 'input';
   if (pulseFirst) {
     pulseFirst = false;
     gates[rounds[round][0]].gate.setPulse(4); // stops when she crosses it
   }
+}
+
+// Returns true while the camera is still travelling up to the overview.
+function updateView(dt) {
+  if (!view) return false;
+  const cam = world.camera;
+  view.t += dt;
+  if (view.mode === 'in' || view.mode === 'out') {
+    const dur = view.mode === 'in' ? VIEW_IN : VIEW_OUT;
+    const k = ease(Math.min(1, view.t / dur));
+    const [a, b] = view.mode === 'in' ? [view.pos, VIEW_POS] : [VIEW_POS, view.pos];
+    const [qa0, qb0] = view.mode === 'in' ? [view.quat, viewQuat] : [viewQuat, view.quat];
+    cam.position.lerpVectors(a, b, k);
+    cam.quaternion.slerpQuaternions(qa0, qb0, k);
+    if (k >= 1) {
+      if (view.mode === 'in') {
+        view.mode = 'hold';
+        view.t = 0;
+      } else {
+        giveBack();
+        return false;
+      }
+    }
+    return view && view.mode === 'in';
+  }
+  return false;
 }
 
 function updatePlayback(dt) {
@@ -209,6 +271,9 @@ export default {
     challenge.done = false;
     challenge.progress = 0;
     rounds = makeRounds();
+    view = null;
+    va.copy(VIEW_AT).sub(VIEW_POS);
+    viewQuat.setFromEuler(new THREE.Euler(Math.atan2(va.y, Math.hypot(va.x, va.z)), Math.atan2(-va.x, -va.z), 0, 'YXZ'));
     round = 0;
     step = 0;
     phase = 'intro';
@@ -242,8 +307,9 @@ export default {
     const p = world.camera.position;
     const prev = world.player.prev;
 
+    const travelling = updateView(dt);
     if (phase === 'playback') {
-      updatePlayback(dt);
+      if (!travelling) updatePlayback(dt);
     } else if (phase === 'wrong' || phase === 'between') {
       wrongT += dt;
       if (wrongT >= (phase === 'wrong' ? WRONG_PAUSE : 1.2) && !dialogue.isStoryActive()) startPlayback();
@@ -293,6 +359,7 @@ export default {
   },
 
   exit() {
+    view = null;
     world.clearBounds();
     world.disposeGroup('torii');
     gates = [];
