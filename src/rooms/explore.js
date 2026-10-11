@@ -13,6 +13,7 @@ import * as city from '../house/city.js';
 import * as koi from '../house/koi.js';
 import * as note from '../house/note.js';
 import * as avatars from '../house/avatars.js';
+import { ringWall } from '../world/physics.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
@@ -58,6 +59,11 @@ async function placeHim() {
   him.root.rotation.y = Math.atan2(f.x, f.z);
   group.add(him.root);
   him.play('sit_type');
+  // he is solid: she walks round him, never through him
+  const block = ringWall(him.root.position, 0.38, 2.0, 16);
+  block.position.y = seat.y + 1.0;
+  group.add(block);
+  world.setColliders([house.colliders, block]);
   call = new THREE.Object3D();
   call.position.copy(seat).add(new THREE.Vector3(0, 1.62, 0));
   group.add(call);

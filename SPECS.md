@@ -4,6 +4,28 @@ Detailed implementation specs. Grep by `##` heading.
 
 ## v3 (2026-10-11) — read first; overrides v2 and older sections
 
+- **EXPLORE (2026-10-12): Tsuki House.** The finished world is the house and
+  garden built in Blender (`art/blender/`: house.py, layout.py, garden.py;
+  `build.py -- --audit --export`). The glitch audit (`audit.py`) must report
+  0 problems before an export ships. `export_house.py` writes
+  `public/models/house/{house.glb, colliders.glb, house.json}`: four
+  Cycles-baked lightmap atlases (carried as each material's occlusion
+  texture on its second UV set; `house/tsuki.js` turns them into
+  MeshBasicMaterial lightmaps, K·π), vegetation lit live, glass, water and
+  glowing shades by material name, doors (`house.json`: hinge / orbit /
+  slide) that open within 2.3 m and close beyond 3.4 m (not colliders), the
+  moon door with its paper note (`house/note.js`), his chair. Koi swim in the
+  pond (`house/koi.js`), the city lies in the valley below (`house/city.js`).
+  The house downloads while the END card is read (`tsuki.preload()`).
+  - **The wake-up (once, `save.seenGoodbye`):** she wakes in the studio,
+    standing at his left. He sits in the plum gaming chair at the desk,
+    typing (`sit_type`). The orb says its goodbye (TEXT "AFTER END — orb
+    goodbye", 4 story bubbles), then leaves (`objects/farewell.js`: a
+    tightening spiral up, a burst of glitter that drifts toward the pond and
+    fades). He turns to her (`sit_look` → `sit_look_idle`) and says his line
+    (TEXT "AFTER END — his line"), then types again; she is free. Later
+    visits: no orb; he says his line once when she comes within 2.2 m.
+
 - **Controls:** `world.js` adds jump and crouch. Space jumps when grounded
   (`JUMP_SPEED` 6.6 → about 1 m apex at `GRAVITY` 22), with 0.1 s coyote time
   and a 0.12 s jump buffer. C held crouches: the capsule height (feet → eye)

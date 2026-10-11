@@ -104,7 +104,13 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 31. **Controls:** Space jumps, Shift runs, C crouches (held). The owner asked for Ctrl; C was chosen together because Ctrl+W (crouch while walking forward) closes the browser tab and a page cannot block it. This lifts the "no jump" rule.
 32. **STARS → parkour:** jumping, ducking and running between the stars (it was too easy).
 33. **PETALS → real obstacles:** the light still leads, but the path has things in the way (it felt like walking forward with nothing stopping her).
-34. **Pending owner approval:** the controls hint copy that mentions Space and C (drafted, not shown in the game until approved).
+34. **Controls hint (approved 2026-10-12):** "W A S D to walk · Shift to run · Space to jump · C to crouch · mouse to look"; shown again when STARS starts.
+
+## Owner decisions — 2026-10-12 (the house, the goodbye)
+
+35. **The house is checked by measurement:** "make sure all the assets are placed correctly without any weird looking stuff… I do not want the house to look like it's built on top of little glitches". The Blender glitch audit (floating parts, intersections, coplanar flicker, light leaks, intrusions, door sweeps) must be at zero; walk bots reach every floor.
+36. **FINAL keeps the separate gaming room;** afterwards she is in the actual house.
+37. **The wake-up in the house:** he is working at his laptop; the orb says goodbye (it will come back if anything goes wrong, with more power-ups; it was made to shine like her, his little star; it was always him talking through it), leaves magically, and he says "take a look around the house and explore my love!". Then she explores freely. The orb's old sealed-door line no longer fits once it has gone: the door shows its approved paper note instead.
 
 ## Human decisions still open
 
