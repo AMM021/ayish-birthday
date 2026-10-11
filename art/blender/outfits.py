@@ -136,7 +136,8 @@ def make_skirt(B, coll, mat, z_top, z_hem=0.035, rings=26, seg=72, flare=0.17, b
             a = -math.pi + (i + 0.5) * 2 * math.pi / seg
             base = r_top[i] + 0.003 + (r_hip[i] - r_top[i] + 0.003) * G.smooth(0.0, 0.12, t)  # tucked under the tunic
             fold = 1 + 0.035 * math.sin(14 * a + 0.6) * t ** 1.2
-            r = (base + flare * t ** 1.25) * fold
+            ell = 0.72 + 0.28 * abs(math.cos(a))  # less flare front/back than at the sides
+            r = (base + flare * ell * t ** 1.25) * fold
             p = Vector((cx + r * math.cos(a), cy + r * math.sin(a), z))
             v = bm.verts.new(mw.inverted() @ p)
             sl = G.smooth(-0.5, 0.5, math.cos(a))  # 1 on her left (+x)

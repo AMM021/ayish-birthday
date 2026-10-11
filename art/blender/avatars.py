@@ -191,7 +191,7 @@ def build_person(key):
     return rig, body
 
 
-def preview(rigs):
+def preview(rigs, shots=True):
     import math
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
@@ -227,6 +227,8 @@ def preview(rigs):
         sc.render.filepath = path
         bpy.ops.render.render(write_still=True)
 
+    if not shots:
+        return
     os.makedirs(OUT, exist_ok=True)
     shot(os.path.join(OUT, 'avatars_full.png'), (0, -5.2, 1.1), (0, 0, 0.85))
     shot(os.path.join(OUT, 'avatars_face_ayish.png'), (-0.45, -1.1, 1.45), (-0.45, 0, 1.42))
@@ -256,4 +258,5 @@ def main():
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'avatars.blend'))
 
 
-main()
+if __name__ == '__main__':
+    main()
