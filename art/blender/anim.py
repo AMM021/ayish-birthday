@@ -114,7 +114,9 @@ class Poser:
             for k, w in ((1, 0.7), (2, 1.0), (3, 0.8)):
                 self.local(f'{f}_0{k}_{s}', 'X', -amount * 55 * w)
             if spread:
-                self.local(f'{f}_01_{s}', 'Z', spread * {'index': -8, 'middle': -2, 'ring': 4, 'pinky': 9}[f] * (1 if s == 'l' else -1))
+                # spread > 0 fans the fingers apart, < 0 closes them (measured:
+                # rest 33° index–pinky, −1.5 → ~10°)
+                self.local(f'{f}_01_{s}', 'Z', -spread * {'index': -8, 'middle': -2, 'ring': 4, 'pinky': 9}[f] * (1 if s == 'l' else -1))
         for k in (1, 2, 3):
             self.local(f'thumb_0{k}_{s}', 'X', -thumb * 25)
 
@@ -394,7 +396,7 @@ def hug_pose_him(u, t, her):
             # shoulders come forward round her (as they do in a hug), a little raised
             P.turn('clavicle_' + s, (0, 0, 1), -sx * 16 * k)
             P.turn('clavicle_' + s, (0, 1, 0), -sx * 7 * k)
-            P.curl(s, 0.1 + 0.15 * (1 - k), spread=0.6 * (1 - k) - 0.5 * k, thumb=0.15 + 0.1 * (1 - k))
+            P.curl(s, 0.2 + 0.05 * (1 - k), spread=0.6 * (1 - k) - 1.5 * k, thumb=0.1 + 0.1 * (1 - k))  # fingers together, wrapping her back
         g = {}
         open_ = open_goals(P, 1.0)
         her_fwd = face_dir(her)
@@ -402,7 +404,7 @@ def hug_pose_him(u, t, her):
         side = (P.rig.matrix_world.to_3x3() @ V(1, 0, 0)).normalized()  # his left
         stroke = 0.04 * math.sin(2 * math.pi * t * 2)
         bvh = getattr(her, 'shell', None)
-        for s, sx, z, lat in (('l', 1, 1.14, 0.12), ('r', -1, 1.07 + stroke, 0.09)):
+        for s, sx, z, lat in (('l', 1, 1.2, 0.11), ('r', -1, 1.03 + stroke * 0.5, 0.11)):
             # the wrist at the corner of her back, the hand laid across it
             spine = her.bone_head('spine_03')
             base = V(spine.x, spine.y, her.rig.location.z + z) + side * sx * lat
@@ -412,8 +414,10 @@ def hug_pose_him(u, t, her):
             sh = P.to_arm(P.bone_head('upperarm_' + s))
             pole = P.rig.matrix_world @ (sh + V(sx * 0.55, 0.3, -0.4))
             g[s] = (arc(open_[s][0], beside, on_back, k), pole)
-            across = on_surface(bvh, base + side * (-sx) * 0.24 + V(0, 0, -0.04), out, 0.045)
-            g['aim_' + s] = (across, G_s(k))
+            # fingers carry on from the forearm, across her back (level, not
+            # drooping toward her spine)
+            across = on_surface(bvh, base + side * (-sx) * 0.28 + V(0, 0, 0.02), out, 0.045)
+            g['aim_' + s] = (across, 0.75 * G_s(k))
             g['palm_' + s] = (on_back - out * 0.25, G_s(k))  # palms on her back
         return g
     return f
@@ -448,7 +452,7 @@ def hug_pose_her(u, t, him):
         P.turn('head', (1, 0, 0), 4 * kh)                  # cheek down onto his chest
         for s, sx in (('l', 1), ('r', -1)):
             P.turn('clavicle_' + s, (0, 0, 1), -sx * 14 * k)
-            P.curl(s, 0.12 + 0.15 * (1 - k), spread=0.4 * (1 - k) - 0.4 * k, thumb=0.2)
+            P.curl(s, 0.12 + 0.15 * (1 - k), spread=0.4 * (1 - k) - 1.3 * k, thumb=0.2)
         his_fwd = face_dir(him)
         out = -his_fwd                                      # out of his back
         side = (P.rig.matrix_world.to_3x3() @ V(1, 0, 0)).normalized()  # her left
