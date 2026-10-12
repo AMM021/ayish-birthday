@@ -62,6 +62,8 @@ let mode = 'wait'; // wait | ready | lead | restart | done
 let s = 0; // distance along the path
 let outT = 0;
 let lostSaid = false;
+let outSaid = false; // this attempt's first step out of the light has had its line
+let progressSaid = 0; // how many of the along-the-way lines this attempt
 let gust = null; // { t, dur, dir, off, amp }
 let nextGust = 0;
 let leaving = false;
@@ -906,6 +908,8 @@ function startOver() {
   gust = null;
   nextGust = 7;
   lostSaid = false;
+  outSaid = false;
+  progressSaid = 0;
   poolMat.uniforms.uK.value = 0;
   placeLight(0);
   orb.place(tmp.set(light.x, ORB_Y, light.z));
@@ -1030,7 +1034,10 @@ export default {
           outT += dt;
           if (!lostSaid) {
             lostSaid = true;
-            dialogue.say(orb.anchor, TEXT.petals.lost, { mode: 'ambient' });
+            // the first time this attempt: "back into the light"; after that
+            // the gentler hand
+            dialogue.say(orb.anchor, outSaid ? TEXT.petals.lost : TEXT.petals.out, { mode: 'ambient' });
+            outSaid = true;
           }
           if (outT >= OUT_LIMIT) {
             restart();
@@ -1038,6 +1045,13 @@ export default {
           }
         }
         poolMat.uniforms.uK.value = Math.min(1, outT / OUT_LIMIT);
+        // along the way, a word from the light now and then (never over her
+        // stepping out, never over story)
+        const along = TEXT.petals.progress[progressSaid];
+        if (along && s / pathLen >= along[0] && inside && !dialogue.isStoryActive()) {
+          progressSaid++;
+          dialogue.say(orb.anchor, along[1], { mode: 'ambient' });
+        }
         if (s >= pathLen) {
           complete();
           return;

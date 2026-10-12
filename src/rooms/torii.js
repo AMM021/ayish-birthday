@@ -314,7 +314,7 @@ function correct(idx) {
     if (round >= ROUNDS) {
       complete();
     } else {
-      dialogue.say(orb.anchor, TEXT.torii.success, { mode: 'ambient' });
+      dialogue.say(orb.anchor, TEXT.torii.success[Math.min(round, TEXT.torii.success.length) - 1], { mode: 'ambient' });
       phase = 'between';
       wrongT = 0;
     }

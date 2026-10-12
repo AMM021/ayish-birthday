@@ -569,7 +569,10 @@ function hitStar(i) {
     challenge.progress = next;
     hints.reset();
     if (next >= 9) complete();
-    else showPath(next);
+    else {
+      showPath(next);
+      if (TEXT.stars.lit[next]) dialogue.say(orb.anchor, TEXT.stars.lit[next], { mode: 'ambient' });
+    }
   } else if (!stars[i].lit && next > 0) {
     // (cannot happen on the course, which only rises ahead of her; kept so
     // a stray route never counts)

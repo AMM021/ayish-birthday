@@ -54,7 +54,8 @@ go on. i'll be right behind you.
 
 ## ROOM: TORII — orb lines
 Intro: watch the gates. walk through them in the same order.
-Success: see? natural.
+Success 1: see? natural. you've always been good at finding your way.
+Success 2: two for two. he'd be showing off about you right now.
 Wrong: no worries. try again.
 Complete: okay that was perfect. portal's open.
 Hint (60s): watch them again. i'll flash the first one for you.
@@ -69,10 +70,10 @@ Question 3: he can't run it alone. not apart, not one at a time… the two of yo
 Answer 3: together
 Question 4: and how does he want to come home? ____ and sound.
 Answer 4: safe
-Correct 1: one.
-Correct 2: two.
-Correct 3: three.
-Correct 4: four.
+Correct 1: ayish. found you. he always does.
+Correct 2: heart. still beating for you, by the way.
+Correct 3: together. it only ever worked that way.
+Correct 4: safe. that's what home is, isn't it?
 Wrong: close. try another word.
 Hint (60s): psst… it starts with “_”.
 Terminal: one last thing. he always starts it the same way. type: npm run dev
@@ -95,12 +96,21 @@ Body lines (revealed per fragment, in order):
 
 ## ROOM: STARS — orb lines
 Intro: these stars know a shape. follow them.
+Star 1: that's one. they remember you.
+Star 3: keep going. it's coming back.
+Star 5: halfway. can you see it yet?
+Star 7: almost. two more.
+Star 8: one more, love.
 Wrong: not yet. start again, gently.
 Complete: that's us. always has been.
 Hint (60s): the shape is already there. you just have to wake it up.
 
 ## ROOM: PETALS — orb lines
-Intro: stay close to me. the petals like to play.
+Intro: this one's the hardest. stay in my light, all the way to the end. if you're out of it for too long, we start again. the petals like to play.
+Quarter: that's it. just like that.
+Half: halfway, love. don't let go.
+Three quarters: nearly there. stay with me.
+Out: back into the light, love. quickly.
 Lost (pause): here, take my hand.
 Complete: almost there. hold on.
 Restart: too far, love. again — from the start.
@@ -195,8 +205,60 @@ he's already giving me more power-ups for next time.
 4. one more thing, love. he made me shine like you — his little star. it
 was always him, talking to you through me.
 
-## AFTER END — his line (speech bubble above him at his laptop, once the orb has gone; the owner's words)
-take a look around the house and explore my love!
+## AFTER END — his line (speech bubbles above him at his laptop, once the orb has gone; one beat each, Enter to continue; approved 2026-10-12)
+1. you found me. i knew you would.
+
+2. so… this is it. this is what i've been working on all this time. every late night, every "just five more minutes".
+
+3. it's our house. the one we keep talking about. i built it room by room, so you could walk through it before it's real.
+
+4. the garden, the koi, the tower, our room at the top… i made every corner of it thinking of you.
+
+5. one day we'll have a home just like this. until then, this one's yours.
+
+6. take a look around the house and explore my love! i'll be right here when you come back.
+
+## HOUSE — his compliments (a speech bubble above him: one at random each time she comes back to him, none repeated until all have been said; approved 2026-10-12)
+1. there she is. my favourite person in every world i could build.
+2. you know you're prettier than anything in this house, right?
+3. i'm so proud of you. you finished all of that for me.
+4. every time you walk in, the whole room gets brighter.
+5. you're my home. the house is just the decoration.
+6. i'd build a hundred houses if you'd walk through every one.
+7. you're so beautiful it's honestly unfair.
+8. have i told you today that i love you? because i do. a lot.
+9. you're the best thing that ever happened to me.
+10. your smile is my favourite thing i've ever seen.
+11. you make everything feel easy, even the hard days.
+12. come here. i missed you, and you were only gone a minute.
+13. you're smart, you're kind, and you're mine. i'm a lucky man.
+14. happy birthday, my princess. i hope today feels as special as you are.
+15. i love the way you laugh. do it again.
+16. you're my favourite hello and my hardest goodbye.
+17. the orb was right. you really do shine.
+18. everything i make, i make with you in mind.
+19. you're the calm in all my chaos.
+20. you worked so hard at uni and still came all this way. you amaze me.
+21. thank you for being patient with me. always.
+22. i still get butterflies when you walk in.
+23. my favourite place in this whole house? wherever you're standing.
+24. you're the answer to my prayers.
+25. if i could, i'd give you the moon. for now, there's a door to it upstairs.
+26. you make me want to be better, every single day.
+27. i'm so glad it's you. it was always going to be you.
+28. you're adorable when you're exploring. don't let me stop you.
+29. go on, there's more to see. but come back to me after.
+30. every room in here is better because you're in it.
+31. you're my best friend and my wife. how did i get so lucky?
+32. i love you more than all the code i've ever written. and that's a lot of code.
+33. you deserve the whole world. this is just a little piece of it.
+34. you're my little star. the brightest one.
+35. seeing you happy is my favourite thing.
+36. i'd get teleported into the void a hundred times if you'd come find me.
+37. you're beautiful inside and out. mostly inside. okay, both, equally.
+38. thank you for walking through all of this for me.
+39. i love you, ayish. that's it. that's the compliment.
+40. you, me, a house like this one day. i can't wait.
 
 ## UI hints (small, non-blocking)
 Look hint: click to look around

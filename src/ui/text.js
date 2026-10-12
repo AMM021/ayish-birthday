@@ -159,7 +159,7 @@ export const TEXT = {
   // H · O · M · E: the line after each level ("E" has a second bubble)
   fragments: { H: frags.H, O: frags.O, M: frags.M, E: frags.E, Ethen: frags['E (then)'] },
   torii: {
-    intro: torii.Intro, success: torii.Success, wrong: torii.Wrong,
+    intro: torii.Intro, success: [torii['Success 1'], torii['Success 2']], wrong: torii.Wrong,
     complete: torii.Complete, hint: torii['Hint (60s)']
   },
   compile: {
@@ -172,8 +172,12 @@ export const TEXT = {
   },
   issue: issueCard(),
   resolution: section('COMPILE — resolution comment').map((l) => l.trim()).filter((l) => l.startsWith('//')).join('\n'),
-  stars: { intro: stars.Intro, wrong: stars.Wrong, complete: stars.Complete, hint: stars['Hint (60s)'] },
-  petals: { intro: petals.Intro, lost: petals['Lost (pause)'], complete: petals.Complete, restart: petals.Restart, hint: petals['Hint (60s)'] },
+  // (the star she has just lit, counting from 1 → its line, where there is one)
+  stars: { intro: stars.Intro, wrong: stars.Wrong, complete: stars.Complete, hint: stars['Hint (60s)'],
+    lit: Object.fromEntries([1, 3, 5, 7, 8].map((n) => [n, stars[`Star ${n}`]])) },
+  petals: { intro: petals.Intro, lost: petals['Lost (pause)'], out: petals.Out, complete: petals.Complete, restart: petals.Restart, hint: petals['Hint (60s)'],
+    // along the way: [fraction of the light's path, line]
+    progress: [[0.25, petals.Quarter], [0.5, petals.Half], [0.75, petals['Three quarters']]] },
   outOfBounds: body('OUT OF BOUNDS — orb line (ambient)'),
   finalLaptop: body('FINAL — orb line at the laptop'),
   laptopCode: codeBlocks('FINAL — laptop fragment code'),
