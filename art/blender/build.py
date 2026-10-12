@@ -12,8 +12,8 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import importlib
-import geo, mats, house, furniture, assets, layout, check, audit, garden, export_house  # noqa: E402
-for m in (geo, mats, house, furniture, assets, layout, check, audit, garden, export_house):
+import geo, mats, house, furniture, assets, layout, check, audit, garden, export_house, lint  # noqa: E402
+for m in (geo, mats, house, furniture, assets, layout, check, audit, garden, export_house, lint):
     importlib.reload(m)
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -238,6 +238,11 @@ def main():
         print('AUDIT:', len(found), 'problem(s)')
         for p in found:
             print('  ', p)
+    if '--lint' in ARGS:
+        found = lint.run([o for o in h.objs if o.type == 'MESH'], put, h.doors)
+        print('LINT:', len(found), 'finding(s)')
+        for f in found:
+            print('  ', f)
     world_light(sc)
     if '--save' in ARGS:
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'house.blend'))

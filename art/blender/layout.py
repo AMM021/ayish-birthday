@@ -92,8 +92,8 @@ def entry_outline():
 def rooms():
     R = {}
     R['sunroom'] = (FFL[0], geo.sector_pts(CX, CZ, 9.55, 15.45, 196.3, 217.8))
-    R['library'] = (FFL[0], geo.sector_pts(CX, CZ, 9.55, 17.27, 218.3, 257.8))
-    R['living'] = (FFL[0], geo.clip_half(geo.sector_pts(CX, CZ, 9.55, 17.27, 258.2, 299), lambda x, z: -2.15 - x))
+    R['library'] = (FFL[0], geo.sector_pts(CX, CZ, 9.55, 17.49, 218.3, 257.8))
+    R['living'] = (FFL[0], geo.clip_half(geo.sector_pts(CX, CZ, 9.55, 17.49, 258.2, 299), lambda x, z: -2.15 - x))
     ent = entry_outline()
     left = geo.offset_poly(geo.clip_half(ent, lambda x, z: 2.0 - x), -0.15)
     R['genkan'] = (FFL[0], geo.clip_half(left, lambda x, z: z + 7.8))
@@ -136,18 +136,20 @@ def furnish(M, coll):
     put['living_plant'] = ('living', A.potted('pachira_aquatica_01', coll, M, 'living_plant', 1.95, ['_d'], 0.5).place(x, z, y0))
     x, z = pol(16.7, 267)
     put['living_plant2'] = ('living', A.potted('calathea_orbifolia_01', coll, M, 'living_plant2', 0.85, ['_a'], 0.42, 'clay').place(x, z, y0))
-    x, z = pol(16.75, 288.5)
-    put['living_cabinet'] = ('living', A.piece('modern_wooden_cabinet', coll, 'living_cabinet').place(x, z, y0, toward(288.5)))
+    cab = A.piece('modern_wooden_cabinet', coll, 'living_cabinet')
+    x, z, f = against_wall(*pol(15.5, 288.5), y0 + 0.4, 288.5, cab.size.x, cab.size.y / 2)
+    put['living_cabinet'] = ('living', cab.place(x, z, y0, f))
 
     # --- library: curved shelves between the deep windows, ladder, reading table ---
+    LIB_R = 17.1  # shelf fronts; the backs stand 1 cm off the wall (r 17.495)
     for i, (a0, a1) in enumerate(((219.5, 227.0), (231.0, 238.0), (242.0, 249.0), (253.0, 256.8))):
-        sh = F.curved_shelves(coll, M, CX, CZ, 16.85, a0, a1, 3.0, 0.38, f'lib_shelves{i}')
+        sh = F.curved_shelves(coll, M, CX, CZ, LIB_R, a0, a1, 3.0, 0.38, f'lib_shelves{i}')
         sh.root.location.z = y0
         put[f'lib_shelves{i}'] = ('library', sh)
     rail = F.Piece('lib_rail', coll, 'decor', solid=False)
-    rail.tube([(pol(16.72, a)[0], y0 + 2.95, pol(16.72, a)[1]) for a in [219.5 + i * 1.5 for i in range(int((256.8 - 219.5) / 1.5) + 1)]], 0.018, M['brass'], 'rail')
+    rail.tube([(pol(LIB_R - 0.13, a)[0], y0 + 2.95, pol(LIB_R - 0.13, a)[1]) for a in [219.5 + i * 1.5 for i in range(int((256.8 - 219.5) / 1.5) + 1)]], 0.018, M['brass'], 'rail')
     lad = F.rolling_ladder(coll, M, 2.95, 'lib_ladder')
-    x, z = pol(16.15, 234.5)
+    x, z = pol(LIB_R - 0.7, 234.5)
     lad.place(x, z, y0, toward(234.5))
     lad.root.rotation_euler[0] = math.radians(-13)
     put['lib_ladder'] = ('library', lad)
@@ -167,15 +169,16 @@ def furnish(M, coll):
         put[f'lib_arm{i}'] = ('library', A.piece('modern_arm_chair_01', coll, f'lib_arm{i}').place(x, z, y0, toward(a)))
     x, z = pol(11.2, 230.5)
     put['lib_lamp'] = ('library', F.akari_lamp(coll, M, 'floor', 'lib_lamp').place(x, z, y0))
-    x, z = pol(16.3, 255.3)
+    x, z = pol(LIB_R - 0.55, 255.3)
     put['lib_plant'] = ('library', A.piece('potted_plant_02', coll, 'lib_plant', height=1.0, kind='plant').place(x, z, y0))
 
     # --- sunroom: two chairs, a small table, plants everywhere ---
-    for i, a in enumerate((203.0, 212.0)):
+    # (kept clear of the divider's slider at 218)
+    for i, a in enumerate((200.0, 208.0)):
         x, z = pol(12.3, a)
-        tx, tz = pol(12.4, 207.5)
+        tx, tz = pol(12.4, 204.0)
         put[f'sun_chair{i}'] = ('sunroom', A.piece('modern_arm_chair_01', coll, f'sun_chair{i}').place(x, z, y0, face_point(x, z, tx, tz)))
-    x, z = pol(12.4, 207.5)
+    x, z = pol(12.4, 204.0)
     put['sun_table'] = ('sunroom', A.piece('side_table_01', coll, 'sun_table').place(x, z, y0))
     put['sun_tea'] = ('sunroom', A.piece('wooden_bowl_01', coll, 'sun_bowl', kind='decor', solid=False).place(x, z, y0 + A.template('side_table_01')[2].z - A.template('side_table_01')[1].z))
     for i, (r, a, mid, h) in enumerate(((14.5, 199.5, 'pachira_aquatica_01', 2.1), (14.6, 215.0, 'potted_plant_01', 1.2), (10.35, 199.5, 'calathea_orbifolia_01', 0.9), (10.5, 214.8, 'anthurium_botany_01', 0.8), (13.2, 197.8, 'potted_plant_04', 0.5))):
@@ -347,7 +350,7 @@ def furnish(M, coll):
     put['bed_plant2'] = ('bedroom', A.potted('calathea_orbifolia_01', coll, M, 'bed_plant2', 0.85, ['_a'], 0.42, 'clay').place(-6.6, 0.6, y2))
 
     # --- balcony ---
-    for i, a in enumerate((258.0, 273.0)):
+    for i, a in enumerate((255.0, 275.0)):  # either side of the pod's slider (264)
         lo = F.Piece(f'bal_lounger{i}', coll)
         lo.box(0.68, 0.3, 1.0, 0, 0, 0.0, M['oak'], r=0.02, name='seat')
         lo.box(0.64, 0.12, 0.85, 0, 0, 0.3, M['linen_lav'], r=0.04, name='cushion')

@@ -767,6 +767,12 @@ def main():
         print('AUDIT:', len(found), 'problem(s)')
         for p in found:
             print('  ', p)
+    if '--lint' in ARGS:
+        import lint
+        found = lint.run([o for o in h.objs if o.type == 'MESH'], {k: v for k, v in put.items() if v[0] != 'outside'}, h.doors, tag=ROOM + ':')
+        print('LINT:', len(found), 'finding(s)')
+        for f in found:
+            print('  ', f)
     world(sc, outdoor)
     if '--preview' in ARGS:
         preview(sc)
