@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE } from '../core/config.js';
 import * as assets from '../core/assets.js';
+import * as kit from './kit.js';
 
 // Torii gate. Geometry is shared; each gate owns its material so gates can
 // light up independently. Lit gates cross the bloom threshold.
@@ -38,18 +39,42 @@ function baseMaterial() {
 
 export function create({ dim = false, rune = null } = {}) {
   const g = geos();
-  const mat = assets.own(baseMaterial());
   const gate = new THREE.Group();
   gate.name = 'torii';
-  const left = new THREE.Mesh(g.pillar, mat);
-  left.position.set(-1.7, 2, 0);
-  const right = new THREE.Mesh(g.pillar, mat);
-  right.position.set(1.7, 2, 0);
-  const top = new THREE.Mesh(g.top, mat);
-  top.position.set(0, 3.35, 0);
-  const upper = new THREE.Mesh(g.upper, mat);
-  upper.position.set(0, 4.05, 0);
-  gate.add(left, right, top, upper);
+  // the kit's lacquered torii (same frame: pillars at ±1.7, opening |x| < 1.5
+  // under 3.1 m); its red parts share this gate's own material so it can
+  // light up on its own. The vermillion is in the texture: the material's
+  // colour stays white, the glow is vermillion.
+  const fromKit = kit.get('torii');
+  let mat;
+  if (fromKit) {
+    let red = null;
+    fromKit.traverse((o) => {
+      if (o.isMesh && o.material.name.startsWith('torii_red')) red = red || o.material;
+    });
+    mat = new THREE.MeshStandardMaterial({
+      map: red?.map || null,
+      color: 0xffffff,
+      roughness: 0.55,
+      emissive: PALETTE.vermillion,
+      emissiveIntensity: DIM_EMISSIVE
+    });
+    fromKit.traverse((o) => {
+      if (o.isMesh && o.material.name.startsWith('torii_red')) o.material = mat;
+    });
+    gate.add(fromKit);
+  } else {
+    mat = assets.own(baseMaterial());
+    const left = new THREE.Mesh(g.pillar, mat);
+    left.position.set(-1.7, 2, 0);
+    const right = new THREE.Mesh(g.pillar, mat);
+    right.position.set(1.7, 2, 0);
+    const top = new THREE.Mesh(g.top, mat);
+    top.position.set(0, 3.35, 0);
+    const upper = new THREE.Mesh(g.upper, mat);
+    upper.position.set(0, 4.05, 0);
+    gate.add(left, right, top, upper);
+  }
 
   let runeMesh = null;
   if (rune) {
@@ -71,7 +96,8 @@ export function create({ dim = false, rune = null } = {}) {
   check.visible = false;
   gate.add(check);
 
-  const base = new THREE.Color(PALETTE.vermillion);
+  const base = fromKit ? new THREE.Color(0xffffff) : new THREE.Color(PALETTE.vermillion); // the material's colour
+  const glowRed = new THREE.Color(PALETTE.vermillion);
   const lav = new THREE.Color(PALETTE.lavender);
   let lit = false;
   let flashT = 0;
@@ -116,11 +142,11 @@ export function create({ dim = false, rune = null } = {}) {
       check.visible = state === 'done';
       if (state === 'locked') {
         mat.color.copy(base).multiplyScalar(0.22);
-        mat.emissive.copy(base);
+        mat.emissive.copy(glowRed);
         baseIntensity = 0;
       } else if (state === 'open') {
         mat.color.copy(base);
-        mat.emissive.copy(base);
+        mat.emissive.copy(glowRed);
         baseIntensity = 0.8;
       } else {
         mat.color.copy(lav).multiplyScalar(0.7);
@@ -134,7 +160,7 @@ export function create({ dim = false, rune = null } = {}) {
       t += dt;
       if (flashT > 0) {
         flashT = Math.max(0, flashT - dt);
-        if (flashT === 0) mat.emissive.copy(base);
+        if (flashT === 0) mat.emissive.copy(glowRed);
       }
       apply();
     }

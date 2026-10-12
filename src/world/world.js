@@ -195,10 +195,14 @@ export function setStandHeight(h = EYE_HEIGHT) {
 }
 
 // Rooms register what is solid. `null`/[] clears (no gravity then).
+let colliderList = [];
 export function setColliders(objects) {
+  colliderList = objects ? [...objects] : [];
   if (objects && objects.length) physics.setColliders(objects);
   else physics.clearColliders();
 }
+// (tests: what she collides with now)
+export const collidersList = () => colliderList.filter(Boolean);
 
 export function setBounds(center, radius = ROOM_BOUNDS_RADIUS) {
   bounds.center.copy(center);

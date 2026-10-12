@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE } from '../core/config.js';
 import * as assets from '../core/assets.js';
+import * as kit from './kit.js';
 
 // A soft, rounded blossom tree: a gently leaning trunk and a cloud of
 // puffy canopy balls. Geometry and materials are shared; size and tint
@@ -11,6 +12,19 @@ function canopyMat(tint) {
 }
 
 export function create({ height = 3.2, tint = 'softPink', seed = Math.random() } = {}) {
+  // the kit's sakura (the jacaranda in blossom, pink or lilac), when loaded
+  const k = kit.get(tint === 'lavender' ? 'sakura_lilac' : 'sakura', { height: height * 1.25, rotY: seed * Math.PI * 2 });
+  if (k) {
+    // she bumps into the trunk, never the crown
+    const col = new THREE.Mesh(assets.shared('tree.kitTrunk', () => new THREE.CylinderGeometry(0.22, 0.26, 2.4, 10)), assets.shared('tree.kitTrunkMat', () => new THREE.MeshBasicMaterial()));
+    col.position.y = 1.2;
+    col.visible = false;
+    k.add(col);
+    col.scale.setScalar(1 / k.scale.x);
+    col.position.y = 1.2 / k.scale.x;
+    k.userData.collider = col;
+    return k;
+  }
   const rand = (() => {
     let s = Math.floor(seed * 2 ** 31) || 1;
     return () => ((s = (s * 16807) % 2147483647) / 2147483647);

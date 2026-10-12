@@ -11,6 +11,7 @@ import * as dialogue from '../ui/dialogue.js';
 import * as toriiObj from '../objects/torii.js';
 import * as portalObj from '../objects/portal.js';
 import * as treeObj from '../objects/tree.js';
+import * as kit from '../objects/kit.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
 import { TEXT } from '../ui/text.js';
@@ -72,18 +73,21 @@ let solid = [];
 
 function build() {
   solid = [];
-  const ground = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 1, 1, 72), new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist }));
+  const ground = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 1, 1, 72), kit.islandMaterials(ISLAND_R) || new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist }));
   ground.position.y = -0.5;
+  const rock = kit.ground('earth', 60, 4);
   const under = new THREE.Mesh(
     new THREE.ConeGeometry(ISLAND_R - 1, 14, 56, 1, true),
-    new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, side: THREE.DoubleSide })
+    new THREE.MeshLambertMaterial(rock ? { map: rock, side: THREE.DoubleSide } : { color: PALETTE.wisteria, side: THREE.DoubleSide })
   );
   under.rotation.x = Math.PI;
   under.position.y = -8;
   group.add(ground, under);
   solid.push(ground);
 
-  const padMat = new THREE.MeshLambertMaterial({ color: PALETTE.moonlight, transparent: true, opacity: 0.75 });
+  // each gate stands on a disc of pale raked gravel
+  const gravel = kit.ground('gravel', 5.2, 1.4);
+  const padMat = gravel ? new THREE.MeshLambertMaterial({ map: gravel }) : new THREE.MeshLambertMaterial({ color: PALETTE.moonlight, transparent: true, opacity: 0.75 });
   const padGeo = new THREE.CircleGeometry(2.6, 32);
   gates = [];
   for (let i = 0; i < GATES; i++) {
@@ -119,6 +123,36 @@ function build() {
   const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), ISLAND_R - 1.5);
   group.add(edge);
   solid.push(edge);
+
+  // stone lanterns by her start, and the meadow: flowers, grass, ferns,
+  // mossy rocks — never in a gate's way, nor where she stands or walks out
+  for (const [x, z] of [[-3.2, 6.5], [3.2, 6.5]]) {
+    const t = kit.get('toro', { height: 1.75, rotY: Math.PI / 4 });
+    if (!t) break;
+    t.position.set(x, 0, z);
+    group.add(t);
+    const post = physics.solidBox(0.45, 1.8, 0.45);
+    post.position.set(x, 0.9, z);
+    group.add(post);
+    solid.push(post);
+  }
+  const keepOut = [
+    ...gates.map((g) => ({ x: g.center.x, z: g.center.z, r: 3.4 })),
+    { x: 0, z: 4, r: 3 }, { x: 0, z: 10, r: 3.5 }, { x: -3.2, z: 6.5, r: 0.8 }, { x: 3.2, z: 6.5, r: 0.8 }
+  ];
+  kit.scatter(group, {
+    r0: 2, r1: ISLAND_R - 2.5, keepOut, seed: 7,
+    kinds: [
+      { name: 'flowers_pink', count: 34, height: [0.35, 0.5], pad: 0.5 },
+      { name: 'flowers_blush', count: 26, height: [0.32, 0.45], pad: 0.5 },
+      { name: 'flowers_white', count: 18, height: [0.3, 0.42], pad: 0.5 },
+      { name: 'flowers_lav', count: 26, height: [0.45, 0.6], pad: 0.55 },
+      { name: 'grass_tall', count: 50, height: [0.4, 0.6], pad: 0.35 },
+      { name: 'fern', count: 14, height: [0.5, 0.7], pad: 0.7 },
+      { name: 'rock1', count: 6, height: [0.35, 0.55], pad: 0.9 },
+      { name: 'rock0', count: 5, height: [0.3, 0.5], pad: 0.9 }
+    ]
+  });
 
   portal = portalObj.create();
   portal.group.position.set(0, 1.9, 10);
@@ -278,6 +312,7 @@ export default {
   nudgeLine: TEXT.torii.hint,
 
   async enter() {
+    await kit.preload();
     group = world.getGroup('torii');
     challenge.done = false;
     challenge.progress = 0;

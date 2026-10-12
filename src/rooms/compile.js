@@ -14,6 +14,7 @@ import * as lanternObj from '../objects/lantern.js';
 import * as portalObj from '../objects/portal.js';
 import * as sakura from '../objects/sakura.js';
 import * as treeObj from '../objects/tree.js';
+import * as kit from '../objects/kit.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
@@ -46,16 +47,28 @@ let bloomT = -1;
 let leaving = false;
 const tmp = new THREE.Vector3();
 const dummy = new THREE.Object3D();
-const groundFrom = new THREE.Color(PALETTE.lilacMist);
-const groundTo = new THREE.Color(PALETTE.meadow);
+let groundFrom = new THREE.Color(PALETTE.lilacMist);
+let groundTo = new THREE.Color(PALETTE.meadow);
+let groundMat = null; // the island's top (it blooms from the void's lilac to grass)
 
 function build() {
   solid = [];
-  ground = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 1, 1, 72), new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist }));
+  const im = kit.islandMaterials(ISLAND_R);
+  if (im) {
+    // grass under a lilac veil, until the garden blooms
+    groundMat = im[1];
+    groundTo = kit.GRASS_TINT.clone();
+    // (a pale lilac wash over the grass: the void, before the code runs)
+    groundFrom = new THREE.Color(PALETTE.lilacMist).multiplyScalar(1.75);
+    groundMat.color.copy(groundFrom);
+  }
+  ground = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 1, 1, 72), im || new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist }));
+  if (!im) groundMat = ground.material;
   ground.position.y = -0.5;
+  const rock = kit.ground('earth', 50, 4);
   const under = new THREE.Mesh(
     new THREE.ConeGeometry(ISLAND_R - 1, 12, 56, 1, true),
-    new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, side: THREE.DoubleSide })
+    new THREE.MeshLambertMaterial(rock ? { map: rock, side: THREE.DoubleSide } : { color: PALETTE.wisteria, side: THREE.DoubleSide })
   );
   under.rotation.x = Math.PI;
   under.position.y = -7;
@@ -63,10 +76,13 @@ function build() {
   solid.push(ground);
 
   // the stone desk and his laptop
-  const stone = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria });
+  // a hewn stone block with a smooth slab on top
+  const hewn = kit.ground('earth', 2, 1.2);
+  const slab = kit.ground('path', 2, 2.4);
+  const stone = hewn ? new THREE.MeshLambertMaterial({ map: hewn }) : new THREE.MeshLambertMaterial({ color: PALETTE.wisteria });
   const desk = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 1), stone);
   desk.position.set(DESK.x, 0.45, DESK.z);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(2, 0.08, 1.15), new THREE.MeshLambertMaterial({ color: PALETTE.moonlight }));
+  const top = new THREE.Mesh(new THREE.BoxGeometry(2, 0.08, 1.15), slab ? new THREE.MeshLambertMaterial({ map: slab }) : new THREE.MeshLambertMaterial({ color: PALETTE.moonlight }));
   top.position.set(DESK.x, 0.93, DESK.z);
   group.add(desk, top);
   solid.push(desk);
@@ -103,6 +119,7 @@ function build() {
     const r = 13 + (i % 3) * 3.5;
     const tr = treeObj.create({ height: 3 + (i % 4) * 0.5, tint: i % 3 === 1 ? 'lavender' : 'softPink', seed: 0.07 + i * 0.061 });
     tr.position.set(Math.cos(a) * r, 0, Math.sin(a) * r + 2);
+    tr.userData.baseScale = tr.scale.x; // (a kit tree's scale is its size)
     tr.scale.setScalar(0.001);
     tr.userData.delay = 0.4 + (r / ISLAND_R) * 1.6;
     group.add(tr);
@@ -127,7 +144,54 @@ function build() {
   group.add(portal.group);
 }
 
+// The garden's flowers: real clumps (cosmos and lavender, from the kit),
+// instanced; each grows in as the bloom reaches it.
+const FLOWER_KINDS = [['flowers_pink', 0.42], ['flowers_blush', 0.4], ['flowers_white', 0.36], ['flowers_lav', 0.5]];
+const PER_KIND = 34;
 function buildFlowers() {
+  const data = [];
+  const sets = [];
+  for (const [name, h] of FLOWER_KINDS) {
+    const set = kit.instanced(name, PER_KIND);
+    if (!set) continue;
+    sets.push(set);
+    for (let i = 0; i < PER_KIND; i++) {
+      let x;
+      let z;
+      do {
+        const a = Math.random() * Math.PI * 2;
+        const r = 3 + Math.sqrt(Math.random()) * (ISLAND_R - 5);
+        x = Math.cos(a) * r;
+        z = Math.sin(a) * r;
+      } while (Math.hypot(x - DESK.x, z - DESK.z) < 3 || (Math.abs(x) < 1.6 && z > -14 && z < 12));
+      data.push({ set, i, x, z, rot: Math.random() * Math.PI * 2, s: (h * (0.8 + Math.random() * 0.4)) / 0.5,
+        delay: (Math.hypot(x, z - DESK.z) / ISLAND_R) * 2.2 + Math.random() * 0.4 });
+    }
+    set.group.userData.noCollide = true;
+    group.add(set.group);
+  }
+  if (!sets.length) return buildFlowersSimple();
+  flowers = { sets, data, kit: true };
+  writeFlowers(0);
+}
+
+const fq = new THREE.Quaternion();
+const fs = new THREE.Vector3();
+const fp = new THREE.Vector3();
+const fm = new THREE.Matrix4();
+function writeFlowers(time) {
+  if (!flowers.kit) return writeFlowersSimple(time);
+  for (const f of flowers.data) {
+    const k = THREE.MathUtils.clamp((time - f.delay) / 0.9, 0, 1);
+    const e = k === 0 ? 0.0001 : 1 - Math.pow(1 - k, 3);
+    fq.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, f.rot);
+    fm.compose(fp.set(f.x, 0, f.z), fq, fs.setScalar(f.s * e + 0.0001));
+    f.set.set(f.i, fm);
+  }
+  flowers.sets.forEach((s) => s.commit());
+}
+
+function buildFlowersSimple() {
   const headGeo = new THREE.IcosahedronGeometry(0.12, 0);
   const stemGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 3);
   stemGeo.translate(0, 0.5, 0);
@@ -151,11 +215,11 @@ function buildFlowers() {
   heads.userData.noCollide = true;
   stems.userData.noCollide = true;
   flowers = { heads, stems, data };
-  writeFlowers(0);
+  writeFlowersSimple(0);
   group.add(stems, heads);
 }
 
-function writeFlowers(time) {
+function writeFlowersSimple(time) {
   const { heads, stems, data } = flowers;
   for (let i = 0; i < data.length; i++) {
     const f = data[i];
@@ -175,8 +239,30 @@ function writeFlowers(time) {
   stems.instanceMatrix.needsUpdate = true;
 }
 
-// A small cute house far away: a glimpse of what he was building.
+// A glimpse of what he was building: Tsuki House on its garden island, far
+// away (a cut-out render of the real house, public/textures/glimpse.webp);
+// the simple cottage if the picture cannot load.
+const GLIMPSE_W = 46;
 function buildCottage() {
+  const g = new THREE.Group();
+  const simple = buildCottageSimple();
+  g.add(simple);
+  new THREE.TextureLoader().load(import.meta.env.BASE_URL + 'textures/glimpse.webp', (tex) => {
+    if (!g.parent) return;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false });
+    const sp = new THREE.Sprite(mat);
+    const aspect = tex.image.width / tex.image.height;
+    sp.scale.set(GLIMPSE_W, GLIMPSE_W / aspect, 1);
+    sp.position.set(0, GLIMPSE_W / aspect / 2 - 6, 0);
+    sp.userData.noCollide = true;
+    g.remove(simple);
+    g.add(sp);
+  });
+  return g;
+}
+
+function buildCottageSimple() {
   const g = new THREE.Group();
   const hill = new THREE.Mesh(new THREE.CylinderGeometry(14, 16, 2, 48), new THREE.MeshLambertMaterial({ color: PALETTE.meadow }));
   hill.position.y = -1;
@@ -245,11 +331,11 @@ function updateBloom(dt) {
   const e = k * k * (3 - 2 * k);
   // sky, fog and light ease from the calm void into sunshine
   world.lerpAtmosphere('day', 'garden', e);
-  ground.material.color.copy(groundFrom).lerp(groundTo, e);
+  groundMat.color.copy(groundFrom).lerp(groundTo, e);
   writeFlowers(bloomT * 1.4);
   for (const tr of trees) {
     const tk = THREE.MathUtils.clamp((bloomT - tr.userData.delay) / 1.2, 0, 1);
-    tr.scale.setScalar(Math.max(0.001, 1 - Math.pow(1 - tk, 3)));
+    tr.scale.setScalar(Math.max(0.001, (tr.userData.baseScale || 1) * (1 - Math.pow(1 - tk, 3))));
   }
   cottage.visible = true;
   cottage.position.y = -20 + 20 * (1 - Math.pow(1 - THREE.MathUtils.clamp((bloomT - 1.2) / 3.2, 0, 1), 3));
@@ -287,6 +373,7 @@ export default {
   },
 
   async enter() {
+    await kit.preload();
     group = world.getGroup('compile');
     challenge.done = false;
     challenge.progress = 0;

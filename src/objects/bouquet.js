@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import { PALETTE } from '../core/config.js';
 import * as assets from '../core/assets.js';
+import * as kit from './kit.js';
 import { enableBloom } from '../world/layers.js';
 
 // A small purple bouquet (HUB altar, FINAL table). "I hope you liked the
 // flowers."
 
 export function create() {
+  // the kit's hand-tied bouquet (roses, lavender, baby's breath, eucalyptus
+  // in lilac washi with a satin bow), when loaded
+  const k = kit.get('bouquet');
+  if (k) return k;
   const g = new THREE.Group();
   g.name = 'bouquet';
   const stemGeo = assets.shared('bouquet.stem', () => new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6));

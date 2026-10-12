@@ -10,6 +10,7 @@ import * as dialogue from '../ui/dialogue.js';
 import * as overlay from '../ui/overlay.js';
 import * as portalObj from '../objects/portal.js';
 import * as bouquet from '../objects/bouquet.js';
+import * as kit from '../objects/kit.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
 import * as laptop from '../ui/laptop.js';
@@ -251,7 +252,7 @@ export default {
   name: 'final',
 
   async enter() {
-    await gamingRoom.preload();
+    await Promise.all([gamingRoom.preload(), kit.preload()]);
     buildScene();
     portal = group.userData.portal;
     portal.disable();

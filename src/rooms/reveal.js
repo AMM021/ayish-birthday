@@ -166,7 +166,7 @@ export default {
     // The FINAL set carries over; rebuild it if we were jumped here.
     group = world.getGroup('final');
     if (!group.children.length) {
-      await gamingRoom.preload();
+      await Promise.all([gamingRoom.preload(), import('../objects/kit.js').then((k) => k.preload())]);
       buildScene();
       world.setPlayer(new THREE.Vector3(gamingRoom.HER_SEAT.x, gamingRoom.HER_SEAT.y, gamingRoom.HER_SEAT.z), Math.PI, 0);
     }
