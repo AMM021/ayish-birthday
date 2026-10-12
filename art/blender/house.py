@@ -516,14 +516,12 @@ class House:
             wins = {0: [op(45, 0.6, 1.0, 2.6), op(120, 0.6, 1.0, 2.6)],
                     1: [op(90, 0.6, 0.9, 2.6), op(45, 0.6, 0.9, 2.6)],
                     2: [op(90, 0.6, 0.9, 2.6), op(135, 0.6, 0.9, 2.6), op(260, 0.6, 0.9, 2.6)]}[i]
-            if i == 2:
-                ops.append(op(MOON, 1.9, 0.12, 2.12))
             for o in ops + wins:
                 ops_all.append({**o, 'y0': o['y0'] + y - base, 'y1': o['y1'] + y - base})
             self.arc_windows(tx, tz, rc, 0, y, wins)
         b = Builder()
         geo.arc_wall(b, tx, tz, rc, 0, 360, base, FFL[2] + 3.25 - base, 0.3, openings=ops_all, step=0.25)
-        self.add(b, 'tower_wall', M['earth'], top=[(M['stone'], lambda x, z: True)])
+        self.tower_wall = self.add(b, 'tower_wall', M['earth'], top=[(M['stone'], lambda x, z: True)])
         self.moon_door(MOON, FFL[2], rc)
         # oak doors to the studio and the bathroom (1F); the others are open
         for nm, ang, w, h in (('studio_door', 180, 1.4, 2.3), ('bath_door', 357, 1.4, 2.3)):
@@ -581,11 +579,8 @@ class House:
         tx, tz = TOWER
         r_open, cy = 0.86, y + 1.12
         w, y0, y1 = 1.9, 0.12, 2.12
-        # the wall around the round opening: the square cut filled back in,
-        # minus a radial cylinder
-        b = Builder()
-        geo.arc_wall(b, tx, tz, rc, deg - math.degrees(w / 2 / rc), deg + math.degrees(w / 2 / rc), y + y0, y1 - y0, 0.3, step=0.15)
-        frame = self.add(b, 'moon_wall', M['earth'])
+        # the round opening, cut straight through the tower wall (one
+        # surface: no seam around a filled-in square)
         cut = Builder()
         bmesh.ops.create_cone(cut.bm, cap_ends=True, segments=64, radius1=r_open, radius2=r_open, depth=1.2)
         bmesh.ops.rotate(cut.bm, cent=Vector((0, 0, 0)), matrix=Matrix.Rotation(math.radians(90), 3, 'Y'), verts=cut.bm.verts)
@@ -593,14 +588,7 @@ class House:
         cx, cz = polar(tx, tz, rc, deg)
         bmesh.ops.translate(cut.bm, vec=P(cx, cz, cy), verts=cut.bm.verts)
         co = cut.obj('moon_cut', None, self.coll)
-        mod = frame.modifiers.new('round', 'BOOLEAN')
-        mod.operation = 'DIFFERENCE'
-        mod.object = co
-        mod.solver = 'EXACT'
-        mod.use_self = True
-        mod.use_hole_tolerant = True
-        bpy.context.view_layer.objects.active = frame
-        bpy.ops.object.modifier_apply(modifier=mod.name)
+        self._difference(self.tower_wall, co)
         bpy.data.objects.remove(co)
         # the door: an oak disc, a brass ring and a brass crescent, inside face
         d = Builder()
@@ -791,14 +779,17 @@ class House:
         self.doorway('front_door', a, c, 0.0, 2.5, 0.3, leaf=False)
         self.pivot_door('front_door', a, c, 0.0, 2.475)
         # partition to the WC (plaster) with its door
+        # (flush with the neck's east wall, x 1.85–2.15, from that wall's
+        # inner corner: no sliver of wall face left between the two)
         b = Builder()
-        geo.line_wall(b, 2.2, -5.6, 2.2, -9.4, 0.0, H, 0.12, openings=[{'t0': 0.95, 't1': 1.8, 'y0': 0.0, 'y1': 2.2}], foot=0.35)
-        self.add(b, 'wc_partition', M['plaster'])
-        self.doorway('wc_door', (2.2, -5.6 - 0.95), (2.2, -5.6 - 1.8), FFL[0], 2.05, 0.12, swing=-1)
+        geo.line_wall(b, 2.0, -5.75, 2.0, -9.4, 0.0, H, 0.3, openings=[{'t0': 0.8, 't1': 1.65, 'y0': 0.0, 'y1': 2.2}], foot=0.35)
+        o = self.add(b, 'wc_partition', M['earth'])
+        self.inner_faces(o, M['plaster'], lambda x, z, nx, nz: nx > 0.5)  # plaster inside the WC
+        self.doorway('wc_door', (2.0, -5.75 - 0.8), (2.0, -5.75 - 1.65), FFL[0], 2.05, 0.3, swing=-1)
         # floors: stone at the door, a 15 cm step up to oak, travertine in the WC
         closed = pts[:]
-        left = geo.clip_half(closed, lambda x, z: 2.2 - x)
-        wc = geo.clip_half(closed, lambda x, z: x - 2.2)
+        left = geo.clip_half(closed, lambda x, z: 2.0 - x)
+        wc = geo.clip_half(closed, lambda x, z: x - 2.0)
         stone = geo.clip_half(left, lambda x, z: -7.8 - z)
         oak = geo.clip_half(left, lambda x, z: z + 7.8)
         for nm, poly, top, mat in (('genkan_stone', stone, 0.0, 'stone'), ('genkan_oak', oak, FFL[0], 'floor_oak'), ('wc_floor', wc, FFL[0], 'travertine')):

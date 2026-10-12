@@ -408,14 +408,14 @@ class Garden:
             self.fence_along(run, gap=self.bridge_ends())
         en = geo.arc(POND[0], POND[1], 7.92, 196, 299)
         self.fence_along(en, gap=self.bridge_ends())
-        # the bridge's sides (over the water)
+        # the bridge's sides (over the water): a rail along each plank, never
+        # across the inside of a zig-zag turn (that would pinch the corner)
         for s in (-1, 1):
-            side = []
             for (xa, za), (xb, zb) in zip(self.bridge, self.bridge[1:]):
                 L = math.hypot(xb - xa, zb - za)
-                nx, nz = -(zb - za) / L * 0.3 * s, (xb - xa) / L * 0.3 * s
-                side += [(xa + nx, za + nz), (xb + nx, zb + nz)]
-            self.fence_along(side[1:-1])
+                ux, uz = (xb - xa) / L, (zb - za) / L
+                nx, nz = -uz * 0.34 * s, ux * 0.34 * s
+                self.fence_along([(xa + nx + ux * 0.12, za + nz + uz * 0.12), (xb + nx - ux * 0.12, zb + nz - uz * 0.12)])
 
     def bridge_near(self, x, z, d):
         return dist_to_poly((x, z), self.bridge) < d

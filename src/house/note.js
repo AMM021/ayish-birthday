@@ -41,9 +41,9 @@ export async function create(text, { pos, y, face }) {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  const note = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.1875), new THREE.MeshBasicMaterial({ map: tex }));
+  const note = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.25), new THREE.MeshBasicMaterial({ map: tex }));
   const n = new THREE.Vector3(face[0], 0, face[1]).normalize();
-  note.position.set(pos[0] + n.x * 0.012, y - 0.47, pos[1] + n.z * 0.012); // below the brass crescent
+  note.position.set(pos[0] + n.x * 0.012, y + 0.58, pos[1] + n.z * 0.012); // above the brass crescent, clear of the rail
   note.lookAt(note.position.clone().add(n));
   note.rotateZ(THREE.MathUtils.degToRad(-3)); // pinned a little crooked
   note.userData.noCollide = true;
