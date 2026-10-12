@@ -38,6 +38,7 @@ REVIEWED = {
 }
 GROUNDS = ('ground', 'gravel_garden', 'roji_moss', 'meadow', 'path', 'fire_terrace', 'pergola_floor')
 EPS_TOUCH = 0.012   # parts closer than this touch
+TOWER_R = 4.1       # the house's tower: rooms wrap it (rooms.py sets 0: no tower)
 EPS_PIERCE = 0.012  # deeper than this is a visible intersection
 SOFT = ('pillow', 'cushion', 'duvet', 'throw', 'fold', 'bag', 'mattress', 'seat', 'back', 'arm', 'rug', 'headboard', 'drop')
 
@@ -356,7 +357,7 @@ def run(house, put, rooms, garden=None):
         leaks = 0
         first = None
         if not room.startswith('tower'):
-            pts = [(x, z) for x, z in pts if math.hypot(x, z) > 4.1]  # not inside the tower wall
+            pts = [(x, z) for x, z in pts if math.hypot(x, z) > TOWER_R]  # not inside the tower wall
         for (x, z) in pts:
             for hy in (0.35, 1.3, 2.4):
                 o = Vector((x, -z, fy + hy))
@@ -385,7 +386,7 @@ def run(house, put, rooms, garden=None):
         tower = room.startswith('tower')
         own = ('stair', 'planter', 'gallery', 'tower_', 'moon', 'window')
         for (x, z) in _grid_in(poly, 0.35, clear=0.45):
-            if not tower and math.hypot(x, z) < 4.3:
+            if not tower and math.hypot(x, z) < TOWER_R + 0.2 and TOWER_R > 0:
                 continue  # rooms wrap the tower: its wall is their wall
             for hy in ((0.2, 0.9, 1.6, 2.3, 2.6) if not tower else (0.6, 1.4, 2.2, 3.0) + ((4.0, 4.8) if room == 'tower_2f' else ())):
                 p = Vector((x, -z, fy + hy))
@@ -407,7 +408,7 @@ def run(house, put, rooms, garden=None):
         if room in open_air or room.startswith('tower'):
             continue
         for (x, z) in _grid_in(poly, 0.12, clear=0.02):
-            if math.hypot(x, z) < 4.1:
+            if math.hypot(x, z) < TOWER_R:
                 continue
             up = sc.ray_cast(dg, Vector((x, -z, fy + 1.2)), Vector((0, 0, 1)), distance=10)
             if not up[0]:
