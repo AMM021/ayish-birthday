@@ -642,6 +642,54 @@ def log(M, name, length=1.8, r=0.2, seed=5):
     return keep(name, [bark, geo_caps] + stubs)
 
 
+# --- the void table (FINAL) -----------------------------------------------------------------
+def void_set(M, coll):
+    """FINAL's desk in the void, with the same frame the game's seated view
+    is tuned to: a 2.0 × 0.95 m oak top at 0.80 m, the chair at z +1.0
+    facing −z, the laptop at the desk's centre."""
+    d = F.Piece('void_desk', coll)
+    d.box(2.0, 0.04, 0.95, 0, 0, 0.76, M['oak'], r=0.006, name='top')
+    for x in (-0.86, 0.86):
+        for z in (-0.4, 0.4):
+            d.box(0.045, 0.72, 0.045, x, z, 0.04, M['metal_black'], name='leg')
+        d.box(0.04, 0.04, 0.76, x, 0, 0.0, M['metal_black'], name='foot')
+        d.box(0.04, 0.035, 0.76, x, 0, 0.72, M['metal_black'], name='rail')
+    keep('void_desk', realize_piece(d), at=(0, 0, 0))
+    keep('void_chair', realize_piece(F.gaming_chair(coll, M, 'fab_lav', 'void_chair')), at=(0, 0, 0))
+    keep('void_laptop', realize_piece(F.laptop(coll, M, 'fab_lav', 'void_laptop')), at=(0, 0, 0))
+    keep('void_lamp', realize_piece(F.akari_lamp(coll, M, 'table', 'void_lamp')), at=(0, 0, 0))
+    m = F.Piece('void_mug', coll, 'decor', solid=False)
+    m.cyl(0.04, 0.095, 0, 0, 0.0, M['ceramic_blush'], segs=28, bevel=0.004, name='cup')
+    m.cyl(0.036, 0.004, 0, 0, 0.082, M['walnut'], segs=24, name='tea')
+    m.tube([(0.04, 0.025, 0), (0.062, 0.03, 0), (0.066, 0.05, 0), (0.062, 0.07, 0), (0.04, 0.075, 0)], 0.007, M['ceramic_blush'], 'handle')
+    keep('void_mug', realize_piece(m), at=(0, 0, 0))
+    keep('void_rug', realize_piece(F.rug(coll, M, 3.0, 3.0, 'fab_blush', 'void_rug', True)), at=(0, 0, 0))
+
+
+# --- the void table (FINAL) -----------------------------------------------------------------
+def void_set(M, coll):
+    """FINAL's desk in the void, in the frame the game's seated view is
+    tuned to: a 2.0 × 0.95 m oak top at 0.80 m, the chair at z +1.0 facing
+    −z, the laptop at the desk's centre."""
+    d = F.Piece('void_desk', coll)
+    d.box(2.0, 0.04, 0.95, 0, 0, 0.76, M['oak'], r=0.006, name='top')
+    for x in (-0.86, 0.86):
+        for z in (-0.4, 0.4):
+            d.box(0.045, 0.72, 0.045, x, z, 0.04, M['metal_black'], name='leg')
+        d.box(0.04, 0.04, 0.76, x, 0, 0.0, M['metal_black'], name='foot')
+        d.box(0.04, 0.035, 0.755, x, 0, 0.725, M['metal_black'], name='rail')
+    keep('void_desk', realize_piece(d), at=(0, 0, 0))
+    keep('void_chair', realize_piece(F.gaming_chair(coll, M, 'fab_lav', 'void_chair')), at=(0, 0, 0))
+    keep('void_laptop', realize_piece(F.laptop(coll, M, 'fab_lav', 'void_laptop')), at=(0, 0, 0))
+    keep('void_lamp', realize_piece(F.akari_lamp(coll, M, 'table', 'void_lamp')), at=(0, 0, 0))
+    m = F.Piece('void_mug', coll, 'decor', solid=False)
+    m.cyl(0.04, 0.095, 0, 0, 0.0, M['ceramic_blush'], segs=28, bevel=0.004, name='cup')
+    m.cyl(0.036, 0.004, 0, 0, 0.082, M['walnut'], segs=24, name='tea')
+    m.tube([(0.04, 0.025, 0), (0.062, 0.03, 0), (0.066, 0.05, 0), (0.062, 0.07, 0), (0.04, 0.075, 0)], 0.007, M['ceramic_blush'], 'handle')
+    keep('void_mug', realize_piece(m), at=(0, 0, 0))
+    keep('void_rug', realize_piece(F.rug(coll, M, 3.0, 3.0, 'fab_blush', 'void_rug', True)), at=(0, 0, 0))
+
+
 # --- materials --------------------------------------------------------------------------
 def kit_mats(M):
     M['torii_red'] = mats.pbr('torii_red', 'Wood092', tile=1.0, tint='#e85a4f', rough=0.45, tint_mix=0.92)
@@ -656,6 +704,12 @@ def kit_mats(M):
     M['babys_breath'] = mats.pbr('babys_breath', tint='#fbf8ff', rough=0.7)
     M['eucalyptus'] = mats.pbr('eucalyptus', tint='#8fb3a0', rough=0.6)
     M['stem_green'] = mats.pbr('stem_green', tint='#5f8a55', rough=0.6)
+    M['fab_lav'] = mats.pbr('fab_lav', 'Fabric061', tile=0.5, tint='#d6c2f0', rough=0.9)
+    M['fab_blush'] = mats.pbr('fab_blush', 'Fabric061', tile=0.5, tint='#f2c8db', rough=0.9)
+    M['ceramic_blush'] = mats.pbr('ceramic_blush', tint='#f0c4d6', rough=0.15)
+    M['fab_lav'] = mats.pbr('fab_lav', 'Fabric061', tile=0.5, tint='#d6c2f0', rough=0.9)
+    M['fab_blush'] = mats.pbr('fab_blush', 'Fabric061', tile=0.5, tint='#f2c8db', rough=0.9)
+    M['ceramic_blush'] = mats.pbr('ceramic_blush', tint='#f0c4d6', rough=0.15)
     M['flower_gold'] = mats.pbr('flower_gold', tint='#f2c14e', rough=0.6)
     M['petal_pink'] = mats.pbr('petal_pink', tint='#ef9fc2', rough=0.6)
     M['petal_white'] = mats.pbr('petal_white', tint='#fbf4fb', rough=0.6)
@@ -681,6 +735,10 @@ def build():
         objs = model('jacaranda_tree', coll, height=6.0, budget=26000, name=name)
         recolor_materials(objs, name, hue_from=(200, 320), hue_to=hue, sat=sat, val=val)
         keep(name, objs)
+    # a lighter one for a forest of them (PETALS' trail)
+    objs = model('jacaranda_tree', coll, height=6.0, budget=7000, name='sakura_lite')
+    recolor_materials(objs, 'sakura_lite', hue_from=(200, 320), hue_to=338, sat=0.5, val=1.15)
+    keep('sakura_lite', objs)
     # flowers: cosmos clumps (pink, blush, white) and lavender bushes
     cosmos(M, 'flowers_pink', M['petal_pink'], 14, 1)
     cosmos(M, 'flowers_blush', M['petal_blush'], 13, 2)
@@ -701,6 +759,7 @@ def build():
     keep('branch', model('dry_branches_medium_01', coll, only=['_a'], budget=2500))
     keep('lantern_wood', model('wooden_lantern_01', coll, height=0.45, budget=4000))
     bouquet(M, coll)
+    void_set(M, coll)
     # ground swatches: the game takes their textures for the islands
     for name, mat in (('grass', 'lv_grass'), ('moss', 'lv_moss'), ('path', 'lv_path'), ('earth', 'lv_earth'), ('gravel', 'lv_gravel')):
         b = geo.Builder()

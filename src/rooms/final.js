@@ -85,6 +85,7 @@ function screenTexture() {
 }
 
 function buildVoidSet() {
+  if (kit.has('void_desk')) return buildVoidGarden();
   const set = new THREE.Group();
   set.name = 'final-void';
   set.position.copy(VOID);
@@ -115,6 +116,11 @@ function buildVoidSet() {
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.002;
   set.add(shadow);
+  return voidFloor(set);
+}
+
+// the void's floor (soft, see-through) and what she collides with
+function voidFloor(set, extra = []) {
   const floor = new THREE.Mesh(
     new THREE.CircleGeometry(9, 48),
     new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist, transparent: true, opacity: 0.8, depthWrite: false })
@@ -127,7 +133,115 @@ function buildVoidSet() {
   tableCol.position.set(0, 0.4, 0);
   const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), 8.6);
   set.add(ground, tableCol, edge);
-  return { set, solid: [ground, tableCol, edge] };
+  return { set, solid: [ground, tableCol, edge, ...extra] };
+}
+
+// With the kit: a small garden floating in the void round his desk — a
+// pale stone terrace with a mossy rim, the desk (oak on black steel), her
+// chair, the laptop, a washi lamp, her mug, the bouquet laid down, two
+// stone lanterns, blossom trees and flowers, mossy stones drifting in the
+// air. The desk keeps the frame the seated view is tuned to; nothing
+// stands on her way in from where she arrives.
+function buildVoidGarden() {
+  const set = new THREE.Group();
+  set.name = 'final-void';
+  set.position.copy(VOID);
+  const extra = [];
+  // the terrace: paving, a ring of moss round it
+  const stone = kit.ground('path', 1, 1);
+  stone.repeat.set(6.4 / 1.4, 6.4 / 1.4);
+  const terrace = new THREE.Mesh(new THREE.CircleGeometry(3.2, 64), new THREE.MeshLambertMaterial({ map: stone, color: 0xf6f0fa }));
+  terrace.rotation.x = -Math.PI / 2;
+  terrace.position.y = 0.006;
+  const moss = kit.ground('moss', 1, 1);
+  moss.repeat.set(9 / 2.5, 9 / 2.5);
+  const rim = new THREE.Mesh(new THREE.RingGeometry(3.2, 4.6, 72), new THREE.MeshLambertMaterial({ map: moss, color: kit.GRASS_TINT }));
+  rim.rotation.x = -Math.PI / 2;
+  rim.position.y = 0.004;
+  set.add(terrace, rim);
+  // the desk and its things
+  const desk = kit.get('void_desk');
+  const chair = kit.get('void_chair', { rotY: Math.PI });
+  chair.position.set(0, 0, 1.0);
+  const lap = kit.get('void_laptop');
+  lap.position.set(0, 0.8, -0.08);
+  lap.traverse((o) => {
+    if (o.isMesh && o.material.name.startsWith('screen')) {
+      o.material = new THREE.MeshBasicMaterial({ color: PALETTE.lilacHaze });
+      o.material.color.multiplyScalar(1.3);
+      lap.userData.screen = o;
+    }
+  });
+  const lamp = kit.get('void_lamp');
+  lamp.position.set(-0.8, 0.8, -0.34);
+  const mug = kit.get('void_mug', { rotY: 0.8 });
+  mug.position.set(-0.42, 0.8, 0.16);
+  set.add(desk, chair, lap, lamp, mug);
+  // the bouquet laid down on the desk, the flowers toward her chair
+  const holder = new THREE.Group();
+  holder.position.set(0.66, 0.8, -0.3);
+  holder.rotation.y = -Math.PI / 2 + 0.55; // the flowers toward her chair
+  const b = bouquet.create();
+  b.rotation.z = -(Math.PI / 2 - Math.atan2(0.15, 0.34));
+  b.position.x = -0.2;
+  b.scale.setScalar(0.85);
+  holder.add(b);
+  set.add(holder);
+  // her way in: from where she arrives (−6.5, +3.5) to her chair
+  const way = (x, z) => {
+    const ax = -6.5, az = 3.5, bx = 0, bz = 1.2;
+    const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / ((bx - ax) ** 2 + (bz - az) ** 2)));
+    return Math.hypot(x - (ax + (bx - ax) * t), z - (az + (bz - az) * t));
+  };
+  // two stone lanterns behind the desk, blossom trees beyond
+  for (const [x, z] of [[-2.3, -1.9], [2.3, -1.9]]) {
+    const t = kit.get('toro', { height: 1.6, rotY: Math.PI / 4 });
+    t.position.set(x, 0, z);
+    set.add(t);
+    const c = physics.solidBox(0.5, 1.7, 0.5);
+    c.position.set(x, 0.85, z);
+    set.add(c);
+    extra.push(c);
+  }
+  for (const [x, z, h, kind] of [[3.9, -3.6, 4.6, 'sakura'], [-4.3, -3.1, 4.2, 'sakura_lilac'], [4.6, 2.4, 3.9, 'sakura'], [-1.2, -5.2, 4.8, 'sakura']]) {
+    const t = kit.get(kind, { height: h, rotY: x * 1.7 });
+    t.position.set(x, 0, z);
+    set.add(t);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 2.4, 10), new THREE.MeshBasicMaterial());
+    c.position.set(x, 1.2, z);
+    c.visible = false;
+    set.add(c);
+    extra.push(c);
+  }
+  // flowers and grasses on the mossy rim (never on her way in)
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const kinds = [['flowers_pink', 0.42], ['flowers_blush', 0.4], ['flowers_lav', 0.5], ['flowers_white', 0.36], ['grass_tall', 0.5], ['fern', 0.6]];
+  const placed = [];
+  for (let i = 0; i < 70; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = 3.35 + rnd() * 1.15;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (way(x, z) < 1.4) continue;
+    if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 0.45)) continue;
+    const [name, h] = kinds[i % kinds.length];
+    const g = kit.get(name, { height: h * (0.85 + rnd() * 0.3), rotY: rnd() * 6.28 });
+    g.position.set(x, 0, z);
+    set.add(g);
+    placed.push([x, z]);
+  }
+  // mossy stones adrift in the void round the garden
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + 0.4;
+    const r = 6.5 + (i % 3) * 1.2;
+    const g = kit.get(i % 2 ? 'rock0' : 'rock1', { height: 0.5 + (i % 3) * 0.25, rotY: a * 3 });
+    g.position.set(Math.cos(a) * r, 1.4 + (i % 4) * 0.7, Math.sin(a) * r);
+    g.rotation.z = (i % 5) * 0.3;
+    g.userData.drift = { y: g.position.y, ph: i * 1.3 };
+    set.add(g);
+  }
+  return voidFloor(set, extra);
 }
 
 // Builds the FINAL sets (the void and the gaming room) into the `final`

@@ -22,11 +22,13 @@ function convert(m, swaps) {
     out.userData.glow = true;
   } else {
     const cut = m.alphaTest > 0 || m.transparent || (m.map && /leaf|leaves|bloom|grass|fern|flower|petal|periwinkle|branches|crown/i.test(m.name + (m.map.name || '')));
+    // (the bouquet's paper is a thin open shell: both faces, a little lifted)
+    const paper = /^wrap_/.test(m.name);
     out = new THREE.MeshLambertMaterial({
       map: m.map,
-      color: m.color,
+      color: paper ? m.color.clone().multiplyScalar(1.25) : m.color,
       alphaTest: cut ? 0.5 : 0,
-      side: cut ? THREE.DoubleSide : THREE.FrontSide
+      side: cut || paper ? THREE.DoubleSide : THREE.FrontSide
     });
   }
   out.name = m.name;
