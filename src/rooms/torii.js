@@ -171,7 +171,7 @@ function build() {
       { name: 'flowers_pink', count: 300, height: [0.32, 0.48], drifts: [14, 2.6] },
       { name: 'flowers_blush', count: 240, height: [0.3, 0.44], drifts: [12, 2.4] },
       { name: 'flowers_white', count: 160, height: [0.28, 0.4], drifts: [10, 2.2] },
-      { name: 'flowers_lav', count: 200, height: [0.4, 0.58], drifts: [10, 2.6] },
+      { name: 'flowers_lav', count: 110, height: [0.4, 0.58], drifts: [10, 2.6] },
       { name: 'rock1', count: 16, height: [0.3, 0.55], pad: 0.4, spacing: 2 },
       { name: 'rock0', count: 14, height: [0.25, 0.45], pad: 0.4, spacing: 2 }
     ]
@@ -181,7 +181,7 @@ function build() {
     r0: 19.5, r1: ISLAND_R - 1.2, seed: 8, keepOut: [...trunks, { x: 0, z: 10, r: 4 }],
     kinds: [
       { name: 'fern', count: 160, height: [0.6, 0.95] },
-      { name: 'flowers_lav', count: 80, height: [0.5, 0.7] }
+      { name: 'flowers_lav', count: 40, height: [0.5, 0.7] }
     ]
   });
   isles = nature.isles(group, { rMin: 55, rMax: 115, count: 14, yMin: -6, yMax: -1, seed: 9 });

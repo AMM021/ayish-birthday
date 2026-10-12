@@ -98,7 +98,7 @@ export function grove(parent, opts) {
 // Floating isles far beyond where she can walk: rock-sided, grassy on top,
 // each with a blossom tree or two and flowers, drifting very slowly.
 // → { group, update(dt) }
-export function isles(parent, { center = new THREE.Vector3(), rMin = 48, rMax = 110, count = 10, yMin = -10, yMax = 6, seed = 7, trees = ['sakura_lite', 'sakura', 'sakura_lilac'] } = {}) {
+export function isles(parent, { center = new THREE.Vector3(), rMin = 48, rMax = 110, count = 10, yMin = -10, yMax = 6, seed = 7, trees = ['sakura_lite'], sectors = 6 } = {}) {
   const rnd = seeded(seed);
   const group = new THREE.Group();
   group.name = 'isles';
@@ -139,12 +139,12 @@ export function isles(parent, { center = new THREE.Vector3(), rMin = 48, rMax = 
   const isleRoot = new THREE.Group();
   group.add(isleRoot);
   meadow(isleRoot, {
-    center, r0: rMin - 12, r1: rMax + 12, accept: onIsle, yAt, seed: seed + 1, sectors: 6, name: 'isle-cover',
+    center, r0: rMin - 12, r1: rMax + 12, accept: onIsle, yAt, seed: seed + 1, sectors, name: 'isle-cover',
     kinds: [
       { name: 'grass_tall', count: Math.round(area * 0.5), height: [0.5, 0.8] },
       { name: 'fern', count: Math.round(area * 0.06), height: [0.9, 1.3] },
       { name: 'flowers_pink', count: Math.round(area * 0.12), height: [0.4, 0.55] },
-      { name: 'flowers_lav', count: Math.round(area * 0.1), height: [0.5, 0.7] },
+      { name: 'flowers_lav', count: Math.round(area * 0.04), height: [0.5, 0.7] },
       { name: 'fern', count: Math.round(area * 0.08), height: [0.6, 0.9] }
     ]
   });
@@ -153,14 +153,14 @@ export function isles(parent, { center = new THREE.Vector3(), rMin = 48, rMax = 
     return d > it.R - 1.6 && d < it.R - 0.3;
   });
   meadow(isleRoot, {
-    center, r0: rMin - 12, r1: rMax + 12, accept: onRim, yAt: (px, pz) => onRim(px, pz)?.top ?? 0, seed: seed + 3, sectors: 6, name: 'isle-rim',
+    center, r0: rMin - 12, r1: rMax + 12, accept: onRim, yAt: (px, pz) => onRim(px, pz)?.top ?? 0, seed: seed + 3, sectors, name: 'isle-rim',
     kinds: [
-      { name: 'flowers_lav', count: Math.round(area * 0.12), height: [0.7, 1.0] },
+      { name: 'flowers_lav', count: Math.round(area * 0.05), height: [0.7, 1.0] },
       { name: 'fern', count: Math.round(area * 0.1), height: [0.9, 1.3] }
     ]
   });
   grove(isleRoot, {
-    center, r0: rMin - 12, r1: rMax + 12, accept: onIsle, yAt, seed: seed + 2, sectors: 6, spacing: 3.2, name: 'isle-trees',
+    center, r0: rMin - 12, r1: rMax + 12, accept: onIsle, yAt, seed: seed + 2, sectors, spacing: 3.2, name: 'isle-trees',
     kinds: trees.map((t, k) => ({ name: t, count: Math.max(2, Math.round(count * (k === 0 ? 1.6 : 0.8))), height: [6, 9] }))
   });
   parent.add(group);

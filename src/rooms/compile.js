@@ -235,8 +235,8 @@ function build() {
 // instanced; each grows in as the bloom reaches it.
 // [kind, height (m), count, nearest to the desk (m)]
 const FLOWER_KINDS = [
-  ['grass_tall', 0.5, 1000, 3], ['periwinkle', 0.16, 300, 3], ['flowers_pink', 0.42, 220, 3], ['flowers_blush', 0.4, 180, 3],
-  ['flowers_white', 0.36, 130, 3], ['flowers_lav', 0.5, 170, 4], ['fern', 0.75, 120, 9]
+  ['grass_tall', 0.5, 1000, 3], ['periwinkle', 0.16, 300, 3], ['flowers_pink', 0.42, 170, 3], ['flowers_blush', 0.4, 180, 3],
+  ['flowers_white', 0.36, 130, 3], ['flowers_lav', 0.5, 100, 4], ['fern', 0.75, 120, 9]
 ];
 const FLOWER_SECTORS = 6; // each kind in sectors round the desk (frustum culling)
 const WAY_LANTERNS = [[-2.1, 7.5], [2.1, 7.5], [-2.1, 2.5], [2.1, 2.5]]; // stone lanterns along the way in

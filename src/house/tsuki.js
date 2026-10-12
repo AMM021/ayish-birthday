@@ -18,6 +18,11 @@ const DOOR_TIME = 0.65;     // s to open or close
 
 let meta = null;
 
+// warm(): download the house ahead without opening it (see assets.warm)
+export function warm() {
+  assets.warm([DIR + 'house.glb', DIR + 'colliders.glb']);
+}
+
 export function preload() {
   return Promise.all([assets.model(DIR + 'house.glb'), assets.model(DIR + 'colliders.glb'), json()]);
 }

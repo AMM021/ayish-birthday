@@ -151,6 +151,18 @@ export function own(material) {
 // (house/models.js does this) instead of adding it.
 const models = new Map();
 let gltf = null;
+// Download models ahead without opening them (opening a big model stalls a
+// frame or two: model() opens it later, at a quiet moment, from the bytes
+// kept here — whatever the server says about caching). Errors are ignored:
+// model() then loads it again and reports them.
+const warmed = new Map(); // path → Promise<ArrayBuffer | null>
+export function warm(paths) {
+  for (const p of paths) {
+    if (warmed.has(p) || models.has(p)) continue;
+    warmed.set(p, fetch(BASE + p).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null));
+  }
+}
+
 export function model(path) {
   if (!models.has(path)) {
     models.set(path, (async () => {
@@ -164,7 +176,9 @@ export function model(path) {
         draco.setDecoderPath(BASE + 'draco/'); // the house is Draco-compressed
         gltf.setDRACOLoader(draco);
       }
-      const g = await gltf.loadAsync(BASE + path);
+      const ahead = warmed.has(path) ? await warmed.get(path) : null;
+      warmed.delete(path);
+      const g = ahead ? await gltf.parseAsync(ahead, BASE + path.replace(/[^/]*$/, '')) : await gltf.loadAsync(BASE + path);
       g.scene.traverse((o) => {
         if (o.geometry) o.geometry.userData.shared = true;
       });

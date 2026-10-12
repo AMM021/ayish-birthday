@@ -216,24 +216,15 @@ function buildVoidGarden() {
     set.add(c);
     extra.push(c);
   }
-  // flowers and grasses on the mossy rim (never on her way in)
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const kinds = [['flowers_pink', 0.42], ['flowers_blush', 0.4], ['flowers_lav', 0.5], ['flowers_white', 0.36], ['grass_tall', 0.5], ['fern', 0.6]];
-  const placed = [];
-  for (let i = 0; i < 70; i++) {
-    const a = rnd() * Math.PI * 2;
-    const r = 3.35 + rnd() * 1.15;
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
-    if (way(x, z) < 1.4) continue;
-    if (placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 0.45)) continue;
-    const [name, h] = kinds[i % kinds.length];
-    const g = kit.get(name, { height: h * (0.85 + rnd() * 0.3), rotY: rnd() * 6.28 });
-    g.position.set(x, 0, z);
-    set.add(g);
-    placed.push([x, z]);
-  }
+  // flowers and grasses on the mossy rim (never on her way in), instanced
+  nature.meadow(set, {
+    r0: 3.35, r1: 4.5, seed: 7, sectors: 2, accept: (x, z) => way(x, z) >= 1.4,
+    kinds: [
+      { name: 'flowers_pink', count: 14, height: [0.36, 0.48] }, { name: 'flowers_blush', count: 12, height: [0.34, 0.46] },
+      { name: 'flowers_lav', count: 8, height: [0.42, 0.58] }, { name: 'flowers_white', count: 10, height: [0.3, 0.42] },
+      { name: 'grass_tall', count: 14, height: [0.42, 0.58] }, { name: 'fern', count: 8, height: [0.5, 0.7] }
+    ]
+  });
   // the garden reaches the void's edge: moss all the way out over a rocky
   // underside, a meadow and more blossom trees (her way in stays open),
   // and small isles floating round it in the haze
@@ -251,7 +242,7 @@ function buildVoidGarden() {
   set.add(outer, under);
   const clear = (x, z) => way(x, z) > 1.7 && Math.hypot(x + 6.5, z - 3.5) > 1.8;
   const more = nature.grove(set, {
-    r0: 5.6, r1: 8.5, seed: 23, spacing: 2.8, accept: (x, z) => way(x, z) > 2.4,
+    r0: 5.6, r1: 8.5, seed: 23, spacing: 2.8, sectors: 2, accept: (x, z) => way(x, z) > 2.4,
     keepOut: [{ x: 3.9, z: -3.6, r: 2 }, { x: -4.3, z: -3.1, r: 2 }, { x: 4.6, z: 2.4, r: 2 }, { x: -1.2, z: -5.2, r: 2 }],
     kinds: [{ name: 'sakura_lite', count: 5, height: [3.6, 4.6] }, { name: 'sakura', count: 3, height: [3.8, 4.6] }, { name: 'sakura_lilac', count: 3, height: [3.4, 4.4] }]
   });
@@ -262,18 +253,18 @@ function buildVoidGarden() {
     extra.push(c);
   }
   nature.meadow(set, {
-    r0: 4.7, r1: 9.1, seed: 25, accept: clear, keepOut: more.map((t) => ({ x: t.x, z: t.z, r: 0.45 })),
+    r0: 4.7, r1: 9.1, seed: 25, sectors: 3, accept: clear, keepOut: more.map((t) => ({ x: t.x, z: t.z, r: 0.45 })),
     kinds: [
       { name: 'grass_tall', count: 320, height: [0.35, 0.65] },
       { name: 'periwinkle', count: 90, height: [0.12, 0.2], drifts: [8, 1.6] },
       { name: 'flowers_pink', count: 80, height: [0.34, 0.5], drifts: [7, 1.4] },
       { name: 'flowers_blush', count: 60, height: [0.32, 0.46], drifts: [6, 1.4] },
-      { name: 'flowers_lav', count: 70, height: [0.42, 0.62], drifts: [6, 1.6] },
+      { name: 'flowers_lav', count: 40, height: [0.42, 0.62], drifts: [6, 1.6] },
       { name: 'flowers_white', count: 40, height: [0.3, 0.42], drifts: [5, 1.2] },
       { name: 'fern', count: 50, height: [0.55, 0.85] }
     ]
   });
-  set.userData.isles = nature.isles(set, { rMin: 17, rMax: 36, count: 9, yMin: -6, yMax: -1, seed: 19 });
+  set.userData.isles = nature.isles(set, { rMin: 17, rMax: 36, count: 9, yMin: -6, yMax: -1, seed: 19, sectors: 3 });
   // mossy stones adrift in the void round the garden
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2 + 0.4;

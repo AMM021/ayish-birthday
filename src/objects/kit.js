@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as assets from '../core/assets.js';
 import { enableBloom } from '../world/layers.js';
 import { PALETTE } from '../core/config.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // The levels' kit (art/blender/kit.py → public/models/kit/kit.glb): the
 // torii, stone lanterns, sakura trees, flowers, grass, ferns, rocks, logs,
@@ -56,6 +57,9 @@ export function preload() {
   }
   return loading;
 }
+
+// warm(): download the kit ahead without opening it (see assets.warm)
+export const warm = () => assets.warm([FILE]);
 
 export const ready = () => !!pieces;
 export const has = (name) => !!pieces?.has(name);
@@ -156,14 +160,47 @@ export function islandMaterials(radius, { top = 'grass', side = 'earth', tint = 
 // → { group, set(i, matrix), commit() } — set() places copy i (a Matrix4
 // for the piece's root), commit() uploads and refits the bounds.
 const tmpM = new THREE.Matrix4();
+// a piece's parts merged per material (a lavender bush is 28 meshes but only
+// a few materials): one InstancedMesh, so one draw call, per material
+const mergedParts = new Map();
+function partsOf(name, src) {
+  if (mergedParts.has(name)) return mergedParts.get(name);
+  src.updateMatrixWorld(true);
+  const byMat = new Map();
+  src.traverse((o) => {
+    if (!o.isMesh) return;
+    if (!byMat.has(o.material)) byMat.set(o.material, []);
+    byMat.get(o.material).push(o.geometry.clone().applyMatrix4(o.matrixWorld));
+  });
+  const parts = [];
+  for (const [mat, geos] of byMat) {
+    let geo = geos[0];
+    if (geos.length > 1) {
+      // (merging needs the same attributes everywhere, all indexed or none)
+      const names = Object.keys(geos[0].attributes).filter((k) => geos.every((g) => g.attributes[k]));
+      const ready = geos.map((g) => {
+        const h = g.index && geos.some((x) => !x.index) ? g.toNonIndexed() : g;
+        for (const k of Object.keys(h.attributes)) if (!names.includes(k)) h.deleteAttribute(k);
+        return h;
+      });
+      geo = mergeGeometries(ready) || null;
+    }
+    if (!geo) {
+      // could not merge: keep them apart
+      geos.forEach((g) => { g.userData.shared = true; parts.push({ geo: g, mat, local: new THREE.Matrix4() }); });
+      continue;
+    }
+    geo.userData.shared = true; // (cached for every level; never disposed with a room)
+    parts.push({ geo, mat, local: new THREE.Matrix4() });
+  }
+  mergedParts.set(name, parts);
+  return parts;
+}
+
 export function instanced(name, count) {
   const src = pieces?.get(name);
   if (!src) return null;
-  src.updateMatrixWorld(true);
-  const parts = [];
-  src.traverse((o) => {
-    if (o.isMesh) parts.push({ geo: o.geometry, mat: o.material, local: o.matrixWorld.clone() });
-  });
+  const parts = partsOf(name, src);
   const group = new THREE.Group();
   group.name = 'kit-many-' + name;
   const meshes = parts.map((p) => {

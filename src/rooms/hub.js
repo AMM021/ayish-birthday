@@ -172,7 +172,7 @@ function buildIsland() {
       { name: 'flowers_pink', count: 150, height: [0.34, 0.5], pad: 0.1, drifts: [8, 2.2] },
       { name: 'flowers_blush', count: 120, height: [0.32, 0.46], pad: 0.1, drifts: [7, 2] },
       { name: 'flowers_white', count: 90, height: [0.3, 0.42], pad: 0.1, drifts: [6, 1.8] },
-      { name: 'flowers_lav', count: 110, height: [0.42, 0.6], pad: 0.15, drifts: [6, 2.2] },
+      { name: 'flowers_lav', count: 70, height: [0.42, 0.6], pad: 0.15, drifts: [6, 2.2] },
       { name: 'fern', count: 70, height: [0.5, 0.75], pad: 0.2 },
       { name: 'rock1', count: 12, height: [0.3, 0.55], pad: 0.4, spacing: 1.5 },
       { name: 'rock0', count: 10, height: [0.25, 0.45], pad: 0.4, spacing: 1.5 }

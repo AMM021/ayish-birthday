@@ -551,9 +551,7 @@ function buildOuterForest() {
   nature.grove(group, {
     r0: 0, r1: Math.hypot(OUTER_X, OUTER_Z), accept: outside, seed: 41, spacing: 4.4, sectors: 10, name: 'outer-trees',
     kinds: [
-      { name: 'sakura_lite', count: 110, height: [5, 7] },
-      { name: 'sakura', count: 24, height: [5, 6.5] },
-      { name: 'sakura_lilac', count: 16, height: [4.6, 6] }
+      { name: 'sakura_lite', count: 150, height: [5, 7] }
     ]
   });
   nature.meadow(group, {
@@ -561,7 +559,7 @@ function buildOuterForest() {
     kinds: [
       { name: 'fern', count: 320, height: [0.8, 1.3] },
       { name: 'grass_tall', count: 420, height: [0.7, 1.1] },
-      { name: 'flowers_lav', count: 110, height: [0.6, 0.9], drifts: [16, 2.5] }
+      { name: 'flowers_lav', count: 40, height: [0.6, 0.9], drifts: [16, 2.5] }
     ]
   });
 }
@@ -977,8 +975,9 @@ export default {
     mode = 'wait';
     fragments.show();
     audio.play('challenge');
-    // the gaming room downloads during the level (FINAL waits for it)
-    import('../house/gamingRoom.js').then((g) => g.preload());
+    // the gaming room downloads during the level (FINAL opens it; opening it
+    // here would stall a frame while she follows the light)
+    import('../house/baked.js').then((b) => b.warmRoom('gaming'));
     dialogue.say(orb.anchor, TEXT.petals.intro, { mode: 'story' }).then(() => {
       if (mode === 'wait') mode = 'ready';
     });

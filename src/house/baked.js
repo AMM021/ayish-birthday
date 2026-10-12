@@ -77,6 +77,11 @@ function json(name) {
 
 const ready = new Map();
 
+// warmRoom(name): download a room's files ahead (see assets.warm)
+export function warmRoom(name) {
+  assets.warm([DIR + name + '.glb', DIR + name + '_colliders.glb']);
+}
+
 // preloadRoom(name) → true when the room's files are in (false: missing)
 export async function preloadRoom(name) {
   const got = await Promise.all([assets.model(DIR + name + '.glb'), assets.model(DIR + name + '_colliders.glb'), json(name)]);

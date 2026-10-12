@@ -196,9 +196,9 @@ export default {
     audio.play('letter'); // keeps playing if it already is
 
     const ok = await placeThem();
-    // the finished world downloads during the hug (END waits for it); the
-    // avatars are in by now, so it never slows them down
-    import('../house/tsuki.js').then((m) => m.preload());
+    // the finished world downloads during the hug, unopened (END opens it,
+    // behind the end card); the avatars are in by now, so it never slows them
+    import('../house/tsuki.js').then((m) => m.warm());
     // she gets up from the chair, facing him
     from = world.camera.position.clone();
     fromYaw = world.player.yaw;

@@ -253,8 +253,8 @@ export default {
     world.setControls({ move: true, look: true });
     orb?.setVisible(false);
     overlay.showLine({ text: TEXT.arrival }).then(() => prompts.showControls());
-    // the levels' kit downloads while she reads the note (HUB needs it)
-    import('../objects/kit.js').then((k) => k.preload());
+    // the levels' kit downloads while she reads the note (HUB opens it)
+    import('../objects/kit.js').then((k) => k.warm());
   },
 
   update(dt) {

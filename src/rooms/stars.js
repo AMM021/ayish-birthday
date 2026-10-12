@@ -438,7 +438,7 @@ function buildShore() {
     r0: LAKE_R + 1.4, r1: LAKE_R + 7, y: 0.12, seed: 31, sectors: 10,
     kinds: [
       { name: 'grass_tall', count: 900, height: [0.6, 1.0] },
-      { name: 'flowers_lav', count: 260, height: [0.55, 0.8], drifts: [22, 2.4] },
+      { name: 'flowers_lav', count: 130, height: [0.55, 0.8], drifts: [22, 2.4] },
       { name: 'flowers_white', count: 160, height: [0.35, 0.5], drifts: [16, 2] },
       { name: 'fern', count: 160, height: [0.7, 1.1] },
       { name: 'rock0', count: 40, height: [0.3, 0.7], spacing: 2 },
@@ -448,9 +448,8 @@ function buildShore() {
   nature.grove(group, {
     r0: LAKE_R + 5, r1: SHORE_R - 6, y: 0.12, seed: 33, spacing: 4.2, sectors: 10,
     kinds: [
-      { name: 'sakura_lilac', count: 50, height: [4.5, 6.5] },
-      { name: 'sakura_lite', count: 80, height: [4.5, 6.5] },
-      { name: 'sakura', count: 30, height: [4.5, 6] }
+      { name: 'sakura_lilac', count: 30, height: [4.5, 6.5] },
+      { name: 'sakura_lite', count: 120, height: [4.5, 6.5] }
     ]
   });
   // stone lanterns round the shore, their windows lit
