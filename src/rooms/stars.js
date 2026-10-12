@@ -36,6 +36,12 @@ const HEIGHTS = [0.6, 0.6, 1.1, 1.1, 0.7, 0.7, 0.7, 0.8, 0.6]; // platform tops
 const SPAWN_TOP = 0.5;
 const CENTER_TOP = 0.6;
 const WATER_FALL = -0.45; // feet below this → she fell in
+// a star she has lit rises out of her way to this height, where it and a
+// string of small orbs trace the heart in the air (and light the stretch
+// ahead of her)
+const AIR_Y = 4.2;
+const LIFT_TIME = 1.4;
+const BEAD_GAP = 1.25; // m between the small orbs
 // unit y → −z: the lobes lie far from the spawn, the tip near the centre
 const HEART_ORIGIN = new THREE.Vector3(0, 0, -2);
 const toWorld = (x, y, h) => new THREE.Vector3(x * SCALE, h, -y * SCALE).add(HEART_ORIGIN);
@@ -62,6 +68,9 @@ let introDone = false;
 let t = 0;
 let glowAll = -1;
 let splash = false;
+let beads = []; // per trail piece: [{ mesh, t }]
+let glow = null; // the warm light above the last star she lit
+let lastLit = -1;
 const seg = new THREE.Vector3();
 const toC = new THREE.Vector3();
 
@@ -258,7 +267,7 @@ function build() {
     halo.scale.setScalar(STAR_TRIGGER_RADIUS * 2.2);
     g.add(core, halo);
     group.add(g);
-    return { group: g, core, coreMat, halo, haloMat, pos, inside: false, lit: false };
+    return { group: g, core, coreMat, halo, haloMat, pos, inside: false, lit: false, lift: 0, liftTo: 0 };
   });
   disc(group, baseSolid, SPAWN_ISLAND, 1.9, SPAWN_TOP, 0.8);
   disc(group, baseSolid, HEART_CENTER, 2.4, CENTER_TOP, 0.8);
@@ -299,6 +308,34 @@ function build() {
     group.add(m);
     segments.push(m);
   }
+
+  // the same outline in the air: small orbs between the risen stars,
+  // shown piece by piece as she lights them
+  const inAir = [...STAR_POINTS.map((p) => p.clone().setY(AIR_Y)), toWorld(0, 0.42, AIR_Y)];
+  const airCurve = new THREE.CatmullRomCurve3(inAir, true, 'centripetal');
+  const beadGeo = new THREE.SphereGeometry(0.12, 12, 8);
+  const beadMat = new THREE.MeshBasicMaterial({ color: PALETTE.gold });
+  beadMat.color.multiplyScalar(2.2);
+  beads = [];
+  for (let i = 0; i < 9; i++) {
+    const t0 = i / n;
+    const t1 = (i === 8 ? n : i + 1) / n;
+    const len = airCurve.getPoint(t0).distanceTo(airCurve.getPoint(t1)) * 1.15;
+    const count = Math.max(3, Math.round(len / BEAD_GAP));
+    const row = [];
+    for (let k = 1; k < count; k++) {
+      const m = new THREE.Mesh(beadGeo, beadMat);
+      m.position.copy(airCurve.getPoint(t0 + ((t1 - t0) * k) / count));
+      m.visible = false;
+      m.userData.noCollide = true;
+      enableBloom(m, 2.0);
+      group.add(m);
+      row.push({ mesh: m, t: -1, delay: (k - 1) * 0.08 });
+    }
+    beads.push(row);
+  }
+  glow = new THREE.PointLight(PALETTE.gold, 0, 18, 1.2);
+  group.add(glow);
 
   // the lake: still water (not solid), softly glossy, with star sparkles
   const lake = new THREE.Mesh(
@@ -363,6 +400,11 @@ function setStarLit(s, on) {
   else s.coreMat.color.multiplyScalar(0.75);
   s.haloMat.color.set(on ? PALETTE.gold : PALETTE.lavender);
   s.haloMat.opacity = on ? 0.9 : 0.55;
+  s.liftTo = on ? 1 : 0;
+}
+
+function showBeads(i) {
+  for (const b of beads[i]) if (b.t < 0) b.t = 0;
 }
 
 function resetSequence() {
@@ -370,13 +412,19 @@ function resetSequence() {
   challenge.progress = 0;
   stars.forEach((s) => setStarLit(s, false));
   segments.forEach((m) => { m.visible = false; });
+  beads.forEach((row) => row.forEach((b) => { b.t = -1; b.mesh.visible = false; }));
+  lastLit = -1;
 }
 
 function hitStar(i) {
   if (challenge.done) return;
   if (i === next) {
     setStarLit(stars[i], true);
-    if (i > 0) segments[i - 1].visible = true;
+    lastLit = i;
+    if (i > 0) {
+      segments[i - 1].visible = true;
+      showBeads(i - 1);
+    }
     audio.chime([523 * Math.pow(2, i / 12 * 2)]);
     next++;
     challenge.progress = next;
@@ -422,6 +470,7 @@ async function fellIn() {
 function complete() {
   challenge.done = true;
   segments[8].visible = true;
+  showBeads(8);
   glowAll = 0;
   portal.group.visible = true;
   portal.enable();
@@ -513,6 +562,30 @@ export default {
     portal.update(dt);
     updatePaths(dt);
     if (rise) updateRise(REDUCED_MOTION ? RISE_END : dt);
+    // lit stars rise out of her way; the warm light follows the last one
+    stars.forEach((s) => {
+      if (s.lift !== s.liftTo) {
+        const step = REDUCED_MOTION ? 1 : dt / LIFT_TIME;
+        s.lift = s.liftTo > s.lift ? Math.min(1, s.lift + step) : Math.max(0, s.lift - step);
+        const e = s.lift * s.lift * (3 - 2 * s.lift);
+        s.group.position.y = s.pos.y + (AIR_Y - s.pos.y) * e;
+      }
+    });
+    if (lastLit >= 0) {
+      glow.position.copy(stars[lastLit].group.position);
+      glow.intensity = Math.min(7, glow.intensity + dt * 6);
+    } else glow.intensity = 0;
+    // the small orbs pop in one after another along the outline
+    for (const row of beads) {
+      for (const b of row) {
+        if (b.t < 0) continue;
+        b.t += dt;
+        const k = REDUCED_MOTION ? 1 : Math.min(1, Math.max(0, (b.t - b.delay) / 0.35));
+        b.mesh.visible = k > 0;
+        const tw = REDUCED_MOTION ? 1 : 1 + 0.12 * Math.sin(t * 2.4 + b.delay * 20);
+        b.mesh.scale.setScalar(k * tw);
+      }
+    }
     // the next star breathes a little, so the shape guides her gently
     stars.forEach((s, i) => {
       const k = !challenge.done && i === next && !REDUCED_MOTION ? 1 + 0.18 * Math.sin(t * 3) : 1;
@@ -579,6 +652,9 @@ export default {
     segments = [];
     paths = [];
     baseSolid = [];
+    beads = [];
+    glow = null;
+    lastLit = -1;
     group = null;
   }
 };
