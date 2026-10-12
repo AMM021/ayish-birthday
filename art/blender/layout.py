@@ -198,6 +198,10 @@ def furnish(M, coll):
     put['genkan_bench'] = ('genkan', b.place(1.6, -5.0, y0, 180))
     put['genkan_plant'] = ('genkan_stone', A.piece('potted_plant_04', coll, 'genkan_plant', height=0.6, kind='plant').place(-1.5, -8.6, 0.0))
     put['genkan_lamp'] = ('genkan_stone', F.akari_lamp(coll, M, 'floor', 'genkan_lamp').place(1.4, -8.7, 0.0))
+    x, z, f = against_wall(-1.655, -5.0, y0 + 1.6, 180, 1.0, 0.0, gap=0.004)
+    put['genkan_art'] = ('genkan', F.wall_art(coll, M, 'genkan_art', 1.0, 0.65).place(x, z, y0 + 1.35, f))
+    put['genkan_runner'] = ('genkan', F.rug(coll, M, 1.0, 2.6, 'linen_lav', 'genkan_runner').place(0.0, -5.2, y0, 90))
+    put['genkan_vase'] = ('genkan', A.piece('ceramic_vase_01', coll, 'genkan_vase', height=0.3, kind='decor', solid=False).place(-1.655, -5.35, y0 + 0.9))
     # the WC: toilet on the straight north wall, basin on the south wall
     put['wc_toilet'] = ('wc', F.toilet(coll, M, 'wc_toilet').place(2.78, -8.795, y0, 90))
     put['wc_basin'] = ('wc', F.vanity(coll, M, 0.6, 'wc_basin').place(2.75, -6.015, y0, 270))
@@ -218,6 +222,10 @@ def furnish(M, coll):
     put['dining_pendant'] = ('kitchen_dining', F.akari_lamp(coll, M, 'pendant', 'dining_pendant').place(12.9, 0.9, y0 + 2.15))
     put['dining_plant'] = ('kitchen_dining', A.potted('pachira_aquatica_01', coll, M, 'dining_plant', 1.8, ['_d'], 0.5).place(14.0, -2.6, y0))
     put['fruit'] = ('kitchen_dining', A.piece('wooden_bowl_01', coll, 'fruit', kind='decor', solid=False).place(9.6, -1.9, y0 + 0.91))
+    put['island_vase'] = ('kitchen_dining', A.piece('ceramic_vase_03', coll, 'island_vase', height=0.36, kind='decor', solid=False).place(8.4, -1.95, y0 + 0.91))
+    x, z, f = against_wall(6.9, -3.4, y0 + 1.6, 270, 1.1, 0.0, gap=0.004)
+    put['kitchen_art'] = ('kitchen_dining', F.wall_art(coll, M, 'kitchen_art', 1.1, 0.7).place(x, z, y0 + 1.3, f))
+    put['island_plant'] = ('kitchen_dining', A.piece('potted_plant_04', coll, 'island_plant', height=0.32, kind='decor', solid=False).place(10.2, -1.85, y0 + 0.91))
     put['laundry'] = ('laundry', F.cabinet(coll, M, 1.5, 0.92, 0.62, 'laundry', 'linen_white', 'marble', 2).place(8.25, -6.955, y0, 90))
     # a proper utility room: a shelf with folded towels above the machines,
     # a laundry basket by them
@@ -277,6 +285,17 @@ def furnish(M, coll):
     put['studio_plant2'] = ('studio', A.potted('calathea_orbifolia_01', coll, M, 'studio_plant2', 0.85, ['_a'], 0.42, 'clay').place(x, z, y1))
     x, z = pol(16.6, 280.3)
     put['studio_lamp'] = ('studio', F.akari_lamp(coll, M, 'floor', 'studio_lamp').place(x, z, y1))
+    # the lounge in the middle: a coffee table with a tea set on the rug, an
+    # armchair facing the sofa, art over the sofa, another plant
+    x, z = pol(14.7, 277.5)
+    put['studio_coffee'] = ('studio', F.coffee_round(coll, M, 0.95, 'studio_coffee').place(x, z, y1))
+    put['studio_tea'] = ('studio', A.piece('tea_set_01', coll, 'studio_tea', height=0.14, kind='decor', solid=False).place(x, z, y1 + 0.38))
+    x, z = pol(13.1, 279.5)
+    put['studio_arm'] = ('studio', A.piece('modern_arm_chair_01', coll, 'studio_arm').place(x, z, y1, face_point(x, z, *pol(14.7, 277.5))))
+    x, z, f = against_wall(*pol(16.0, 286.5), y1 + 1.5, 286.5, 1.2, 0.0, gap=0.004)
+    put['studio_art'] = ('studio', F.wall_art(coll, M, 'studio_art', 1.2, 0.75).place(x, z, y1 + 1.2, f))
+    x, z = pol(16.6, 257.6)
+    put['studio_plant3'] = ('studio', A.potted('calathea_orbifolia_01', coll, M, 'studio_plant3', 0.85, ['_a'], 0.42, 'clay').place(x, z, y1))
 
     # --- terrace on the library roof ---
     for i, a in enumerate((229.0, 243.0)):
@@ -291,13 +310,50 @@ def furnish(M, coll):
         put[f'terrace_planter{i}'] = ('terrace', A.piece('planter_box_01', coll, f'terrace_planter{i}', height=0.7, kind='plant').place(x, z, y1 + 0.06, toward(a)))
 
     # --- bathroom (1F, east wing) ---
-    put['tub'] = ('bath', F.tub(coll, M, 'tub').place(9.0, -0.5, y1, 180))
+    # a deep oval tub for two on an oak plinth, along the curved east wall
+    put['tub'] = ('bath', F.tub_for_two(coll, M, 'tub').place(9.45, -0.5, y1, 180))
     put['shower'] = ('bath', F.shower(coll, M, 2.0, 1.2, 'shower').place(8.85, -3.75, y1, 90))
     put['bath_wc'] = ('bath', F.toilet(coll, M, 'bath_wc').place(10.03, 1.82, y1, 197.1))  # on the curved east wall
     put['bath_vanity'] = ('bath', F.vanity(coll, M, 1.8, 'bath_vanity').place(8.45, 3.075, y1, 270))
-    put['bath_plant'] = ('bath', A.potted('anthurium_botany_01', coll, M, 'bath_plant', 0.8, ['_a'], 0.38).place(5.8, 2.15, y1))
-    put['bath_duck'] = ('bath', A.piece('rubber_duck_toy', coll, 'bath_duck', height=0.09, kind='decor', solid=False).place(9.4, -0.5, y1 + 0.6))
-    put['bath_rug'] = ('bath', F.rug(coll, M, 1.4, 0.8, 'linen_blush', 'bath_rug').place(7.6, -0.5, y1, 0))
+    put['bath_plant'] = ('bath', A.potted('anthurium_botany_01', coll, M, 'bath_plant', 0.8, ['_a'], 0.38).place(4.95, 1.65, y1))
+    put['bath_duck'] = ('bath', A.piece('rubber_duck_toy', coll, 'bath_duck', height=0.09, kind='decor', solid=False).place(9.7, 0.0, y1 + 0.795))
+    put['bath_rug'] = ('bath', F.rug(coll, M, 1.6, 0.8, 'linen_blush', 'bath_rug').place(7.85, -0.5, y1, 0))
+    # towels: a ladder on the south wall, a stool with folded towels by the
+    # tub's foot, shelves of towels and jars on the round west wall
+    lx, lz, lf = against_wall(6.5, -3.0, y1 + 1.6, 270, 0.6, 0.34, gap=0.02)  # (its top rests on the wall)
+    put['bath_ladder'] = ('bath', F.towel_ladder(coll, M, 'bath_ladder').place(lx, lz, y1, lf))
+    put['bath_stool'] = ('bath', A.piece('side_table_01', coll, 'bath_stool').place(7.75, -2.25, y1))
+    stool_top = y1 + A.template('side_table_01')[2].z - A.template('side_table_01')[1].z
+    put['bath_towels'] = ('bath', F.towel_stack(coll, M, 'bath_towels').place(7.75, -2.25, stool_top, 30))
+    sh = A.piece('wooden_display_shelves_01', coll, 'bath_shelves')
+    # (this model's front faces its local x: a quarter turn, width along y)
+    sx_, sz_, sf_ = against_wall(6.25, 2.4, y1 + 1.0, 90, sh.size.y, sh.size.x / 2)
+    put['bath_shelves'] = ('bath', sh.place(sx_, sz_, y1, sf_ - 90))
+    # what's on them: three cubbies across, three shelves up (above the drawers)
+    fr, fz_ = math.cos(math.radians(sf_)), math.sin(math.radians(sf_))
+    rx_, rz_ = -fz_, fr
+    def cubby(col, row):
+        return sx_ + rx_ * col * 0.355, sz_ + rz_ * col * 0.355, y1 + (0.395, 0.792, 1.155)[row]
+    x_, z_, yy = cubby(-1, 0)
+    put['bath_sh_towels0'] = ('bath', F.towel_stack(coll, M, 'bath_sh_towels0', 2, 0.28, 0.26).place(x_, z_, yy, sf_))
+    x_, z_, yy = cubby(0, 0)
+    put['bath_sh_towels1'] = ('bath', F.towel_stack(coll, M, 'bath_sh_towels1', 3, 0.28, 0.26).place(x_, z_, yy, sf_))
+    x_, z_, yy = cubby(1, 0)
+    put['bath_sh_vase'] = ('bath', A.piece('ceramic_vase_03', coll, 'bath_sh_vase', height=0.24, kind='decor', solid=False).place(x_, z_, yy))
+    x_, z_, yy = cubby(-1, 1)
+    put['bath_sh_bowl'] = ('bath', A.piece('wooden_bowl_01', coll, 'bath_sh_bowl', height=0.08, kind='decor', solid=False).place(x_, z_, yy))
+    x_, z_, yy = cubby(0, 1)
+    put['bath_sh_candles'] = ('bath', F.candles(coll, M, 'bath_sh_candles').place(x_, z_, yy, sf_))
+    x_, z_, yy = cubby(1, 1)
+    put['bath_sh_towels2'] = ('bath', F.towel_stack(coll, M, 'bath_sh_towels2', 2, 0.28, 0.26).place(x_, z_, yy, sf_))
+    x_, z_, yy = cubby(-1, 2)
+    put['bath_sh_plant'] = ('bath', A.piece('potted_plant_04', coll, 'bath_sh_plant', height=0.3, kind='decor', solid=False).place(x_, z_, yy))
+    x_, z_, yy = cubby(1, 2)
+    put['bath_sh_vase2'] = ('bath', A.piece('ceramic_vase_01', coll, 'bath_sh_vase2', height=0.2, kind='decor', solid=False).place(x_, z_, yy))
+    # plants: a tall one in the south-east, smaller ones by the tub and vanity
+    put['bath_tree'] = ('bath', A.potted('pachira_aquatica_01', coll, M, 'bath_tree', 1.9, ['_d'], 0.5).place(10.0, -2.6, y1))
+    put['bath_plant2'] = ('bath', A.potted('calathea_orbifolia_01', coll, M, 'bath_plant2', 0.8, ['_a'], 0.4, 'clay').place(8.05, 1.45, y1))
+    put['bath_plant3'] = ('bath', A.piece('potted_plant_02', coll, 'bath_plant3', height=0.9, kind='plant').place(4.9, -2.7, y1))
 
     # --- bedroom pod (2F) ---
     # the bed's head against the north wall, looking south through the glass

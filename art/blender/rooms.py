@@ -469,6 +469,13 @@ def build_threshold(M, arch, coll):
     put['shelves'] = (R, sh.place(x1 - sh.size.y / 2 - 0.01, 2.4, 0.0, 180))
     put['side_plant'] = (R, A.potted('anthurium_botany_01', coll, M, 'side_plant', 0.85, ['_a'], 0.4).place(3.45, -2.3, 0.0))
     put['corner_plant'] = (R, A.potted('calathea_orbifolia_01', coll, M, 'corner_plant', 0.9, ['_a'], 0.44, 'clay').place(3.45, 3.5, 0.0))
+    # the back wall beside the sofa: a low oak sideboard with a vase, a small
+    # plant and books, a large print above it
+    put['sideboard'] = (R, F.cabinet(coll, M, 1.5, 0.62, 0.42, 'sideboard', 'oak', 'walnut', 3).place(1.85, z1 - 0.22, 0.0, 270))
+    put['side_vase'] = (R, A.piece('ceramic_vase_03', coll, 'side_vase', height=0.3, kind='decor', solid=False).place(1.3, z1 - 0.22, 0.62))
+    put['side_pot'] = (R, A.piece('potted_plant_04', coll, 'side_pot', height=0.32, kind='decor', solid=False).place(2.4, z1 - 0.24, 0.62))
+    put['side_books'] = (R, A.piece('book_encyclopedia_set_01', coll, 'side_books', height=0.22, kind='decor', solid=False).place(1.85, z1 - 0.22, 0.62, 270))
+    put['back_art'] = (R, frame(coll, M, 1.1, 0.7, 'canvas_lav', 'back_art').place(1.85, z1, 1.25, 270))
 
     # the console on the right wall: a lamp, a vase, art above it
     put['console'] = (R, F.cabinet(coll, M, 1.3, 0.8, 0.4, 'console', 'oak', 'walnut', 2).place(x1 - 0.2, -0.6, 0.0, 180))
@@ -505,6 +512,7 @@ VIEWS = {
         't_living': ((2.6, 1.6, -1.5), (-1.5, 0.7, 3.2)),
         't_console': ((-1.5, 1.6, 0.5), (4.0, 1.1, -0.8)),
         't_entry': ((-2.5, 1.6, 1.5), (1.5, 1.0, -4.0)),
+        't_back': ((1.2, 1.6, 0.4), (1.85, 1.0, 4.0)),
     },
 }
 
@@ -683,8 +691,11 @@ def export(h, put, meta, outdoor):
     # ceiling keep theirs)
     big = ('floor_oak', 'oak', 'walnut', 'plaster_lilac', 'ceiling')
     shown_now = [o for k in groups for o in groups[k]] + [o for sp_ in special.values() for o in sp_] + veg + kept
+    # (the game materials' tinted copies — '<material>_albedo' — are made
+    # from the full-size sources, so they are capped here too)
     for img in {n.image for o in shown_now for m in o.data.materials if m and m.use_nodes for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image}:
-        if img.size[0] > 512 and not img.name.startswith(big):
+        base = img.name[:-len('_albedo')] if img.name.endswith('_albedo') else img.name
+        if img.size[0] > 512 and not base.startswith(big) and not img.name.startswith('lm_'):
             img.scale(512, max(1, img.size[1] * 512 // img.size[0]))
     # 3. bake
     info = {'K': K, 'atlases': {}, **{k: v for k, v in meta.items() if k != 'keep'}}

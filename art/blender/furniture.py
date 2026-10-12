@@ -235,6 +235,17 @@ def round_table(coll, M, diameter=1.6, h=0.74, name='table_round'):
     return t
 
 
+def wall_art(coll, M, name='art', w=1.0, h=0.7, paper='washi'):
+    """A framed print for a wall: oak frame, the print a little inset. Its
+    back is at local z = 0 (hang it with against_wall(..., back=0))."""
+    art = Piece(name, coll, 'decor', solid=False)
+    fd = 0.03
+    for (x_, y_, ww, hh) in ((0, 0, w, 0.035), (0, h - 0.035, w, 0.035), (-w / 2 + 0.0175, 0.035, 0.035, h - 0.07), (w / 2 - 0.0175, 0.035, 0.035, h - 0.07)):
+        art.box(ww, hh, fd, x_, fd / 2, y_, M['oak'], name='rail')
+    art.box(w - 0.07, h - 0.07, 0.006, 0, 0.004, 0.035, M[paper], name='print')
+    return art
+
+
 def coffee_round(coll, M, d=1.1, name='coffee_round'):
     t = Piece(name, coll)
     t.cyl(d / 2, 0.06, 0, 0, 0.32, M['oak'], segs=64, bevel=0.015, name='top')
@@ -358,6 +369,67 @@ def tub(coll, M, name='tub'):
     t.prism(outer, 0.0, 0.6, M['ceramic'], 'shell', r=0.05)
     t.prism(inner, 0.22, 0.61, M['water'], 'water')
     t.tube([(0.95, 0, 0), (0.95, 1.0, 0), (0.85, 1.05, 0)], 0.018, M['brass'], 'filler')
+    return t
+
+
+def tub_for_two(coll, M, name='tub'):
+    """A deep oval soaking tub, big enough for two, on a raised oak plinth:
+    a rounded rim, a bath pillow at each end, a wooden tray across it with a
+    candle and a little vase, a brass floor filler, candles on the plinth.
+    Long axis along local x (2.24 m outside, 1.48 m wide)."""
+    t = Piece(name, coll)
+    t.box(3.0, 0.16, 2.1, 0, 0, 0.0, M['oak'], r=0.012, name='plinth')
+    rim_pts = geo.ellipse_pts(0, 0, 1.12, 0.74, 0, 64)
+    t.prism(rim_pts, 0.16, 0.78, M['ceramic'], 'shell', r=0.05)
+    t.tube([(x, 0.785, z) for x, z in rim_pts + rim_pts[:1]], 0.045, M['ceramic'], 'lip')
+    t.prism(geo.ellipse_pts(0, 0, 1.05, 0.67, 0, 64), 0.16, 0.795, M['water'], 'water')
+    for sx in (-1, 1):
+        t.box(0.17, 0.12, 0.42, sx * 0.97, 0, 0.77, M['linen_white'], r=0.05, segs=4, name=f'pillow{sx}')
+    # the tray across, a candle and a little vase on it
+    t.box(0.26, 0.025, 1.66, 0.22, 0, 0.83, M['oak'], r=0.008, name='tray')
+    t.cyl(0.035, 0.085, 0.22, -0.45, 0.855, M['ceramic'], segs=20, name='candle')
+    t.sphere(0.012, 0.22, -0.45, 0.955, M['washi_glow'], scale=(1, 1.9, 1), name='flame')
+    t.cyl(0.042, 0.13, 0.22, 0.42, 0.855, M['clay'], segs=24, name='vase', r_top=0.026)
+    # the filler, standing on the plinth at the foot end
+    t.cyl(0.05, 0.03, -1.36, 0, 0.16, M['brass'], segs=24, name='filler_foot')
+    t.tube([(-1.36, 0.19, 0), (-1.36, 1.02, 0), (-1.26, 1.08, 0), (-1.16, 1.0, 0)], 0.02, M['brass'], 'filler')
+    # a cluster of candles on the plinth's corner
+    for i, (cx, cz, ch) in enumerate(((1.3, 0.86, 0.16), (1.38, 0.74, 0.11), (1.22, 0.72, 0.08))):
+        t.cyl(0.04, ch, cx, cz, 0.16, M['ceramic'], segs=20, name=f'cand{i}')
+        t.sphere(0.013, cx, cz, 0.16 + ch + 0.018, M['washi_glow'], scale=(1, 1.9, 1), name=f'flame{i}')
+    return t
+
+
+def towel_ladder(coll, M, name='towel_ladder', h=1.7, w=0.5, lean=0.32):
+    """An oak ladder leaning on the wall behind it (local -z), towels over
+    two of its rungs."""
+    t = Piece(name, coll, 'decor', solid=False)
+    for sx in (-1, 1):
+        t.tube([(sx * w / 2, 0, 0), (sx * w / 2, h, -lean)], 0.022, M['oak'], f'rail{sx}')
+    for i, y in enumerate((0.38, 0.78, 1.16, 1.52)):
+        z = -lean * y / h
+        t.tube([(-w / 2, y, z), (w / 2, y, z)], 0.014, M['oak'], f'rung{i}')
+    for y, mat in ((0.78, 'linen_white'), (1.16, 'linen_blush')):
+        z = -lean * y / h
+        t.box(w - 0.08, 0.46, 0.025, 0, z + 0.03, y - 0.46, M[mat], r=0.01, name=f'towel_{y}')
+        t.box(w - 0.08, 0.3, 0.025, 0, z - 0.03, y - 0.3, M[mat], r=0.01, name=f'towel_b{y}')
+    return t
+
+
+def towel_stack(coll, M, name='towels', n=3, w=0.38, d=0.28):
+    """Folded towels, stacked."""
+    t = Piece(name, coll, 'decor', solid=False)
+    for i in range(n):
+        t.box(w, 0.06, d, 0, 0, i * 0.062, M['linen_white' if i % 2 == 0 else 'linen_blush'], r=0.025, segs=3, name=f't{i}')
+    return t
+
+
+def candles(coll, M, name='candles'):
+    """Three pillar candles, lit."""
+    t = Piece(name, coll, 'decor', solid=False)
+    for i, (cx, cz, ch) in enumerate(((-0.06, 0.0, 0.12), (0.05, 0.04, 0.09), (0.04, -0.06, 0.06))):
+        t.cyl(0.03, ch, cx, cz, 0.0, M['ceramic'], segs=18, name=f'c{i}')
+        t.sphere(0.011, cx, cz, ch + 0.016, M['washi_glow'], scale=(1, 1.9, 1), name=f'f{i}')
     return t
 
 
