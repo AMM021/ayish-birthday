@@ -15,6 +15,8 @@ const actionHandlers = [];
 const muteHandlers = [];
 let muteKey = true; // off while the FINAL laptop needs M for a fragment
 const lockListeners = [];
+const userUnlockListeners = [];
+let ownRelease = false; // releaseLock() exits the lock itself; Esc or leaving the window does not
 let canvasEl = null;
 let lookDX = 0;
 let lookDY = 0;
@@ -39,8 +41,11 @@ export function initInput(canvas) {
     if (document.hidden) clearHeld();
   });
   document.addEventListener('pointerlockchange', () => {
+    const user = !isLocked() && !ownRelease && lookAllowed;
+    ownRelease = false;
     if (!isLocked()) clearHeld();
     for (const fn of lockListeners) fn(isLocked());
+    if (user) for (const fn of userUnlockListeners) fn();
   });
   document.addEventListener('pointerlockerror', () => {
     for (const fn of lockListeners) fn(false);
@@ -118,6 +123,12 @@ export function onLockChange(fn) {
   lockListeners.push(fn);
 }
 
+// She let go of the mouse herself (Esc, or the window lost focus) while
+// looking around: the pause menu opens.
+export function onUserUnlock(fn) {
+  userUnlockListeners.push(fn);
+}
+
 // --- held state ------------------------------------------------------
 export const isDown = (code) => held.has(code);
 
@@ -161,6 +172,7 @@ export function requestLock() {
 
 export function releaseLock() {
   if (isLocked()) {
+    ownRelease = true;
     try {
       document.exitPointerLock();
     } catch {

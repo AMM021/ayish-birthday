@@ -147,6 +147,7 @@ const compile = labeled('ROOM: COMPILE — orb lines');
 const stars = labeled('ROOM: STARS — orb lines');
 const petals = labeled('ROOM: PETALS — orb lines');
 const ui = labeled('UI hints');
+const pause = labeled('PAUSE MENU');
 
 export const TEXT = {
   passcode: passcode(),
@@ -192,5 +193,6 @@ export const TEXT = {
   compliments: optionalNumbered('HOUSE — his compliments'),
   lookHint: ui['Look hint'],
   controlsHint: ui['Controls hint'],
-  touchNotice: ui['Keyboard-first notice (if touch-only device detected)']
+  touchNotice: ui['Keyboard-first notice (if touch-only device detected)'],
+  pause: { title: pause.Title, continue: pause.Continue, music: pause.Music, sfx: pause['Sound effects'], mouse: pause.Mouse, fullscreen: pause.Fullscreen }
 };

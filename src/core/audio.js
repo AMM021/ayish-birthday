@@ -1,10 +1,14 @@
 // Music (three looping tracks, crossfaded) plus tiny synthesized cues.
 // Any failure — blocked autoplay, a missing file — is silent and never
-// blocks progression.
+// blocks progression. Volumes: each track's level × the music setting;
+// the cues go through one effects bus × the sound-effects setting
+// (core/settings.js, the pause menu).
+import * as settings from './settings.js';
 
 const BASE = import.meta.env.BASE_URL;
 const TRACKS = ['hub', 'challenge', 'letter'];
 const VOLUME = 0.45;
+const SFX_GAIN = 2.0; // the cues' bus at a full setting (they were lost under the music)
 
 const els = {};
 const statusListeners = [];
@@ -12,6 +16,7 @@ let current = null;
 let muted = false;
 let status = 'idle'; // idle | playing | blocked | missing
 let fades = new Map();
+const levels = new Map(); // track element → its level before the music setting
 let ctx = null;
 let lastOpts = {};
 
@@ -36,13 +41,18 @@ function setStatus(s) {
   for (const fn of statusListeners) fn({ status, muted });
 }
 
+function setLevel(a, v) {
+  levels.set(a, v);
+  a.volume = Math.max(0, Math.min(1, v * settings.get('music')));
+}
+
 function fadeTo(a, target, ms, done) {
   if (fades.has(a)) clearInterval(fades.get(a));
-  const from = a.volume;
+  const from = levels.get(a) ?? 0;
   const start = performance.now();
   const id = setInterval(() => {
     const t = Math.min(1, (performance.now() - start) / Math.max(1, ms));
-    a.volume = Math.max(0, Math.min(1, from + (target - from) * t));
+    setLevel(a, from + (target - from) * t);
     if (t >= 1) {
       clearInterval(id);
       fades.delete(a);
@@ -133,11 +143,20 @@ export function armOnFirstGesture(name, opts) {
   play(name, opts);
 }
 
+settings.onChange((k, v) => {
+  if (k === 'music') for (const [a, l] of levels) a.volume = Math.max(0, Math.min(1, l * v));
+  if (k === 'sfx' && bus) bus.gain.value = v * SFX_GAIN;
+});
+
 // --- synthesized cues (no assets) --------------------------------------
+let bus = null;
 function audioCtx() {
   if (!ctx) {
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
+      bus = ctx.createGain();
+      bus.gain.value = settings.get('sfx') * SFX_GAIN;
+      bus.connect(ctx.destination);
     } catch {
       ctx = null;
     }
@@ -157,7 +176,7 @@ function tone(freq, start, dur, gain, type = 'sine') {
   g.gain.setValueAtTime(0, t0);
   g.gain.linearRampToValueAtTime(gain, t0 + 0.01);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g).connect(c.destination);
+  o.connect(g).connect(bus);
   o.start(t0);
   o.stop(t0 + dur + 0.05);
 }

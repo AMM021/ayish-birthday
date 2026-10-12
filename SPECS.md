@@ -449,7 +449,7 @@ glow intensities by eye in dev mode (bloom toggle).
 
 ## core/input.js
 
-Keyboard: `W A S D`, `Shift` (run), `Space` (jump), `C` (crouch, held), `Esc` (release pointer lock), `Enter` (dialogue/typewriter actions), and `M` (toggle mute; the pointer is locked during play, so an on-screen icon alone could not be clicked). Use `event.code`; ignore repeated keydown events for one-shot actions; prevent Space/arrows from scrolling while the game has focus. Pointer lock is requested only after a deliberate canvas click. On `visibilitychange`, blur, pointer-lock loss, or any blocking overlay, clear all held-key state and zero movement velocity. Cap frame delta at 0.05 seconds after a tab return. One keydown may advance at most one dialogue action: if Enter completes typing, it must not also dismiss that line. If a device appears touch-only (coarse pointer with no fine pointer), show the keyboard-first notice from TEXT.md; do not pretend touch controls exist. Mouse sensitivity `LOOK_SENS`, damping `MOVE_DAMP`, and per-room bounds are configurable.
+Keyboard: `W A S D`, `Shift` (run), `Space` (jump), `C` (crouch, held), `Esc` (release pointer lock and open the pause menu, see UI: pausemenu.js), `Enter` (dialogue/typewriter actions), and `M` (toggle mute; the pointer is locked during play, so an on-screen icon alone could not be clicked). Use `event.code`; ignore repeated keydown events for one-shot actions; prevent Space/arrows from scrolling while the game has focus. Pointer lock is requested only after a deliberate canvas click. On `visibilitychange`, blur, pointer-lock loss, or any blocking overlay, clear all held-key state and zero movement velocity. Cap frame delta at 0.05 seconds after a tab return. One keydown may advance at most one dialogue action: if Enter completes typing, it must not also dismiss that line. If a device appears touch-only (coarse pointer with no fine pointer), show the keyboard-first notice from TEXT.md; do not pretend touch controls exist. Mouse sensitivity `LOOK_SENS` (× the player's setting from the pause menu), damping `MOVE_DAMP`, and per-room bounds are configurable.
 
 ## core/assets.js
 
@@ -479,6 +479,11 @@ crossfades from current track over 1200ms. `mute()`, `unmute()`,
 `fadeOut(ms = 800)` (fades the current track to silence; used when REVEAL
 begins). The `M` key toggles mute; a small speaker icon in
 `ui/prompts.js` shows the muted/blocked state.
+Volumes (owner, 2026-10-13: the music drowned the sound effects): each
+track plays at its own level × the music setting (default 60 %); the
+synthesized cues go through one gain bus at 2× their old level × the
+sound-effects setting (default 80 %). Both are set in the pause menu and
+kept in `core/settings.js`.
 The first `play()` must come from a user gesture: the passcode submit
 on a fresh run, or, when progress resumes past PASSCODE (HUB, FINAL or
 END after a refresh), her first keydown or pointerdown on the page.
@@ -942,6 +947,28 @@ deepIndigo, no panel; they fade in/out, no typing). Copy is in TEXT.md →
 - Audio icon: a tiny speaker glyph at the bottom-left showing on/muted
   (dim when autoplay was blocked or a track is missing). Status only; `M`
   toggles it, and it is also clickable when the pointer is unlocked.
+
+## UI: pausemenu.js
+
+(owner, 2026-10-13) `Esc` pauses: when she presses it, or lets go of the
+mouse while looking around (the browser's own Esc, or leaving the
+window), the pause menu opens. A small pause glyph beside the speaker
+icon opens it too when the pointer is unlocked. Not on the passcode
+gate, during a transition, or over a blocking overlay (note, letter,
+his words, the end card).
+- Open: the render loop pauses (`clock.pause('menu')`), every typewriter
+  holds its place, Enter and all game keys (movement, the laptop's
+  H·O·M·E) go to the menu alone; music keeps playing.
+- Card: a title, three sliders (music, sound effects, mouse
+  sensitivity 0.3–2.5×), a fullscreen toggle, and continue. Copy is in
+  TEXT.md → "PAUSE MENU".
+- Continue (click, or Enter/Space on the focused button) or a click
+  beside the card: closes and takes the pointer back. `Esc` closes
+  without taking it (the browser reads that Esc as a release), so the
+  look hint shows and a click resumes looking.
+- Settings live in `core/settings.js` under `localStorage['ayish.settings']`
+  (`{music, sfx, sens}`, clamped, defaults on anything malformed),
+  separate from progress; storage blocked → they last for the visit.
 
 ## UI: issuecard.js
 

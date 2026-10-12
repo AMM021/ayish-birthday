@@ -144,14 +144,14 @@ WIFES_BIRTHDAY/
 └── src/
     ├── assets/pics/       # any number of personal photos; auto-discovered by Vite
     ├── main.js
-    ├── core/{renderer,composer,clock,input,assets,audio,save,config,hints}.js
+    ├── core/{renderer,composer,clock,input,assets,audio,save,settings,config,hints}.js
     ├── world/{world,layers,transitions,physics}.js   # physics: colliders (three-mesh-bvh)
     ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end,explore}.js
     ├── state/{machine,states}.js
     ├── house/{props,models,structure,gamingRoom,avatars,tsuki,city}.js   # gaming room (Kenney kit), the avatars, Tsuki House loader (doors), the city
-    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments,laptop}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor
-    └── styles/{base,overlay,devtools,issuecard}.css
+    ├── ui/{overlay,dialogue,typewriter,devtools,issuecard,prompts,text,fragments,laptop,pausemenu}.js   # text.js reads TEXT.md verbatim; issuecard = COMPILE editor; pausemenu = Esc (volumes, mouse, fullscreen)
+    └── styles/{base,overlay,devtools,issuecard,pause}.css
 ```
 
 ## Performance Rules (non-negotiable)

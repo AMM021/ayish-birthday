@@ -1,6 +1,12 @@
 import { REDUCED_MOTION } from '../core/config.js';
 import * as audio from '../core/audio.js';
 
+// Paused (the pause menu): every running typewriter holds its place.
+let paused = false;
+export function setPaused(on) {
+  paused = on;
+}
+
 // run(el, text, opts) types into a single text node and returns a Promise
 // that also carries finish() (complete instantly) and isDone().
 export function run(el, text, { speed = 28, clickEvery = 3, pauses = true, quiet = false, sound = true } = {}) {
@@ -33,6 +39,10 @@ export function run(el, text, { speed = 28, clickEvery = 3, pauses = true, quiet
 
   function step() {
     if (done) return;
+    if (paused) {
+      timer = setTimeout(step, 120);
+      return;
+    }
     if (i >= text.length) {
       end();
       return;

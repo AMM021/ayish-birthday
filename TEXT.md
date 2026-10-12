@@ -260,6 +260,14 @@ was always him, talking to you through me.
 39. i love you, ayish. that's it. that's the compliment.
 40. you, me, a house like this one day. i can't wait.
 
+## PAUSE MENU (Esc, or the small pause button beside the speaker; proposed 2026-10-13, awaiting the owner's approval)
+Title: paused
+Continue: continue
+Music: music
+Sound effects: sound effects
+Mouse: mouse sensitivity
+Fullscreen: fullscreen
+
 ## UI hints (small, non-blocking)
 Look hint: click to look around
 Controls hint: W A S D to walk · Shift to run · Space to jump · C to crouch · mouse to look

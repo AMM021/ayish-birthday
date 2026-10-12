@@ -5,6 +5,7 @@ import {
   JUMP_SPEED, JUMP_COYOTE, JUMP_BUFFER, CROUCH_HEIGHT, CROUCH_MULT, CROUCH_TIME
 } from '../core/config.js';
 import * as input from '../core/input.js';
+import * as settings from '../core/settings.js';
 import * as physics from './physics.js';
 
 // The one Scene and the one Camera. Rooms add groups; they never
@@ -256,8 +257,9 @@ function updatePlayer(dt) {
   player.prev.copy(camera.position);
   const look = input.consumeLook();
   if (player.canLook && input.isLocked()) {
-    player.yaw -= look.x * LOOK_SENS;
-    player.pitch -= look.y * LOOK_SENS;
+    const sens = LOOK_SENS * settings.get('sens');
+    player.yaw -= look.x * sens;
+    player.pitch -= look.y * sens;
     player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch));
     applyLook();
   }

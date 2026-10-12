@@ -124,6 +124,8 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 
 43. **The overhaul (owner, 2026-10-12):** the orb leads instead of being held (it goes ahead, waits, comes back for her, comes to her to talk); every level is filled with nature (no bare ground or empty horizon anywhere); the bathroom has a tub for two; he turns round naturally before he calls her; the passcode torii no longer sits behind the words. Details in SPECS → v3 → the overhaul. The owner chose compliments (not minigames or a laptop to watch things on) for when she comes back to him: one at random each time, none repeated until all have been said. The new lines (the orb's right-answer lines, PETALS' "stay in my light" instruction and progress lines, his longer goodbye, the compliments) were approved by the owner as drafted and are in TEXT.md.
 
+44. **Pause menu and volumes (owner, 2026-10-13: "a ui for pausing and continuing … volume adjustments … the music is so loud that you can't hear the sound effects"):** Esc opens a pause menu (music, sound effects, mouse sensitivity, fullscreen, continue) that stops the world while it is open; settings persist in `ayish.settings`. The music now starts at 60 % of its old level and the cues play through their own bus at 2× × 80 %. The menu's labels are proposed in TEXT.md → "PAUSE MENU" and await the owner's approval (see open decisions). Same day, the owner's report of a wall over part of the 1F bathroom door: the tower wall's openings at 357° crossed the wall's 0° seam and were cut on one side only, so a third of the bath door (and the ground-floor archway below it) stood behind the wall; `geo.arc_wall` now cuts across the seam, and curved-wall jambs get their texture across the wall instead of stretched.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
@@ -139,6 +141,7 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 - [x] Photos added (2026-10-11). No video is needed any more.
 - [ ] Decide on the Vite chunk-size warning (three.js alone is ~500 kB; the deploy skill wants a clean build, SPECS fixes vite.config).
 - [x] Approved by the owner (2026-10-12) and in TEXT.md: the new lines drafted 2026-10-12: the orb's right-answer lines (TORII rounds, COMPILE words, STARS milestones), PETALS' "stay in my light" instruction and progress lines, his longer goodbye in the house, the compliments.
+- [ ] Approve the pause menu's labels (TEXT.md → "PAUSE MENU": paused, continue, music, sound effects, mouse sensitivity, fullscreen; proposed 2026-10-13).
 - [ ] Deploy to Netlify (needs the owner's Netlify login).
 
 ## Build gate / acceptance criteria

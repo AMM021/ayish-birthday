@@ -15,6 +15,8 @@ import * as orbModule from './objects/orb.js';
 import * as machine from './state/machine.js';
 import * as dialogue from './ui/dialogue.js';
 import * as prompts from './ui/prompts.js';
+import * as pausemenu from './ui/pausemenu.js';
+import './styles/pause.css';
 import { TEXT } from './ui/text.js';
 
 // Palette → CSS custom properties, so stylesheets never hold raw colours.
@@ -89,6 +91,7 @@ async function boot() {
   });
 
   prompts.initPrompts();
+  pausemenu.init(machine);
 
   addEventListener('resize', () => {
     world.resize();
@@ -117,6 +120,7 @@ async function boot() {
     machine.update(dt);
     dialogue.update(dt);
     prompts.update();
+    pausemenu.update();
     composer.updateQuality(clock.getRawDelta());
     composer.render();
     if (first) {
