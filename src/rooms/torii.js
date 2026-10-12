@@ -371,7 +371,7 @@ export default {
     orb.follow();
     orb.place();
     audio.play('challenge');
-    dialogue.say(orb.anchor, TEXT.torii.intro, { mode: 'story' }).then(() => {
+    dialogue.sayAll(orb.anchor, TEXT.torii.introLines).then(() => {
       if (phase === 'intro') startPlayback();
     });
   },

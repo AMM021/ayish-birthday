@@ -58,6 +58,14 @@ export const isStoryActive = () =>
   storyQ.length > 0 || (!!active && active.mode === 'story');
 export const isBusy = () => !!active || storyQ.length > 0 || progressQ.length > 0;
 
+// Several story beats in a row (one bubble each, Enter between them);
+// resolves when the last one is dismissed.
+export function sayAll(orb, lines, opts = {}) {
+  let p = Promise.resolve();
+  for (const line of lines) p = say(orb, line, { ...opts, mode: 'story' });
+  return p;
+}
+
 export function clear() {
   for (const q of [storyQ, progressQ, ambientQ]) {
     q.forEach((i) => i.resolve(false));

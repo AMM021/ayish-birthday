@@ -134,6 +134,18 @@ canvas { display: block; }
 .prompt.show { opacity: 0.9; }
 .prompt-look { bottom: 18%; }
 .prompt-controls { bottom: 11%; }
+.prompt-coach {
+  bottom: 22%;
+  font-size: 1.15rem;
+  transition: opacity 400ms ease, background-color 250ms ease, color 250ms ease;
+}
+.prompt-coach.now {
+  background: rgba(var(--gold-rgb), 0.92);
+  color: var(--lacquer);
+  animation: coach-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes coach-pulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .prompt-coach.now { animation: none; } }
 .prompt-touch {
   top: 1.5rem;
   white-space: normal;

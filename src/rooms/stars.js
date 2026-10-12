@@ -23,14 +23,15 @@ import { TEXT } from '../ui/text.js';
 // stepping stones (Space), low gates to duck under (C), hurdles, a narrow
 // beam, steps up and wide gaps that need a run-up (Shift + Space). The
 // water is not solid: falling in brings her back to the last star she lit.
-// After the ninth, a bridge of light leads to the portal in the heart.
+// After the ninth, a bridge of light leads back to the top notch and down
+// the heart's middle to the portal. Lit stars rise into one smooth heart in
+// the sky (the platforms below keep the course).
 
 const UNIT = [
   [0.44, 0.78], [1.0, 0.49], [0.9, -0.14], [0.41, -0.6], [0, -1.12],
   [-0.41, -0.6], [-0.9, -0.14], [-1.0, 0.49], [-0.44, 0.78]
 ];
 const SCALE = 14;
-const LINE_Y = 0.04;
 const LAKE_R = 36;
 const STAR_LIFT = 1.35; // star above its platform (chest height)
 const PLAT_R = 1.3;
@@ -53,12 +54,46 @@ const SPAWN_ISLAND = toWorld(0, 0.36, SPAWN_TOP); // in the heart's top notch
 const HEART_CENTER = toWorld(0, -0.17, CENTER_TOP);
 const flat = new THREE.Vector3();
 
+// The heart in the sky: the classic heart curve (unit size: the notch at
+// the top, the tip at the bottom), measured by length so the stars and the
+// small orbs between them sit evenly on it. at(f): f = 0 at the notch,
+// running down the right side (star 1) and up the left (star 9).
+const SKY_HEART = (() => {
+  const N = 720;
+  const pts = [];
+  const len = [0];
+  for (let k = 0; k <= N; k++) {
+    const t = (2 * Math.PI * k) / N;
+    const sn = Math.sin(t);
+    pts.push([sn * sn * sn, (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16]);
+    if (k) len.push(len[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+  }
+  const total = len[N];
+  return {
+    total,
+    at(f) {
+      const d = (((f % 1) + 1) % 1) * total;
+      let k = 1;
+      while (k < N && len[k] < d) k++;
+      const u = (d - len[k - 1]) / Math.max(1e-9, len[k] - len[k - 1]);
+      const [x0, y0] = pts[k - 1];
+      const [x1, y1] = pts[k];
+      return toWorld(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, AIR_Y);
+    }
+  };
+})();
+const slotOf = (i) => (i + 1) / 10; // star i's place on the sky heart (the notch keeps the tenth)
+const AIR_SLOTS = UNIT.map((_, i) => SKY_HEART.at(slotOf(i)));
+
 // what lies between star i−1 (or the spawn) and star i
 const COURSE = ['stones', 'duck', 'steps', 'runjump', 'hurdles', 'zigzag', 'beam', 'runjump', 'gates'];
+// The first stretch that needs each move: until she is across it, its keys
+// stay on screen and light up where the move is needed (the run-up and
+// the gap; each gate; each stone).
+const TEACH = { 0: 'jump', 1: 'crouch', 3: 'run' };
 
 let group = null;
 let stars = [];
-let segments = [];
 let portal = null;
 let paths = []; // per stretch: { group, solid[], shown, t }
 let baseSolid = [];
@@ -67,6 +102,7 @@ const challenge = { done: false, progress: 0, total: 9 };
 let next = 0;
 let leaving = false;
 let introDone = false;
+let toldTeach = -1; // the stretch whose tip the orb has said
 let t = 0;
 let glowAll = -1;
 let splash = false;
@@ -316,7 +352,7 @@ function build() {
     halo.scale.setScalar(STAR_TRIGGER_RADIUS * 2.2);
     g.add(core, halo);
     group.add(g);
-    return { group: g, core, coreMat, halo, haloMat, pos, inside: false, lit: false, lift: 0, liftTo: 0 };
+    return { group: g, core, coreMat, halo, haloMat, pos, air: AIR_SLOTS[i], inside: false, lit: false, lift: 0, liftTo: 0 };
   });
   disc(group, baseSolid, SPAWN_ISLAND, 1.9, SPAWN_TOP, 0.8);
   disc(group, baseSolid, HEART_CENTER, 2.4, CENTER_TOP, 0.8);
@@ -328,53 +364,34 @@ function build() {
     const rA = i === 0 ? 1.9 : PLAT_R;
     return buildPath(kind, A, hA, rA, PLATS[i], HEIGHTS[i], PLAT_R);
   });
-  paths.push(buildPath('bridge', PLATS[8], HEIGHTS[8], PLAT_R, HEART_CENTER, CENTER_TOP, 2.4));
+  // the bridge of light: from the ninth star back to the top notch, then
+  // straight down the heart's middle to the portal (one stretch, two slabs)
+  const bridge = buildPath('bridge', PLATS[8], HEIGHTS[8], PLAT_R, SPAWN_ISLAND, SPAWN_TOP, 1.9);
+  const down = buildPath('bridge', SPAWN_ISLAND, SPAWN_TOP, 1.9, HEART_CENTER, CENTER_TOP, 2.4);
+  bridge.group.add(...down.group.children);
+  bridge.solid.push(...down.solid);
+  paths.push(bridge);
   for (const p of paths) {
     p.group.visible = false;
     group.add(p.group);
   }
 
-  // Outline on the water: one smooth closed curve through the nine stars
-  // plus the heart's top notch, cut into nine pieces so the trail can
-  // advance star by star. The last piece (9 → notch → 1) closes it.
-  const notch = toWorld(0, 0.42, LINE_Y);
-  const onWater = STAR_POINTS.map((p) => p.clone().setY(LINE_Y));
-  const curve = new THREE.CatmullRomCurve3([...onWater, notch], true, 'centripetal');
-  const n = STAR_POINTS.length + 1;
-  segments = [];
-  for (let i = 0; i < 9; i++) {
-    const t0 = i / n;
-    const t1 = (i === 8 ? n : i + 1) / n;
-    const pts = [];
-    for (let k = 0; k <= 16; k++) pts.push(curve.getPoint(t0 + ((t1 - t0) * k) / 16));
-    const piece = new THREE.CatmullRomCurve3(pts);
-    const m = new THREE.Mesh(
-      new THREE.TubeGeometry(piece, 24, 0.1, 6, false),
-      new THREE.MeshBasicMaterial({ color: PALETTE.lavender, transparent: true, opacity: 0.9 })
-    );
-    m.visible = false;
-    enableBloom(m, 2.2);
-    group.add(m);
-    segments.push(m);
-  }
-
-  // the same outline in the air: small orbs between the risen stars,
-  // shown piece by piece as she lights them
-  const inAir = [...STAR_POINTS.map((p) => p.clone().setY(AIR_Y)), toWorld(0, 0.42, AIR_Y)];
-  const airCurve = new THREE.CatmullRomCurve3(inAir, true, 'centripetal');
+  // the outline in the sky: small orbs along the heart between the risen
+  // stars, shown piece by piece as she lights them (the last piece runs
+  // from the ninth star over the notch to the first)
   const beadGeo = new THREE.SphereGeometry(0.12, 12, 8);
   const beadMat = new THREE.MeshBasicMaterial({ color: PALETTE.gold });
   beadMat.color.multiplyScalar(2.2);
   beads = [];
   for (let i = 0; i < 9; i++) {
-    const t0 = i / n;
-    const t1 = (i === 8 ? n : i + 1) / n;
-    const len = airCurve.getPoint(t0).distanceTo(airCurve.getPoint(t1)) * 1.15;
+    const f0 = slotOf(i);
+    const f1 = i === 8 ? 1 + slotOf(0) : slotOf(i + 1);
+    const len = ((f1 - f0) * SKY_HEART.total) * SCALE;
     const count = Math.max(3, Math.round(len / BEAD_GAP));
     const row = [];
     for (let k = 1; k < count; k++) {
       const m = new THREE.Mesh(beadGeo, beadMat);
-      m.position.copy(airCurve.getPoint(t0 + ((t1 - t0) * k) / count));
+      m.position.copy(SKY_HEART.at(f0 + ((f1 - f0) * k) / count));
       m.visible = false;
       m.userData.noCollide = true;
       enableBloom(m, 2.0);
@@ -550,7 +567,6 @@ function resetSequence() {
   next = 0;
   challenge.progress = 0;
   stars.forEach((s) => setStarLit(s, false));
-  segments.forEach((m) => { m.visible = false; });
   beads.forEach((row) => row.forEach((b) => { b.t = -1; b.mesh.visible = false; }));
   lastLit = -1;
 }
@@ -560,10 +576,7 @@ function hitStar(i) {
   if (i === next) {
     setStarLit(stars[i], true);
     lastLit = i;
-    if (i > 0) {
-      segments[i - 1].visible = true;
-      showBeads(i - 1);
-    }
+    if (i > 0) showBeads(i - 1);
     audio.chime([523 * Math.pow(2, i / 12 * 2)]);
     next++;
     challenge.progress = next;
@@ -588,15 +601,48 @@ function hitStar(i) {
 function checkpoint() {
   const from = next === 0 ? SPAWN_ISLAND : PLATS[next - 1];
   const top = next === 0 ? SPAWN_TOP : HEIGHTS[next - 1];
-  const to = challenge.done ? HEART_CENTER : PLATS[Math.min(8, next)];
+  const to = challenge.done ? SPAWN_ISLAND : PLATS[Math.min(8, next)]; // (the bridge runs by the notch)
   const pos = new THREE.Vector3(from.x, top + world.player.standHeight, from.z);
   const yaw = Math.atan2(-(to.x - from.x), -(to.z - from.z));
   return { pos, yaw };
 }
 
+// where she is along stretch i (m from its start) and how far off its line
+function along(i) {
+  const r = paths[i].route;
+  const p = world.player.eye;
+  const dx = p.x - r.A[0];
+  const dz = p.z - r.A[1];
+  return { s: dx * r.dir[0] + dz * r.dir[1] - r.rA, off: Math.abs(dx * r.dir[1] - dz * r.dir[0]) };
+}
+
+function updateCoach() {
+  const kind = !challenge.done && introDone && !rise && !splash && !leaving ? TEACH[next] : undefined;
+  if (!kind || !paths[next]) {
+    prompts.setCoach(null);
+    return;
+  }
+  const keys = TEXT.controlKeys;
+  const text = kind === 'jump' ? keys.jump : kind === 'crouch' ? keys.crouch : `${keys.run} · ${keys.jump}`;
+  const r = paths[next].route;
+  const { s, off } = along(next);
+  let now = false;
+  if (off < 2.5) {
+    if (kind === 'crouch') now = r.ducks.some(([a, b]) => s > a - 1.2 && s < b);
+    else if (kind === 'run') now = s > r.jumps[0] - 5 && s < r.jumps[0] + 0.6;
+    else now = r.jumps.some((j) => s > j - 0.9 && s < j + 0.4);
+  }
+  prompts.setCoach(text, now);
+  if (toldTeach !== next && s > -1.5 && off < 3 && TEXT.stars.teach[kind] && !dialogue.isStoryActive()) {
+    toldTeach = next;
+    dialogue.say(orb.anchor, TEXT.stars.teach[kind], { mode: 'ambient' });
+  }
+}
+
 async function fellIn() {
   if (splash) return;
   splash = true;
+  if (TEACH[next] === 'run') toldTeach = -1; // the tip once more after a missed gap
   world.setControls({ move: false });
   audio.softPulse();
   await transitions.fadeOut(260, PALETTE.lavender);
@@ -611,7 +657,6 @@ async function fellIn() {
 
 function complete() {
   challenge.done = true;
-  segments[8].visible = true;
   showBeads(8);
   glowAll = 0;
   portal.group.visible = true;
@@ -620,10 +665,13 @@ function complete() {
   audio.chimeUp();
   dialogue.say(orb.anchor, TEXT.stars.complete, { mode: 'story' });
   fragments.grant('stars');
-  orb.leadTo(portal.group.position.clone().setY(CENTER_TOP), { stop: 2.6 });
+  orb.guide([PLATS[8].clone().setY(HEIGHTS[8]), SPAWN_ISLAND.clone().setY(SPAWN_TOP), HEART_CENTER.clone().setY(CENTER_TOP)], { stop: 2.6 });
   // rise gently above the lake so she sees the whole heart, then come back
   world.setControls({ move: false });
-  const up = new THREE.Vector3(HEART_CENTER.x, 24, HEART_CENTER.z + 15);
+  // (high and a little south, so the whole heart fits: its lobes lie north
+  // of the centre, its tip south)
+  const look = toWorld(0, -0.3, 0);
+  const up = new THREE.Vector3(look.x, 30, look.z + 9);
   rise = {
     t: 0,
     from: world.camera.position.clone(),
@@ -631,7 +679,7 @@ function complete() {
     yaw: world.player.yaw,
     pitch: world.player.pitch,
     to: up,
-    toQ: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(up, HEART_CENTER.clone().setY(0), new THREE.Vector3(0, 1, 0)))
+    toQ: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(up, look, new THREE.Vector3(0, 1, 0)))
   };
 }
 
@@ -674,6 +722,7 @@ export default {
     challenge.done = false;
     leaving = false;
     introDone = false;
+    toldTeach = -1;
     splash = false;
     t = 0;
     glowAll = -1;
@@ -695,7 +744,7 @@ export default {
     orb.place();
     audio.play('challenge');
     stars.forEach((s) => { s.inside = false; });
-    dialogue.say(orb.anchor, TEXT.stars.intro, { mode: 'story' }).then(() => {
+    dialogue.sayAll(orb.anchor, TEXT.stars.introLines).then(() => {
       introDone = true;
       prompts.showControls({ again: true });
     });
@@ -707,13 +756,14 @@ export default {
     updateFloaters(dt);
     updatePaths(dt);
     if (rise) updateRise(REDUCED_MOTION ? RISE_END : dt);
+    updateCoach();
     // lit stars rise out of her way; the warm light follows the last one
     stars.forEach((s) => {
       if (s.lift !== s.liftTo) {
         const step = REDUCED_MOTION ? 1 : dt / LIFT_TIME;
         s.lift = s.liftTo > s.lift ? Math.min(1, s.lift + step) : Math.max(0, s.lift - step);
         const e = s.lift * s.lift * (3 - 2 * s.lift);
-        s.group.position.y = s.pos.y + (AIR_Y - s.pos.y) * e;
+        s.group.position.lerpVectors(s.pos, s.air, e);
       }
     });
     if (lastLit >= 0) {
@@ -738,8 +788,8 @@ export default {
     });
     if (glowAll >= 0) {
       glowAll += dt;
-      const k = 2.2 + Math.sin(Math.min(glowAll, 1.5) * Math.PI / 1.5) * 1.5;
-      segments.forEach((m) => enableBloom(m, k));
+      const k = 2.0 + Math.sin(Math.min(glowAll, 1.5) * Math.PI / 1.5) * 1.5; // ends where the beads rest (2.0)
+      if (beads[0]?.[0]) enableBloom(beads[0][0].mesh, k); // (one material for all of them)
       if (glowAll > 1.5) glowAll = -1;
     }
     if (leaving || splash) return;
@@ -791,11 +841,11 @@ export default {
   },
 
   exit() {
+    prompts.setCoach(null);
     world.clearBounds();
     world.disposeGroup('stars');
     floaters = null;
     stars = [];
-    segments = [];
     paths = [];
     baseSolid = [];
     beads = [];

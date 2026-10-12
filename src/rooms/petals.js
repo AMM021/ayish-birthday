@@ -718,7 +718,6 @@ function buildShared() {
 function buildObstacles(groundMat) {
   const W = HALF_W * 2;
   const wood = new THREE.MeshLambertMaterial({ color: PALETTE.walnut });
-  const bloom = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, emissive: PALETTE.lavender, emissiveIntensity: 0.25 });
   const blossom = new THREE.MeshLambertMaterial({ color: PALETTE.softPink, flatShading: true });
   const water = new THREE.MeshPhongMaterial({ color: PALETTE.dusk, specular: PALETTE.lavender, shininess: 80, transparent: true, opacity: 0.85 });
   const stone = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, flatShading: true });
@@ -982,7 +981,7 @@ export default {
     // the gaming room downloads during the level (FINAL opens it; opening it
     // here would stall a frame while she follows the light)
     import('../house/baked.js').then((b) => b.warmRoom('gaming'));
-    dialogue.say(orb.anchor, TEXT.petals.intro, { mode: 'story' }).then(() => {
+    dialogue.sayAll(orb.anchor, TEXT.petals.introLines).then(() => {
       if (mode === 'wait') mode = 'ready';
     });
   },

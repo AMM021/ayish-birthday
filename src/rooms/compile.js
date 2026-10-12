@@ -504,7 +504,7 @@ export default {
     orb.guide([SPAWN.clone().setY(0), DESK.clone()], { stop: 2.4 }); // the desk with his broken code
     fragments.show();
     audio.play('challenge');
-    dialogue.say(orb.anchor, TEXT.compile.intro, { mode: 'story' }).then(() => {
+    dialogue.sayAll(orb.anchor, TEXT.compile.introLines).then(() => {
       if (phase === 'intro') phase = 'walk';
     });
   },
