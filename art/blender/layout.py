@@ -15,6 +15,63 @@ def pol(r, a):
     return polar(CX, CZ, r, a)
 
 
+_arch_bvh = None
+
+
+def _arch():
+    """BVH of the architecture as built (world space), for wall snapping."""
+    global _arch_bvh
+    if _arch_bvh is None:
+        import bpy
+        from mathutils.bvhtree import BVHTree
+        dg = bpy.context.evaluated_depsgraph_get()
+        vs, polys = [], []
+        for o in bpy.data.collections['architecture'].all_objects:
+            if o.type != 'MESH' or 'glass' in o.name:
+                continue
+            e = o.evaluated_get(dg)
+            me = e.to_mesh()
+            n = len(vs)
+            vs += [e.matrix_world @ v.co for v in me.vertices]
+            polys += [tuple(n + i for i in p.vertices) for p in me.polygons]
+            e.to_mesh_clear()
+        _arch_bvh = BVHTree.FromPolygons(vs, polys)
+    return _arch_bvh
+
+
+def against_wall(x, z, y, toward, width, back, gap=0.015):
+    """Where a piece stands with its back to the wall that lies from plan
+    point (x, z) in plan direction `toward` (deg): squared to the wall, and
+    set off just enough that no corner of a straight back enters a curved
+    wall. `back`: distance from the piece's origin to its back face.
+    → (x, z, face)"""
+    from mathutils import Vector
+    bvh = _arch()
+    a = math.radians(toward)
+    o = Vector((x, -z, y))
+    hit = bvh.ray_cast(o, Vector((math.cos(a), -math.sin(a), 0)), 30)
+    if hit[0] is None:
+        raise RuntimeError(f'against_wall: no wall from ({x}, {z}) toward {toward}')
+    loc, nrm = hit[0], hit[1]
+    n = Vector((nrm.x, -nrm.y))
+    if n.length < 1e-6:
+        n = Vector((-math.cos(a), -math.sin(a)))
+    n.normalize()
+    if n.dot(Vector((math.cos(a), math.sin(a)))) > 0:
+        n = -n  # into the room
+    tang = Vector((-n.y, n.x))
+    w = Vector((loc.x, -loc.y))
+    over = 0.0
+    for t in (-0.5, -0.25, 0.25, 0.5):
+        c = w + tang * (t * width)
+        start = c + n * 1.0
+        h2 = bvh.ray_cast(Vector((start.x, -start.y, y)), Vector((-n.x, n.y, 0)), 3)
+        if h2[0] is not None:
+            over = max(over, 1.0 - h2[3])
+    c = w + n * (gap + over + back)
+    return c.x, c.y, math.degrees(math.atan2(n.y, n.x)) % 360
+
+
 def toward(a):
     """Facing the pond from angle a (i.e. toward the crescent's centre)."""
     return (a + 180) % 360
@@ -240,24 +297,54 @@ def furnish(M, coll):
     put['bath_rug'] = ('bath', F.rug(coll, M, 1.4, 0.8, 'linen_blush', 'bath_rug').place(7.6, -0.5, y1, 0))
 
     # --- bedroom pod (2F) ---
+    # the bed's head against the north wall, looking south through the glass
+    # to the pond; nightstands either side; the wardrobe and the dresser
+    # squared to the curved timber wall (against_wall), a reading chair by
+    # the glass
     pr = POD['rot']
-    put['bed'] = ('bedroom', F.bed(coll, M, 2.1, 2.3, 'bed').place(-10.8, -3.75, y2, 90 + pr))
-    for i, dx in enumerate((-1.55, 1.55)):
-        ns = F.cabinet(coll, M, 0.55, 0.5, 0.45, f'nightstand{i}', 'oak', 'walnut', 1)
-        x = -10.8 + dx * math.cos(math.radians(pr))
-        z = -4.75 + dx * math.sin(math.radians(pr))
-        put[f'nightstand{i}'] = ('bedroom', ns.place(x, z, y2, 90 + pr))
-        put[f'bedlamp{i}'] = ('bedroom', F.akari_lamp(coll, M, 'table', f'bedlamp{i}').place(x, z, y2 + 0.53))
+    pcx, pcz = POD['cx'], POD['cz']
+    bw, bl = 2.1, 2.3
+    bx, bz, bf = against_wall(pcx - 0.1, pcz - 1.0, y2 + 0.9, 270 + pr, bw + 0.3, bl / 2 + 0.17)
+    put['bed'] = ('bedroom', F.bed(coll, M, bw, bl, 'bed').place(bx, bz, y2, bf))
+    fx, fz = math.cos(math.radians(bf)), math.sin(math.radians(bf))   # toward the foot
+    tx, tz = -fz, fx                                                  # along the headboard
+    for i, s_ in enumerate((-1, 1)):
+        px = bx + tx * s_ * (bw / 2 + 0.5) - fx * 0.8
+        pz = bz + tz * s_ * (bw / 2 + 0.5) - fz * 0.8
+        nx, nz, nf = against_wall(px, pz, y2 + 0.3, (bf + 180) % 360, 0.55, 0.225)
+        put[f'nightstand{i}'] = ('bedroom', F.cabinet(coll, M, 0.55, 0.5, 0.45, f'nightstand{i}', 'oak', 'walnut', 1).place(nx, nz, y2, nf))
+        # the lamp on the outer half, a few books on the inner half
+        put[f'bedlamp{i}'] = ('bedroom', F.akari_lamp(coll, M, 'table', f'bedlamp{i}').place(nx + tx * s_ * 0.12, nz + tz * s_ * 0.12, y2 + 0.53))
+        put[f'night_books{i}'] = ('bedroom', A.piece('book_encyclopedia_set_01', coll, f'night_books{i}', height=0.12, kind='decor', solid=False).place(
+            nx - tx * s_ * 0.13, nz - tz * s_ * 0.13, y2 + 0.53, nf))
+    foot = 0.23 + bl / 2
     bench = F.Piece('bed_bench', coll)
     bench.box(1.6, 0.42, 0.45, 0, 0, 0.0, M['velvet_plum'], r=0.04, name='bench')
-    put['bed_bench'] = ('bedroom', bench.place(-10.6, -2.15, y2, 90 + pr))
-    put['bed_rug'] = ('bedroom', F.rug(coll, M, 3.6, 3.6, 'boucle', 'bed_rug', True).place(-10.7, -2.9, y2))
-    put['wardrobe'] = ('bedroom', F.cabinet(coll, M, 1.8, 2.3, 0.6, 'wardrobe', 'oak', None, 3).place(-7.5, -4.1, y2, 90 + pr))
-    put['bed_lounge'] = ('bedroom', A.piece('mid_century_lounge_chair', coll, 'bed_lounge').place(-14.9, -0.4, y2, 150))
-    put['dresser'] = ('bedroom', A.piece('modern_wooden_cabinet', coll, 'dresser').place(-5.85, -2.3, y2, 180))
-    put['bed_plant'] = ('bedroom', A.potted('pachira_aquatica_01', coll, M, 'bed_plant', 1.8, ['_d'], 0.5).place(-14.6, -2.2, y2))
-    put['bed_plant2'] = ('bedroom', A.piece('potted_plant_01', coll, 'bed_plant2', height=1.0, kind='plant').place(-7.2, 1.6, y2))
-    put['bed_lamp'] = ('bedroom', F.akari_lamp(coll, M, 'floor', 'bed_lamp').place(-13.6, 1.2, y2))
+    put['bed_bench'] = ('bedroom', bench.place(bx + fx * (bl / 2 + 0.38), bz + fz * (bl / 2 + 0.38), y2, bf))
+    put['bed_rug'] = ('bedroom', F.rug(coll, M, 3.8, 3.8, 'boucle', 'bed_rug', True).place(bx + fx * 0.75, bz + fz * 0.75, y2))
+    # a large print above the headboard, squared to the curved wall
+    ax_, az_, af_ = against_wall(bx, bz, y2 + 1.75, (bf + 180) % 360, 1.3, 0.0, gap=0.004)
+    art = F.Piece('bed_art', coll, 'decor', solid=False)
+    fw, fh, fd = 1.3, 0.75, 0.03
+    for (x_, y_, ww, hh) in ((0, 0, fw, 0.035), (0, fh - 0.035, fw, 0.035), (-fw / 2 + 0.0175, 0.035, 0.035, fh - 0.07), (fw / 2 - 0.0175, 0.035, 0.035, fh - 0.07)):
+        art.box(ww, hh, fd, x_, fd / 2, y_, M['oak'], name='rail')
+    art.box(fw - 0.07, fh - 0.07, 0.006, 0, 0.004, 0.035, M['washi'], name='print')
+    put['bed_art'] = ('bedroom', art.place(ax_, az_, y2 + 1.42, af_))
+    # the wardrobe on the north-east wall, the dresser on the north-west
+    wx, wz, wf = against_wall(pcx + 3.6, pcz - 2.6, y2 + 1.2, math.degrees(math.atan2(-2.6, 3.6)), 1.8, 0.3)
+    put['wardrobe'] = ('bedroom', F.cabinet(coll, M, 1.8, 2.3, 0.6, 'wardrobe', 'oak', None, 3).place(wx, wz, y2, wf))
+    dr = A.piece('modern_wooden_cabinet', coll, 'dresser')
+    dx, dz, df = against_wall(pcx - 3.7, pcz - 2.4, y2 + 0.4, math.degrees(math.atan2(-2.4, -3.7)), dr.size.x, dr.size.y / 2)
+    put['dresser'] = ('bedroom', dr.place(dx, dz, y2, df))
+    top = y2 + dr.size.z
+    ffx, ffz = math.cos(math.radians(df)), math.sin(math.radians(df))
+    put['dresser_vase'] = ('bedroom', A.piece('ceramic_vase_01', coll, 'dresser_vase', height=0.32, kind='decor', solid=False).place(dx - ffz * 0.45, dz + ffx * 0.45, top))
+    put['dresser_bowl'] = ('bedroom', A.piece('wooden_bowl_01', coll, 'dresser_bowl', kind='decor', solid=False).place(dx + ffz * 0.35, dz - ffx * 0.35, top))
+    # by the glass: a reading chair, a washi lamp, plants
+    put['bed_lounge'] = ('bedroom', A.piece('mid_century_lounge_chair', coll, 'bed_lounge').place(-14.2, 0.6, y2, 20))
+    put['bed_lamp'] = ('bedroom', F.akari_lamp(coll, M, 'floor', 'bed_lamp').place(-14.6, -0.6, y2))
+    put['bed_plant'] = ('bedroom', A.potted('pachira_aquatica_01', coll, M, 'bed_plant', 1.8, ['_d'], 0.5).place(-13.4, 2.0, y2))
+    put['bed_plant2'] = ('bedroom', A.potted('calathea_orbifolia_01', coll, M, 'bed_plant2', 0.85, ['_a'], 0.42, 'clay').place(-6.6, 0.6, y2))
 
     # --- balcony ---
     for i, a in enumerate((258.0, 273.0)):

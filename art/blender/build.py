@@ -159,6 +159,8 @@ VIEWS = {
     'bath_vanity': ((7.0, 5.15, -1.5), (8.6, 4.9, 3.3)),
     'pod': ((-6.0, 8.5, 0.6), (-12.5, 7.6, -4.2)),
     'pod_glass': ((-10.5, 8.5, -3.5), (-11.0, 8.0, 3.5)),
+    'pod_bed': ((-10.5, 8.6, 2.4), (-10.5, 7.5, -4.5)),
+    'pod_door': ((-13.0, 8.6, 0.6), (-5.0, 7.6, -2.5)),
     'bridge': ((-6.2, 8.6, -1.0), (-2.5, 8.2, -1.2)),
     'g_roji': ((0.4, 1.6, -21.0), (0.0, 1.6, -9.0)),
     'g_gate': ((0.0, 1.6, -12.0), (0.0, 1.4, -22.0)),
@@ -169,6 +171,9 @@ VIEWS = {
     'g_pergola': ((11.0, 1.7, 13.0), (11.0, 1.6, 6.0)),
     'g_kitchen': ((15.0, 1.7, -1.0), (22.0, 0.6, -8.0)),
     'g_gravel': ((-16.5, 1.7, -2.5), (-26.0, 0.4, -10.0)),
+    # COMPILE's glimpse of the house: from far over the garden (with
+    # --transparent → art/out/preview/glimpse.png, the game's billboard)
+    'glimpse': ((46, 31, 60), (-4.0, 0.5, 3.0)),
 }
 
 
@@ -197,12 +202,19 @@ def render(sc, samples=64, res=(1280, 720)):
     sc.cycles.diffuse_bounces = 4
     sc.cycles.transparent_max_bounces = 16
     sc.render.image_settings.file_format = 'JPEG'
+    if '--transparent' in ARGS:
+        sc.render.film_transparent = True
+        for o in bpy.data.objects:
+            if o.name.startswith('slope'):
+                o.hide_render = True  # the land falling away: the picture is the garden island
+        sc.render.image_settings.file_format = 'PNG'
+        sc.render.image_settings.color_mode = 'RGBA'
     only = [a for a in ARGS if a.startswith('--view=')]
     names = only[0].split('=')[1].split(',') if only else list(VIEWS)
     for n in names:
         eye, tgt = VIEWS[n]
         sc.camera = camera(sc, 'cam_' + n, eye, tgt)
-        sc.render.filepath = os.path.join(OUT, 'preview', n + '.jpg')
+        sc.render.filepath = os.path.join(OUT, 'preview', n + ('.png' if '--transparent' in ARGS else '.jpg'))
         bpy.ops.render.render(write_still=True)
         print('rendered', n)
 

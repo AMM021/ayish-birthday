@@ -294,20 +294,23 @@ def bed(coll, M, w=2.1, l=2.3, name='bed'):
     b.box(w + 0.07, 0.08, 0.45, 0, -l / 2 + 0.85, mat_top - 0.01, M['linen_white'], r=0.035, name='fold')
     b.box(w * 0.55, 0.02, 0.6, 0, l / 2 - 0.5, mat_top + 0.035, M['velvet_plum'], r=0.008, name='throw')
     # headboard: curved upholstered panel
-    pts = [(x, -l / 2 - 0.06 - 0.05 * (1 - (2 * x / (w + 0.3)) ** 2)) for x in [(-w / 2 - 0.15) + (w + 0.3) * i / 24 for i in range(25)]]
+    # (its front meets the platform's back edge: it stands on the bed, not the wall)
+    pts = [(x, -l / 2 - 0.05 * (1 - (2 * x / (w + 0.3)) ** 2)) for x in [(-w / 2 - 0.15) + (w + 0.3) * i / 24 for i in range(25)]]
     back = [(x, z - 0.12) for x, z in reversed(pts)]
     b.prism(pts + back, 0.25, 1.25, M['velvet_plum'], 'headboard', r=0.04)
+    # pillows lean back against the headboard (never into it: what sinks
+    # into another solid bakes black)
     for i, (x, mat) in enumerate(((-0.5, 'linen_white'), (0.5, 'linen_white'))):
         p = pillow(coll, M, mat, w=0.75, h=0.5, d=0.18, name=f'{name}_pillow{i}')
-        b.attach(p, x, -l / 2 + 0.28, mat_top, 90)
-        p.root.rotation_euler = (math.radians(-55), 0, 0)
+        b.attach(p, x, -l / 2 + 0.42, mat_top, 90)
+        p.root.rotation_euler = (math.radians(-38), 0, 0)
     for i, (x, mat) in enumerate(((-0.45, 'linen_blush'), (0.45, 'linen_blush'))):
         p = pillow(coll, M, mat, w=0.6, h=0.42, d=0.16, name=f'{name}_pillowF{i}')
-        b.attach(p, x, -l / 2 + 0.5, mat_top, 90)
-        p.root.rotation_euler = (math.radians(-35), 0, 0)
+        b.attach(p, x, -l / 2 + 0.66, mat_top, 90)
+        p.root.rotation_euler = (math.radians(-30), 0, 0)
     c = pillow(coll, M, 'velvet_plum', w=0.4, h=0.32, d=0.14, name=f'{name}_cushion')
-    b.attach(c, 0, -l / 2 + 0.66, mat_top, 90)
-    c.root.rotation_euler = (math.radians(-25), 0, 0)
+    b.attach(c, 0, -l / 2 + 0.84, mat_top, 90)
+    c.root.rotation_euler = (math.radians(-22), 0, 0)
     return b
 
 
