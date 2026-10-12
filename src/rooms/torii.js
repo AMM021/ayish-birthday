@@ -29,6 +29,10 @@ const WRONG_PAUSE = 0.8;
 // While a sequence plays, the camera lifts to one view that frames all nine
 // gates (her first view cannot hold the whole arc), then returns her.
 const VIEW_POS = new THREE.Vector3(0, 8, 16);
+// where she starts, facing the gates: every playback brings her back here
+// (the camera flies down to it), so she is never lost among the gates
+const START = new THREE.Vector3(0, 1.6, 4);
+const START_PITCH = -0.05;
 const VIEW_AT = new THREE.Vector3(0, 1, -6);
 const VIEW_IN = 1.1;
 const VIEW_OUT = 0.9;
@@ -137,11 +141,17 @@ function startPlayback() {
   play = { i: 0, t: 0, lit: false };
   if (!view) {
     const cam = world.camera;
-    view = { mode: 'in', t: 0, pos: world.player.eye.clone(), quat: cam.quaternion.clone(), yaw: world.player.yaw, pitch: world.player.pitch };
+    const back = new THREE.Quaternion().setFromEuler(new THREE.Euler(START_PITCH, 0, 0, 'YXZ'));
+    view = { mode: 'in', t: 0, from: world.player.eye.clone(), fromQuat: cam.quaternion.clone(), pos: START.clone(), quat: back, yaw: 0, pitch: START_PITCH };
     world.setControls({ move: false });
     world.player.canLook = false; // keep pointer lock; mouse deltas are dropped
   } else {
-    view.mode = view.mode === 'out' ? 'in' : view.mode; // replay while returning: go back up
+    if (view.mode === 'out') {
+      // replay while coming down: go back up from where the camera is
+      view.mode = 'in';
+      view.from = world.camera.position.clone();
+      view.fromQuat = world.camera.quaternion.clone();
+    }
     view.t = 0;
   }
 }
@@ -180,8 +190,9 @@ function updateView(dt) {
   if (view.mode === 'in' || view.mode === 'out') {
     const dur = view.mode === 'in' ? VIEW_IN : VIEW_OUT;
     const k = ease(Math.min(1, view.t / dur));
-    const [a, b] = view.mode === 'in' ? [view.pos, VIEW_POS] : [VIEW_POS, view.pos];
-    const [qa0, qb0] = view.mode === 'in' ? [view.quat, viewQuat] : [viewQuat, view.quat];
+    // up from where she stood; back down to the start
+    const [a, b] = view.mode === 'in' ? [view.from, VIEW_POS] : [VIEW_POS, view.pos];
+    const [qa0, qb0] = view.mode === 'in' ? [view.fromQuat, viewQuat] : [viewQuat, view.quat];
     cam.position.lerpVectors(a, b, k);
     cam.quaternion.slerpQuaternions(qa0, qb0, k);
     if (k >= 1) {
@@ -284,7 +295,7 @@ export default {
     world.setAtmosphere('day');
     world.setBounds(new THREE.Vector3(0, 0, 0), ISLAND_R + 4);
     world.setColliders(solid);
-    world.setPlayer(new THREE.Vector3(0, 1.6, 4), 0, -0.05);
+    world.setPlayer(START, 0, START_PITCH);
     fragments.show();
     world.setControls({ move: true, look: true });
     orb.setVisible(true);
