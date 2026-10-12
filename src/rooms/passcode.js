@@ -139,6 +139,8 @@ export default {
       await typewriter.run(h, TEXT.passcode.heading, { speed: 46 });
       await typewriter.run(hint, TEXT.passcode.hint, { speed: 34 });
     })();
+    // the entry hall downloads while she types (it is the next room)
+    import('../house/baked.js').then((b) => b.preloadRoom('threshold'));
   },
 
   update(dt) {

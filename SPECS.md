@@ -16,7 +16,12 @@ Detailed implementation specs. Grep by `##` heading.
   slide) that open within 2.3 m and close beyond 3.4 m (not colliders), the
   moon door with its paper note (`house/note.js`), his chair. Koi swim in the
   pond (`house/koi.js`), the city lies in the valley below (`house/city.js`).
-  The house downloads while the END card is read (`tsuki.preload()`).
+  The house starts downloading during the hug, once the avatars are in
+  (`tsuki.preload()` in REVEAL; END calls it again and shares the same
+  download), so she wakes in it straight after the card. In the same way
+  the entry hall downloads on the passcode screen, the levels' kit in the
+  entry hall and the gaming room during PETALS (background, never awaited
+  there).
   - **The wake-up (once, `save.seenGoodbye`):** she wakes in the studio,
     standing at his left. He sits in the plum gaming chair at the desk,
     typing (`sit_type`). The orb says its goodbye (TEXT "AFTER END — orb

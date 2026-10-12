@@ -202,6 +202,7 @@ const TRAIL_COURSE = [
   [0.74, 'stones'], [0.82, 'log'], [0.89, 'leaning'], [0.95, 'log']
 ];
 const DUCK_KINDS = ['trellis', 'arch', 'leaning'];
+const FOREST_BANDS = 6; // the forest's plantings, split along the trail for culling
 let trailMode = false;
 let trail = null; // the whole trail's curve (beyond the light's path at both ends)
 
@@ -526,10 +527,9 @@ function buildForest(rnd, S, inChannel) {
   const nearObstacle = (p, r) => obstacles.some((o) => Math.hypot(o.x - p.x, o.z - p.z) < r);
   const dummy = new THREE.Object3D();
   const plant = (name, count, lat0, lat1, scale0, scale1, opts = {}) => {
-    const set = kit.instanced(name, count);
-    if (!set) return;
-    let n = 0;
-    for (let tries = 0; n < count && tries < count * 6; tries++) {
+    if (!kit.has(name)) return;
+    const placed = [];
+    for (let tries = 0; placed.length < count && tries < count * 6; tries++) {
       const q = at(rnd() * total);
       const side = rnd() < 0.5 ? -1 : 1;
       // denser close to the edge
@@ -544,12 +544,23 @@ function buildForest(rnd, S, inChannel) {
       dummy.rotation.set(0, rnd() * Math.PI * 2, 0);
       dummy.scale.setScalar(scale0 + (scale1 - scale0) * rnd());
       dummy.updateMatrix();
-      set.set(n++, dummy.matrix);
+      placed.push(dummy.matrix.clone());
     }
-    for (; n < count; n++) set.set(n, dummy.matrix.makeScale(0, 0, 0));
-    set.commit();
-    set.group.userData.noCollide = true;
-    group.add(set.group);
+    // one instanced set per band along the trail: the bands behind her or
+    // out of view are frustum-culled (one set for the whole forest never is)
+    const bands = new Map();
+    for (const m of placed) {
+      const k = Math.min(FOREST_BANDS - 1, Math.max(0, Math.floor(((m.elements[14] + HALF_LEN) / (2 * HALF_LEN)) * FOREST_BANDS)));
+      if (!bands.has(k)) bands.set(k, []);
+      bands.get(k).push(m);
+    }
+    for (const list of bands.values()) {
+      const set = kit.instanced(name, list.length);
+      list.forEach((m, i) => set.set(i, m));
+      set.commit();
+      set.group.userData.noCollide = true;
+      group.add(set.group);
+    }
   };
   // undergrowth right at the edges, thickest where the trail ends (it
   // hides the forest's walls), thinning out under the trees
@@ -921,6 +932,8 @@ export default {
     mode = 'wait';
     fragments.show();
     audio.play('challenge');
+    // the gaming room downloads during the level (FINAL waits for it)
+    import('../house/gamingRoom.js').then((g) => g.preload());
     dialogue.say(orb.anchor, TEXT.petals.intro, { mode: 'story' }).then(() => {
       if (mode === 'wait') mode = 'ready';
     });
