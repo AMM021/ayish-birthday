@@ -47,6 +47,13 @@ def wrap_uv(bm, wraps, size=1.0):
             f = bm.faces[i]
             if abs(f.normal.z) > 0.5:
                 continue
+            if curve[0] == 'arc':  # a jamb or an end (facing along the curve): u runs across the wall
+                c = f.calc_center_median()
+                ox, oz = c.x - curve[1], -c.y - curve[2]
+                if abs(f.normal.x * ox - f.normal.y * oz) < 0.8 * (math.hypot(ox, oz) or 1):
+                    for l in f.loops:
+                        l[uv].uv = (math.hypot(l.vert.co.x - curve[1], -l.vert.co.y - curve[2]) / size, l.vert.co.z / size)
+                    continue
             us = []
             for l in f.loops:
                 x, z = l.vert.co.x, -l.vert.co.y
@@ -222,8 +229,13 @@ def _spans(h, openings, t0, t1, foot=0.0):
 def arc_wall(b, cx, cz, r, a0, a1, y, h, thick, openings=(), step=2.0, foot=0.0):
     """Curved wall centred on radius r (inner r-thick/2 … outer r+thick/2)
     from angle a0 to a1 (degrees). Openings use arc length t along the
-    wall from a0: {t0, t1, y0, y1}. Segments split at every opening edge."""
+    wall from a0: {t0, t1, y0, y1}. Segments split at every opening edge.
+    On a full circle an opening across the seam at a0 is cut on both sides."""
     length = math.radians(a1 - a0) * r
+    if a1 - a0 >= 360 - 1e-6:
+        openings = list(openings)
+        openings += [{**o, 't0': o['t0'] - length, 't1': o['t1'] - length} for o in openings if o['t1'] > length]
+        openings += [{**o, 't0': o['t0'] + length, 't1': o['t1'] + length} for o in openings if o['t0'] < 0]
     marks = {0.0, length}
     for o in openings:
         marks.update((max(0.0, o['t0']), min(length, o['t1'])))
