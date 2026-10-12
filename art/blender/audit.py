@@ -30,6 +30,11 @@ REVIEWED = {
     ('pod_lining', 'pod_roof'),
     ('genkan_oak', 'wc_partition'),                   # floor edge and partition end, inside the entry wall
     ('bamboo', 'bamboo'),                             # culm segments meeting at the nodes
+    # walls and slabs that meet the tower are cut 1 cm inside its outer face:
+    # their cut faces lie inside the tower wall
+    ('crescent_roofslab_studio', 'entry_walls'), ('east_slab', 'east_walls'),
+    ('east_roofslab', 'east_walls'), ('bath_roof', 'bath_walls'),
+    ('studio_roof', 'studio_roof_green'),             # the planted layer lies on the roof slab
 }
 GROUNDS = ('ground', 'gravel_garden', 'roji_moss', 'meadow', 'path', 'fire_terrace', 'pergola_floor')
 EPS_TOUCH = 0.012   # parts closer than this touch

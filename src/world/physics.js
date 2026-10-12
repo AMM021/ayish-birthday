@@ -72,6 +72,8 @@ const triPoint = new THREE.Vector3();
 const capPoint = new THREE.Vector3();
 const delta = new THREE.Vector3();
 const push = new THREE.Vector3();
+const triNormal = new THREE.Vector3();
+const WALKABLE = 0.55; // ground up to ~57° is stood on, not slid down
 export function resolveCapsule(eye, height = EYE_HEIGHT) {
   push.set(0, 0, 0);
   if (!bvh) return push;
@@ -92,7 +94,16 @@ export function resolveCapsule(eye, height = EYE_HEIGHT) {
         const depth = r - dist;
         delta.subVectors(capPoint, triPoint);
         if (delta.lengthSq() < 1e-12) tri.getNormal(delta);
-        delta.normalize().multiplyScalar(depth);
+        delta.normalize();
+        // Walkable ground (a stair ramp, a slope): lift her straight up
+        // instead of along the slope, so standing on it never slides her down.
+        tri.getNormal(triNormal);
+        if (triNormal.dot(delta) < 0) triNormal.negate();
+        if (triNormal.y > WALKABLE && delta.y > WALKABLE) { // standing on it (not brushing an edge)
+          delta.set(0, depth / triNormal.y, 0);
+        } else {
+          delta.multiplyScalar(depth);
+        }
         seg.start.add(delta);
         seg.end.add(delta);
       }

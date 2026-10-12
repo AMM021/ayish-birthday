@@ -159,6 +159,14 @@ def furnish(M, coll):
     put['dining_plant'] = ('kitchen_dining', A.potted('pachira_aquatica_01', coll, M, 'dining_plant', 1.8, ['_d'], 0.5).place(14.0, -2.6, y0))
     put['fruit'] = ('kitchen_dining', A.piece('wooden_bowl_01', coll, 'fruit', kind='decor', solid=False).place(9.6, -1.9, y0 + 0.91))
     put['laundry'] = ('laundry', F.cabinet(coll, M, 1.5, 0.92, 0.62, 'laundry', 'linen_white', 'marble', 2).place(8.25, -6.955, y0, 90))
+    # a proper utility room: a shelf with folded towels above the machines,
+    # a laundry basket by them
+    sh = F.Piece('laundry_shelf', coll)
+    sh.box(1.5, 0.03, 0.3, 0, 0.0, 1.7, M['oak'], r=0.005, name='shelf')
+    for k, (dx, mat) in enumerate(((-0.5, 'linen_lav'), (-0.15, 'linen_white'), (0.2, 'linen_blush'), (0.52, 'linen_white'))):
+        sh.box(0.28, 0.16, 0.24, dx, 0.0, 1.73, M[mat], r=0.03, name=f'towels{k}')
+    put['laundry_shelf'] = ('laundry', sh.place(8.25, -7.125, y0, 90))
+    put['laundry_basket'] = ('laundry', A.piece('wicker_basket_01', coll, 'laundry_basket', height=0.42, kind='furniture').place(9.25, -5.75, y0))
 
     # --- studio (1F): the desk at the pond window, his cars, her corner ---
     st = F.Piece('studio_desk', coll)

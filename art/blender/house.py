@@ -84,6 +84,7 @@ class House:
         self.win_frame = Builder()
         self.lights = []     # (name, (x, z), y, watts, radius) point lights for the bake
         self._posts = set()
+        self.fences = []     # invisible colliders (no jumping off a terrace or balcony)
 
     def add(self, b, name, mat, solid=True, cut=False, uv=1.0, side=None, top=None, bottom=None):
         """`side`: material for the vertical faces (slab edges → fascia).
@@ -333,6 +334,16 @@ class House:
                 self.doors.append(dict(name=panel.name, obj=panel, kind='slide', dir=(s_ * (p0[0] - p1[0]) / w, s_ * (p0[1] - p1[1]) / w), dist=w - 0.06, width=w))
             self.solids.append(panel)
 
+    def fence(self, pts, y, h=2.6):
+        """An invisible wall along a rail: she can lean on the glass, never
+        jump over it."""
+        b = Builder()
+        for (xa, za), (xb, zb) in zip(pts, pts[1:]):
+            geo.line_wall(b, xa, za, xb, zb, y, h, 0.05)
+        o = b.obj('fence_' + str(len(self.fences)), None, self.coll)
+        o.hide_render = True
+        self.fences.append(o)
+
     def arc_pts(self, cx, cz, r, a0, a1, step=4.0):
         n = max(1, math.ceil(abs(a1 - a0) / step))
         return [polar(cx, cz, r, a0 + (a1 - a0) * i / n) for i in range(n + 1)]
@@ -473,6 +484,9 @@ class House:
         self.glazing('terrace_rail_in', self.arc_pts(cx, cz, R0 - 0.4, 218, 255), y + 0.06, y + 1.1, mullion=2.4)
         self.glazing('terrace_rail_out', self.arc_pts(cx, cz, R1 + 0.35, 218, 255), y + 0.06, y + 1.1, mullion=2.4)
         self.glazing('terrace_rail_end', [polar(cx, cz, R0 - 0.4, 218), polar(cx, cz, R1 + 0.35, 218)], y + 0.06, y + 1.1, mullion=2.4, trim=(0.065, 0.065))
+        self.fence(self.arc_pts(cx, cz, R0 - 0.4, 218, 255) + [], y)
+        self.fence(self.arc_pts(cx, cz, R1 + 0.35, 218, 255), y)
+        self.fence([polar(cx, cz, R0 - 0.4, 218), polar(cx, cz, R1 + 0.35, 218)], y)
         # studio roof (also the pod's floor zone), planted, with a deep eave
         b = Builder()
         b.prism(geo.sector_pts(cx, cz, R0 - 0.9, R1 + 1.3, 252, 299), FFL[2] - 0.35, FFL[2])
@@ -547,7 +561,8 @@ class House:
             geo.ring_prism(b, tx, tz, 2.45, rc - 0.15, y - 0.3, y, 4)
             self.add(b, f'gallery_{k}', M['floor_oak'], side=M['oak'])
             g0, g1 = self.landing[k]
-            self.glazing(f'gallery_rail_{k}', self.arc_pts(tx, tz, 2.5, g1, g0 + 360, 6), y, y + 1.05, mullion=1.0)
+            end = g0 if g0 > g1 else g0 + 360  # the long way round, once
+            self.glazing(f'gallery_rail_{k}', self.arc_pts(tx, tz, 2.5, g1, end, 6), y, y + 1.05, mullion=1.0)
         # ground floor inside the tower (stone)
         b = Builder()
         b.prism(geo.circle_pts(tx, tz, rc - 0.15, 96), -0.35, FFL[0])
@@ -664,12 +679,24 @@ class House:
         # where the treads meet the galleries: 1F mid-flight (one tread
         # either side of level), 2F the last tread
         tread = lambda i: (a0 + i * step_deg) % 360
-        self.landing = {1: (tread(per - 2), (tread(per) + step_deg + 1.5) % 360),
-                        2: (tread(n - 1), (tread(n - 1) + step_deg + 1.5) % 360)}
+        land2 = (tread(n - 1) + step_deg + 1.5) % 360  # where the last tread ends
+        self.landing = {1: (tread(per - 3), (tread(per + 1) + step_deg + 1.5) % 360),
+                        2: (tread(n - 1), (land2 + 46) % 360)}
+        # the top landing: a floor over the stair's core from the last tread,
+        # 46° round (about 1.4 m at the walk line), railed on the void side
+        b = Builder()
+        steps = 8
+        for k in range(steps):
+            a_ = land2 + 46 * k / steps
+            a2 = land2 + 46 * (k + 1) / steps
+            b.prism([polar(tx, tz, rout + 0.05, a_), polar(tx, tz, rout + 0.05, a2), polar(tx, tz, rin, a2), polar(tx, tz, rin, a_)], FFL[2] - 0.12, FFL[2])
+        self.add(b, 'stair_landing', M['oak'])
+        rail_pts = [polar(tx, tz, 2.5, land2 + 46)] + [polar(tx, tz, rin + 0.04, land2 + 46 - 46 * k / 8) for k in range(9)]
+        self.glazing('landing_rail', rail_pts, FFL[2], FFL[2] + 1.05, mullion=1.0, trim=(0.065, 0.0))
         # balusters + a round brass rail on both edges (open at the landings)
         rail = Builder()
         def in_landing(i):
-            return (per - 2 <= i <= per) or i >= n - 1
+            return (per - 3 <= i <= per + 1) or i >= n - 1
         for r in (rout - 0.04, rin + 0.04):
             pts = []
             for i in range(n):
@@ -776,8 +803,7 @@ class House:
         # the front door: a 1.2 m oak pivot door in an oak lining
         a = geo.point_at(pts, d_front - 0.65)
         c = geo.point_at(pts, d_front + 0.65)
-        self.doorway('front_door', a, c, 0.0, 2.5, 0.3, leaf=False)
-        self.pivot_door('front_door', a, c, 0.0, 2.475)
+        self.doorway('front_door', a, c, 0.0, 2.5, 0.3, swing=1)
         # partition to the WC (plaster) with its door
         # (flush with the neck's east wall, x 1.85–2.15, from that wall's
         # inner corner: no sliver of wall face left between the two)
@@ -851,14 +877,13 @@ class House:
         H = 2.8
         d_back = self._dist_to(pts, (6.0, -5.95))
         d_win = self._dist_to(pts, (10.5, -5.95))
-        ops = [{'t0': d_back - 0.45, 't1': d_back + 0.45, 'y0': 0.0, 'y1': 2.2}]
+        ops = []
         wins = [{'t0': d_win - 0.45, 't1': d_win + 0.45, 'y0': 1.1, 'y1': 2.1}]
         b = Builder()
         geo.band_wall(b, pts, y, H, 0.25, openings=ops + wins, foot=0.5)
         self.add(b, 'laundry_walls', M['earth'])
         for o in wins:
             self._window(geo.point_at(pts, o['t0']), geo.point_at(pts, o['t1']), y + o['y0'], y + o['y1'])
-        self.doorway('laundry_back', geo.point_at(pts, d_back - 0.45), geo.point_at(pts, d_back + 0.45), y, 2.2, 0.25, center=(7.45, -5.95), swing=-1)
         b = Builder()
         b.prism(st, -0.35, y)
         self.add(b, 'laundry_floor', M['terrazzo'], side=M['stone'])
@@ -972,7 +997,9 @@ class House:
         self.add(b, 'pod_walls', M['charred'])
         b = Builder()
         lining = self._inset_open(pts, 0.12)
-        geo.band_wall(b, lining, y, 3.0, 0.16, openings=[{**door, 't0': door['t0'] - 0.02, 't1': door['t1'] + 0.02}])
+        la = self._dist_to(lining, self._inset_open([geo.point_at(pts, door['t0'])], 0.12)[0])
+        lc = self._dist_to(lining, self._inset_open([geo.point_at(pts, door['t1'])], 0.12)[0])
+        geo.band_wall(b, lining, y, 3.0, 0.16, openings=[{**door, 't0': min(la, lc) - 0.02, 't1': max(la, lc) + 0.02}])
         self.add(b, 'pod_lining', M['plaster'], solid=False)
         # bedroom door: oak lining through both layers, leaf on the room side
         pa, pc = geo.point_at(pts, door['t0']), geo.point_at(pts, door['t1'])
@@ -1020,6 +1047,9 @@ class House:
         self.glazing('balcony_rail', self.arc_pts(cx, cz, 7.25, 250, 282), y, y + 1.05, mullion=2.0)
         self.glazing('balcony_rail_w', [polar(cx, cz, 7.25, 250), polar(cx, cz, 9.0, 250)], y, y + 1.05, mullion=2.0, trim=(0.065, 0.0))
         self.glazing('balcony_rail_e', [polar(cx, cz, 7.25, 282), polar(cx, cz, 9.0, 282)], y, y + 1.05, mullion=2.0, trim=(0.065, 0.0))
+        self.fence(self.arc_pts(cx, cz, 7.25, 250, 282), y)
+        self.fence([polar(cx, cz, 7.25, 250), polar(cx, cz, 9.0, 250)], y)
+        self.fence([polar(cx, cz, 7.25, 282), polar(cx, cz, 9.0, 282)], y)
 
     def _inset_open(self, pts, d):
         """Offset an open polyline toward the pod's centre by d."""
@@ -1050,13 +1080,15 @@ class House:
         b.prism(geo.circle_pts(*TOWER, TR - 0.15, 96), -1, 20)
         cutter = b.obj('tower_void', None, self.coll)
         b = Builder()
-        b.prism(geo.circle_pts(*TOWER, TR, 96), -1, 20)
+        b.prism(geo.circle_pts(*TOWER, TR - 0.01, 96), -1, 20)
         slab_cutter = b.obj('tower_outer', None, self.coll)
         flat = ('slab', 'floor', 'roof', 'green', 'deck', 'stone', 'oak')
         for o in self.cut_tower:
             mod = o.modifiers.new('void', 'BOOLEAN')
             mod.operation = 'DIFFERENCE'
-            mod.object = slab_cutter if any(k in o.name for k in flat) else cutter
+            # walls too: a wall end left inside the tower wall would show in
+            # its doorways, so everything stops at the tower's outer face
+            mod.object = slab_cutter
             mod.solver = 'EXACT'
             mod.use_self = True
             mod.use_hole_tolerant = True
@@ -1081,7 +1113,7 @@ class House:
         parts beyond the roof (the roof's own top is oak under them), so no
         two floor faces overlap."""
         p = POD
-        cutter = self.union_prisms('pod_cut', [geo.offset_poly(geo.ellipse_pts(p['cx'], p['cz'], p['rx'], p['rz'], p['rot'], 72), 0.1),
+        cutter = self.union_prisms('pod_cut', [geo.offset_poly(geo.ellipse_pts(p['cx'], p['cz'], p['rx'], p['rz'], p['rot'], 72), 0.03),
                                                 [(-5.2, -2.1), (-3.0, -2.1), (-3.0, -0.3), (-5.2, -0.3)]], FFL[2] - 0.05, FFL[2] + 1, None, solid=False)
         self.objs.remove(cutter)
         self._difference(self.studio_green, cutter)

@@ -163,6 +163,11 @@ export default {
     if (!house) return;
     const p = world.camera.position;
     house.update(dt, p);
+    // (the pond and pool are fenced; should she ever end up in the water,
+    // she is set back on the lawn by the bridge)
+    if (p.y < 0.9 && ((p.x + 9) / 7.8) ** 2 + ((p.z - 10.5) / 7.0) ** 2 < 1.05) {
+      world.setPlayer(new THREE.Vector3(-6.2, STAND_HEIGHT, 19.2), 0, 0);
+    }
     // a later visit: he greets her once when she comes to him
     if (phase === 'free' && !greeted && him && house.chair) {
       const s = house.chair.pos;

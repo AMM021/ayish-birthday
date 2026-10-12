@@ -373,7 +373,7 @@ def export(h, put, gd):
 
     # 1. colliders: copies of the solids, a box per solid piece, tree trunks
     col = []
-    for o in h.solids + gd.solids + gd.fences:
+    for o in h.solids + gd.solids + gd.fences + h.fences:
         if o.type != 'MESH' or o.name in door_names:
             continue
         c = o.copy()

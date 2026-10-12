@@ -324,7 +324,7 @@ class Garden:
         outline = geo.ellipse_pts(c['cx'], c['cz'], c['rx'], c['rz'], 0, 96)
         b = Builder()
         b.prism(geo.ellipse_pts(c['cx'], c['cz'], c['rx'] + 0.02, c['rz'] + 0.02, 0, 96), -1.0, -0.9)
-        self.add(b, 'pond_bed', M['moss_ground'])
+        self.add(b, 'pond_bed', M['moss_ground'], solid=True)
         # the basin's side: a ring wall of stone from the bed to the lawn
         b = Builder()
         geo.band_wall(b, outline + [outline[0]], -0.95, 0.925, 0.08)  # top 5 mm under the lawn
@@ -423,7 +423,7 @@ class Garden:
     def bridge_ends(self):
         return [self.bridge[0], self.bridge[-1]]
 
-    def fence_along(self, pts, gap=(), h=1.4, gap_r=0.9):
+    def fence_along(self, pts, gap=(), h=2.6, gap_r=0.9):
         b = Builder()
         for (xa, za), (xb, zb) in zip(pts, pts[1:]):
             mx, mz = (xa + xb) / 2, (za + zb) / 2
@@ -592,34 +592,44 @@ class Garden:
     def kitchen_garden(self):
         M = self.M
         beds = Builder()
+        rims = Builder()
         soil = Builder()
-        greens = Builder()
         for i in range(6):
             x = 19.2 + (i % 3) * 3.0
             z = -10.6 + (i // 3) * 4.0
-            beds.box(x, z, x + 2.2, z + 2.2, GROUND - 0.05, 0.5)
-            soil.box(x + 0.06, z + 0.06, x + 2.14, z + 2.14, 0.38, 0.44)
+            # an open timber frame (four sides), soil inside it
+            for bx in ((x, z, x + 2.2, z + 0.06), (x, z + 2.14, x + 2.2, z + 2.2), (x, z + 0.06, x + 0.06, z + 2.14), (x + 2.14, z + 0.06, x + 2.2, z + 2.14)):
+                beds.box(*bx, GROUND - 0.05, 0.44)
+            # a board cap round the top edge, like a real timber bed
+            for bx in ((x - 0.03, z - 0.03, x + 2.23, z + 0.09), (x - 0.03, z + 2.11, x + 2.23, z + 2.23),
+                       (x - 0.03, z + 0.09, x + 0.09, z + 2.11), (x + 2.11, z + 0.09, x + 2.23, z + 2.11)):
+                rims.box(*bx, 0.44, 0.48)
+            soil.box(x + 0.06, z + 0.06, x + 2.14, z + 2.14, GROUND - 0.05, 0.38)
             for r in range(3):
-                for c in range(4):
-                    px, pz = x + 0.35 + c * 0.5, z + 0.45 + r * 0.65
-                    for j in range(6):
-                        a = 60 * j + r * 13 + c * 7
-                        tip = polar(px, pz, 0.2, a)
-                        bm = greens.bm
-                        v = [bm.verts.new(P(px, pz, 0.45)), bm.verts.new(P(*polar(px, pz, 0.08, a - 25), 0.5)), bm.verts.new(P(*tip, 0.58)), bm.verts.new(P(*polar(px, pz, 0.08, a + 25), 0.5))]
-                        bm.faces.new(v)
+                for c in range(3):
+                    px, pz = x + 0.45 + c * 0.65, z + 0.45 + r * 0.65
+                    f = A.piece('fern_02', self.coll, f'veg{i}_{r}{c}', height=self.rnd.uniform(0.22, 0.32), kind='plant', solid=False, only=['fern_02_b'])
+                    self.piece(f'veg{i}_{r}{c}', f.place(px, pz, 0.37, self.rnd.uniform(0, 360)))
         self.add(beds, 'raised_beds', M['oak'], solid=True)
+        self.add(rims, 'raised_bed_rims', M['oak'])
         self.add(soil, 'raised_soil', M['moss_ground'])
-        self.add(greens, 'vegetables', M['leaf_green'])
-        # the herb spiral: a stone wall winding up around its centre
-        hx, hz = 28.0, -4.5
+        # the herb planter: two round stone tiers with herbs
+        hx, hz = 24.0, -1.2  # between the beds and the fruit trees
         b = Builder()
-        for i in range(36):
-            a0, a1 = i * 18, (i + 1) * 18
-            r = 1.6 - i * 0.032
-            h = 0.12 + i * 0.022
-            b.prism([polar(hx, hz, r - 0.18, a0), polar(hx, hz, r, a0), polar(hx, hz, r, a1), polar(hx, hz, r - 0.18, a1)], GROUND - 0.05, h)
-        self.add(b, 'herb_spiral', M['stone'], solid=True)
+        geo.ring_prism(b, hx, hz, 1.4, 1.62, GROUND - 0.05, 0.42, 8)
+        geo.ring_prism(b, hx, hz, 0.62, 0.82, GROUND - 0.05, 0.78, 10)
+        self.add(b, 'herb_planter', M['stone'], solid=True)
+        b = Builder()
+        geo.ring_prism(b, hx, hz, 0.82, 1.4, GROUND - 0.05, 0.36, 8)
+        b.prism(geo.circle_pts(hx, hz, 0.62, 24), GROUND - 0.05, 0.72)
+        self.add(b, 'herb_soil', M['moss_ground'], solid=True)
+        for k in range(8):
+            a = k * 45 + 10
+            px, pz = polar(hx, hz, 1.1, a)
+            f = A.piece('fern_02', self.coll, f'herb{k}', height=0.18, kind='plant', solid=False, only=['fern_02_b'])
+            self.piece(f'herb{k}', f.place(px, pz, 0.35, self.rnd.uniform(0, 360)))
+        f = A.piece('fern_02', self.coll, 'herb_top', height=0.22, kind='plant', solid=False, only=['fern_02_b'])
+        self.piece('herb_top', f.place(hx, hz, 0.71, 0))
         for k, (x, z) in enumerate(FRUIT):
             t = A.piece('island_tree_02', self.coll, f'fruit_tree{k}', height=3.4, kind='plant', solid=False)
             self.piece(f'fruit_tree{k}', t.place(x, z, GROUND, self.rnd.uniform(0, 360)))
