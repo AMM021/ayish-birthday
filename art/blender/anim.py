@@ -11,18 +11,21 @@ Clips (30 fps):
          sit_type (loop), sit_look (once, holds), sit_look_idle (loop) — at his laptop
   ayish: idle (loop), hug_in (once), hug (loop)
 The hug is played with both rigs in this file's layout: him at the origin
-facing -Y, Ayish facing him at (0, -HUG_D, 0).
+facing -Y, Ayish facing him at (HUG_SIDE, -HUG_D, 0) — a little to his left, as
+real hugs are offset, so her head rests beside his face, not into it.
 """
 import math
 import os
 import sys
 import bpy
 from mathutils import Matrix, Quaternion, Vector
+from mathutils.bvhtree import BVHTree
 
 sys.path.insert(0, os.path.dirname(__file__))
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 FPS = 30
 HUG_D = 0.32
+HUG_SIDE = 0.06
 OUT = os.path.join(os.path.dirname(__file__), '..', 'out')
 
 FINGERS = ('index', 'middle', 'ring', 'pinky')
@@ -264,42 +267,154 @@ def open_goals(P, k):
     return g
 
 
-def hug_pose_him(k, t, her):
-    """k: 0 open arms → 1 holding her. t: phase of the slow loop (0–1).
-    His arms round her upper back, the left hand high on her shoulder
-    blade, the right lower and slowly stroking; chin down onto her head;
-    the two of them rock gently together."""
+# --- the hug -----------------------------------------------------------------
+# Hands are placed on the other's real surface (the posed body and clothes,
+# raycast), travel round the other's sides on an arc (never through them),
+# and any part of an arm that would sink into the other is pushed back out
+# (`settle`). He reaches first, she follows; heads settle last; a small
+# squeeze as the arms close, then the slow rocking loop.
+SKIP_SHELL = ('eye', 'brow', 'lash', 'teeth', 'tongue', 'glasses', 'buckle', 'low-poly')
+ARM_R = {'upperarm': 0.05, 'lowerarm': 0.042, 'hand': 0.022}  # flesh + sleeve, m
+CLEAR = 0.008
+
+
+def shell(rig):
+    """BVH of the body and everything worn, as posed now (world space)."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    vs, polys = [], []
+    for o in rig.children_recursive:
+        if o.type != 'MESH' or any(t in o.name for t in SKIP_SHELL):
+            continue
+        e = o.evaluated_get(dg)
+        me = e.to_mesh()
+        mw = e.matrix_world
+        n = len(vs)
+        vs += [mw @ v.co for v in me.vertices]
+        polys += [tuple(n + i for i in p.vertices) for p in me.polygons]
+        e.to_mesh_clear()
+    return BVHTree.FromPolygons(vs, polys)
+
+
+def on_surface(bvh, p, out, lift):
+    """Where a line from outside (along `out`) toward p first meets the
+    other's surface, lifted off it by `lift`."""
+    if bvh is None:
+        return p
+    hit = bvh.ray_cast(p + out * 0.45, -out, 0.7)[0]
+    return (hit + out * lift) if hit is not None else p
+
+
+def arc(p0, p1, p2, k):
+    """Quadratic curve from p0 to p2 passing through p1 halfway."""
+    c = p1 * 2 - (p0 + p2) * 0.5
+    return p0 * (1 - k) ** 2 + c * (2 * k * (1 - k)) + p2 * (k * k)
+
+
+def arm_points(P, s):
+    mw = P.rig.matrix_world
+    pts = []
+    for part, t0, stretch in (('upperarm', 0.4, 1.0), ('lowerarm', 0.0, 1.0), ('hand', 0.0, 2.0)):
+        pb = P.rig.pose.bones[f'{part}_{s}']
+        a, b = mw @ pb.head, mw @ pb.tail
+        b = a + (b - a) * stretch  # the hand bone stops at the knuckles
+        for i in range(7):
+            pts.append((part, a.lerp(b, t0 + (1 - t0) * i / 6)))
+    return pts
+
+
+def settle(P, frame, bvh, iters=14):
+    """Push the IK goals until no part of either arm is inside `bvh`."""
+    if bvh is None:
+        return
+    for _ in range(iters):
+        bpy.context.view_layer.update()
+        moved = False
+        for s, (tgt, pole, c) in P.goals.items():
+            if c.influence < 0.5:
+                continue
+            worst = None
+            for part, p in arm_points(P, s):
+                loc, n, _, _ = bvh.find_nearest(p, 0.3)
+                if loc is None:
+                    continue
+                pen = ARM_R[part] + CLEAR - (p - loc).dot(n)
+                if 0 < pen < 0.2 and (worst is None or pen > worst[0]):
+                    worst = (pen, part, n.normalized())
+            if worst:
+                pen, part, n = worst
+                if part == 'upperarm':
+                    pole.location = pole.location + n * 0.25  # elbow out
+                    tgt.location = tgt.location + n * (pen * 0.5)
+                else:
+                    tgt.location = tgt.location + n * (pen + 0.002)
+                    if part == 'hand':  # the fingers' aim moves with the hand
+                        e = P.aims[s][0]
+                        e.location = e.location + n * (pen + 0.002)
+                        e.keyframe_insert('location', frame=frame)
+                tgt.keyframe_insert('location', frame=frame)
+                pole.keyframe_insert('location', frame=frame)
+                moved = True
+        if not moved:
+            break
+    for s, (tgt, pole, c) in P.goals.items():
+        if c.influence < 0.5:
+            continue
+        wrist = P.rig.matrix_world @ P.rig.pose.bones['lowerarm_' + s].tail
+        miss = (wrist - tgt.location).length
+        if miss > 0.02:
+            print(f'SETTLE {P.rig.name} f{frame} {s}: wrist {miss * 100:.0f} cm short of its goal')
+
+
+def stage(x, a, b):
+    return ease(max(0.0, min(1.0, (x - a) / (b - a))))
+
+
+def hug_pose_him(u, t, her):
+    """u: 0 open arms → 1 holding her (the hug_in). t: phase of the slow
+    loop (0–1). His arms over hers: the left hand high on her back, over
+    the hijab's drape, the right lower at her waist, slowly stroking; chin
+    down onto her head; they rock together."""
     def f(P):
+        k = stage(u, 0.0, 0.8)        # arms
+        kh = stage(u, 0.1, 0.75)      # head and lean
+        sq = math.sin(math.pi * stage(u, 0.55, 1.0)) * 0.6  # the squeeze
         sway = math.sin(2 * math.pi * t)
         breath = math.sin(2 * math.pi * t * 2 + 0.6)
         P.turn('pelvis', (0, 0, 1), 3.0 * sway * k)        # rocking, side to side
         P.turn('pelvis', (0, 1, 0), 1.6 * sway * k)
         P.turn('spine_01', (1, 0, 0), 3 * k)
-        P.turn('spine_02', (1, 0, 0), 3 * k + 0.8 * breath)
-        P.turn('spine_03', (1, 0, 0), 4 * k)
+        P.turn('spine_02', (1, 0, 0), 3 * k + 2 * sq + 0.8 * breath)
+        P.turn('spine_03', (1, 0, 0), 4 * kh + 2 * sq)
         P.turn('spine_03', (0, 1, 0), -1.2 * sway * k)
-        P.turn('neck_01', (1, 0, 0), 16 * k)
-        P.turn('neck_01', (0, 1, 0), 8 * k)               # toward his left, where her head rests
-        P.turn('head', (1, 0, 0), 12 * k)
-        P.turn('head', (0, 0, 1), (-14 + 3 * math.sin(2 * math.pi * t + 1.3)) * k)  # nestling
-        for s in 'lr':
-            P.curl(s, 0.25 - 0.13 * k, spread=0.3 * (1 - k) - 0.5 * k, thumb=0.25 - 0.1 * k)  # relaxed, near flat on her back
+        P.turn('neck_01', (1, 0, 0), 10 * kh)
+        P.turn('neck_01', (0, 1, 0), -5 * kh)              # leaning a touch to his right, past her head
+        P.turn('head', (1, 0, 0), 10 * kh)
+        P.turn('head', (0, 0, 1), (-12 + 3 * math.sin(2 * math.pi * t + 1.3)) * kh)  # nestling
+        for s, sx in (('l', 1), ('r', -1)):
+            # shoulders come forward round her (as they do in a hug), a little raised
+            P.turn('clavicle_' + s, (0, 0, 1), -sx * 16 * k)
+            P.turn('clavicle_' + s, (0, 1, 0), -sx * 7 * k)
+            P.curl(s, 0.1 + 0.15 * (1 - k), spread=0.6 * (1 - k) - 0.5 * k, thumb=0.15 + 0.1 * (1 - k))
         g = {}
         open_ = open_goals(P, 1.0)
-        her_back = her.bone_head('spine_02')   # just under the drape's hem
-        her_mid = her.bone_head('spine_01')
         her_fwd = face_dir(her)
+        out = -her_fwd                                      # out of her back
         side = (P.rig.matrix_world.to_3x3() @ V(1, 0, 0)).normalized()  # his left
-        stroke = 0.045 * math.sin(2 * math.pi * t * 2)
-        for s, sx, base, z in (('l', 1, her_back, 0.09), ('r', -1, her_mid, 0.0 + stroke)):
-            # the wrist on his own side of her back, the fingers laid across
-            # it toward her spine (so they never stick out past her sides)
-            on_back = base - her_fwd * 0.08 + side * sx * 0.07 + V(0, 0, z)
+        stroke = 0.04 * math.sin(2 * math.pi * t * 2)
+        bvh = getattr(her, 'shell', None)
+        for s, sx, z, lat in (('l', 1, 1.14, 0.12), ('r', -1, 1.07 + stroke, 0.09)):
+            # the wrist at the corner of her back, the hand laid across it
+            spine = her.bone_head('spine_03')
+            base = V(spine.x, spine.y, her.rig.location.z + z) + side * sx * lat
+            on_back = on_surface(bvh, base, out, 0.03)
+            # round her side, at the height of her shoulders' edge
+            beside = V(spine.x, spine.y, her.rig.location.z + z + 0.14) + side * sx * 0.36 + out * 0.02
             sh = P.to_arm(P.bone_head('upperarm_' + s))
-            pole = P.rig.matrix_world @ (sh + V(sx * 0.45, 0.25, -0.45))
-            g[s] = (open_[s][0].lerp(on_back, k), pole)
-            g['aim_' + s] = (on_back + side * (-sx) * 0.25 - her_fwd * 0.02 + V(0, 0, -0.06), G_s(k))
-            g['palm_' + s] = (base + her_fwd * 0.15 + V(0, 0, z), G_s(k))  # palms on her back
+            pole = P.rig.matrix_world @ (sh + V(sx * 0.55, 0.3, -0.4))
+            g[s] = (arc(open_[s][0], beside, on_back, k), pole)
+            across = on_surface(bvh, base + side * (-sx) * 0.24 + V(0, 0, -0.04), out, 0.045)
+            g['aim_' + s] = (across, G_s(k))
+            g['palm_' + s] = (on_back - out * 0.25, G_s(k))  # palms on her back
         return g
     return f
 
@@ -309,36 +424,49 @@ def G_s(k):
     return max(0.0, min(1.0, (k - 0.4) / 0.6))
 
 
-def hug_pose_her(k, t, him):
-    """Her arms round his waist, hands flat on his lower back, cheek
-    against his chest; she rocks with him."""
+def hug_pose_her(u, t, him):
+    """Her arms under his, round his waist, hands flat on his back; her
+    cheek against his chest; she rocks with him."""
     def f(P):
+        k = stage(u, 0.12, 0.9)
+        kh = stage(u, 0.0, 0.6)       # she turns her head as she comes in
+        sq = math.sin(math.pi * stage(u, 0.6, 1.0)) * 0.6
+        # the last small step into his arms (mostly under the fade-in)
+        P.move('pelvis', face_dir(P) * (-0.14 * (1 - stage(u, 0.0, 0.45))))
         sway = math.sin(2 * math.pi * t)
         breath = math.sin(2 * math.pi * t * 2)
         P.turn('pelvis', (0, 0, 1), 3.0 * sway * k)
         P.turn('pelvis', (0, 1, 0), -1.6 * sway * k)
         P.turn('spine_01', (1, 0, 0), 3 * k)
-        P.turn('spine_02', (1, 0, 0), 3 * k + 0.8 * breath)
-        P.turn('spine_03', (1, 0, 0), 2 * k)
+        P.turn('spine_02', (1, 0, 0), 3 * k + 1.5 * sq + 0.8 * breath)
+        P.turn('spine_03', (1, 0, 0), 2 * kh + 1.5 * sq)
         # her cheek against his chest, turned to her right (his left)
-        P.turn('neck_01', (0, 0, 1), -26 * k)
-        P.turn('head', (0, 0, 1), -30 * k)
-        P.turn('head', (0, 1, 0), -10 * k)
-        P.turn('head', (1, 0, 0), -4 * k)
-        for s in 'lr':
-            P.curl(s, 0.25 - 0.1 * k, spread=0.25 * (1 - k) - 0.4 * k, thumb=0.3 - 0.1 * k)  # relaxed, near flat on his back
-        down = arms_down(P)
-        his_waist = him.bone_head('spine_01')
+        P.turn('neck_01', (0, 0, 1), -26 * kh)
+        P.turn('neck_01', (0, 1, 0), -6 * kh)
+        P.turn('head', (0, 0, 1), -30 * kh)
+        P.turn('head', (0, 1, 0), -10 * kh)
+        P.turn('head', (1, 0, 0), 4 * kh)                  # cheek down onto his chest
+        for s, sx in (('l', 1), ('r', -1)):
+            P.turn('clavicle_' + s, (0, 0, 1), -sx * 14 * k)
+            P.curl(s, 0.12 + 0.15 * (1 - k), spread=0.4 * (1 - k) - 0.4 * k, thumb=0.2)
         his_fwd = face_dir(him)
+        out = -his_fwd                                      # out of his back
         side = (P.rig.matrix_world.to_3x3() @ V(1, 0, 0)).normalized()  # her left
+        bvh = getattr(him, 'shell', None)
         g = {}
-        for s, sx, z in (('l', 1, 0.05), ('r', -1, 0.0)):
-            behind = his_waist - his_fwd * 0.09 + side * sx * 0.07 + V(0, 0, z)
+        for s, sx, z, lat in (('l', 1, 1.0, 0.12), ('r', -1, 0.95, 0.12)):
+            spine = him.bone_head('spine_02')
+            base = V(spine.x, spine.y, him.rig.location.z + z) + side * sx * lat
+            behind = on_surface(bvh, base, out, 0.03)
+            # she starts reaching for him (her hands by his sides, in front)
+            start = him.bone_head('spine_01') + side * sx * 0.3 + his_fwd * 0.2 + V(0, 0, -0.05)
+            beside = V(spine.x, spine.y, him.rig.location.z + z + 0.02) + side * sx * 0.3
             sh = P.to_arm(P.bone_head('upperarm_' + s))
-            pole = P.rig.matrix_world @ (sh + V(sx * 0.4, 0.3, -0.4))
-            g[s] = (down[s][0].lerp(behind, k), pole)
-            g['aim_' + s] = (behind + side * (-sx) * 0.25 - his_fwd * 0.02 + V(0, 0, -0.06), G_s(k))
-            g['palm_' + s] = (his_waist + his_fwd * 0.15 + V(0, 0, z), G_s(k))  # palms on his back
+            pole = P.rig.matrix_world @ (sh + V(sx * 0.45, 0.15, -0.55))  # elbows low, under his
+            g[s] = (arc(start, beside, behind, k), pole)
+            across = on_surface(bvh, base + side * (-sx) * 0.24 + V(0, 0, -0.03), out, 0.045)
+            g['aim_' + s] = (across, G_s(k))
+            g['palm_' + s] = (behind - out * 0.25, G_s(k))  # palms on his back
         return g
     return f
 
@@ -405,12 +533,20 @@ def build_clips(rigs):
     # him: open arms 1.4 s, then hold with breathing
     clip(him, 'open_arms', [(f, open_arms_pose(ease(f / 42), f / 120)) for f in range(0, 43, 6)], None)
     clip(him, 'open_idle', [(f, open_arms_pose(1.0, f / 120)) for f in range(0, 121, 10)], None)
-    # hug: arms close over 1.6 s, then a slow 6 s sway loop. Both rigs are
-    # keyed together (her first, so his hands find her posed back), then baked.
+    # hug: both rigs keyed together, twice: the second pass places each one's
+    # hands on the other's posed body and clothes and settles the arms clear
+    # of them; then baked.
     def hug_clip(name, frames):
-        for f, k, sway in frames:
-            her.key(f, hug_pose_her(k, sway, him))
-            him.key(f, hug_pose_him(k, sway, her))
+        for rnd in range(2):
+            for f, u, t in frames:
+                bpy.context.scene.frame_set(f)
+                him.shell = shell(him.rig) if rnd else None
+                her.key(f, hug_pose_her(u, t, him))
+                settle(her, f, him.shell)
+                her.shell = shell(her.rig)
+                him.key(f, hug_pose_him(u, t, her))
+                settle(him, f, her.shell)
+        him.shell = her.shell = None
         f0, f1 = frames[0][0], frames[-1][0]
         clips[('ayish', name)] = her.bake(name, f0, f1)
         clips[('him', name)] = him.bake(name, f0, f1)
@@ -420,10 +556,11 @@ def build_clips(rigs):
     clip(him, 'sit_type', [(f, sit_pose(f / 120)) for f in range(0, 121, 4)], None)
     clip(him, 'sit_look', [(f, sit_pose(f / 120, ease(f / 24))) for f in range(0, 25, 4)], None)
     clip(him, 'sit_look_idle', [(f, sit_pose(f / 120, 1.0)) for f in range(0, 121, 10)], None)
-    # arms close over 1.8 s (the rocking starts as they do), then a slow
-    # 7 s loop: rocking, breathing, his hand on her back, his head nestling
-    hug_clip('hug_in', [(f, ease(f / 54), 0.0) for f in range(0, 55, 6)])
-    hug_clip('hug', [(f, 1.0, f / 210) for f in range(0, 211, 10)])
+    # arms round each other over 2.2 s (his first, then hers, then the heads
+    # and a small squeeze), then a slow 7 s loop: rocking, breathing, his
+    # hand on her back, his head nestling
+    hug_clip('hug_in', [(f, f / 66, 0.0) for f in range(0, 67, 3)])
+    hug_clip('hug', [(f, 1.0, f / 210) for f in range(0, 211, 6)])
     him.finish()
     her.finish()
     return clips
@@ -444,7 +581,7 @@ def main():
         (outfits.dress_ayish if key == 'ayish' else outfits.dress_him)(B, sc.collection)
         rig.name = key
         rigs[key] = rig
-    rigs['ayish'].location = (0, -HUG_D, 0)
+    rigs['ayish'].location = (HUG_SIDE, -HUG_D, 0)
     rigs['ayish'].rotation_euler = (0, 0, math.pi)
     bpy.context.view_layer.update()
     clips = build_clips(rigs)

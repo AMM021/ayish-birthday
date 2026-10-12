@@ -6,9 +6,10 @@ import * as assets from '../core/assets.js';
 //   him:   idle, open_arms, open_idle, hug_in, hug
 //   ayish: idle, hug_in, hug
 // The hug is authored as a pair: him at the origin facing +z, her HUG_D in
-// front of him facing −z (`hugPartner`).
+// front of him and HUG_SIDE to his left, facing −z (`hugPartner`).
 
 export const HUG_D = 0.32; // close: they stand hip to hip (art/blender/anim.py)
+export const HUG_SIDE = 0.06; // offset to his left, so her head rests beside his face
 const FILES = { ayish: 'models/avatars/ayish.glb', him: 'models/avatars/him.glb' };
 const CUTOUT = /hair|eyebrow|eyelash|glasses/i;
 const FADE = 0.35;
@@ -89,6 +90,9 @@ export async function create(key) {
 // the same parent).
 export function hugPartner(lead, partner) {
   const r = lead.root;
-  partner.root.position.set(r.position.x + Math.sin(r.rotation.y) * HUG_D, r.position.y, r.position.z + Math.cos(r.rotation.y) * HUG_D);
+  const s = Math.sin(r.rotation.y);
+  const c = Math.cos(r.rotation.y);
+  // forward (s, c) by HUG_D, his left (c, −s) by HUG_SIDE
+  partner.root.position.set(r.position.x + s * HUG_D + c * HUG_SIDE, r.position.y, r.position.z + c * HUG_D - s * HUG_SIDE);
   partner.root.rotation.set(0, r.rotation.y + Math.PI, 0);
 }

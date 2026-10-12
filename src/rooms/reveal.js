@@ -129,7 +129,7 @@ async function hug() {
 
 // Over his left shoulder from behind her right: her face resting on his
 // shoulder, his head bowed over hers. Swings a little (not with reduced
-// motion). Angles are in the pair's frame (him facing +z, her at +HUG_D).
+// motion). Angles are in the pair's frame (him facing +z, her at +HUG_D, a little to his left).
 const ORBIT_R = 1.45;
 const ORBIT_A = THREE.MathUtils.degToRad(65);
 const ORBIT_SWING = THREE.MathUtils.degToRad(12);
