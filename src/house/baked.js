@@ -28,6 +28,12 @@ export function convert(root, K) {
     } else if (lm && m.aoMap) {
       const light = m.aoMap;
       light.colorSpace = THREE.SRGBColorSpace;
+      // no mipmaps: the smaller levels blend each lightmap island's edge
+      // with the empty atlas round it, which draws dark seams on walls
+      // (the light itself is smooth, it needs none)
+      light.generateMipmaps = false;
+      light.minFilter = THREE.LinearFilter;
+      light.needsUpdate = true;
       // (its UV set comes from the file: TEXCOORD_1, or _2 where a model had two)
       out = new THREE.MeshBasicMaterial({ map: m.map, color: m.color, lightMap: light, lightMapIntensity: K * Math.PI, alphaTest: m.alphaTest || (m.transparent ? 0.5 : 0), side: m.side });
     } else {

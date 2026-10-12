@@ -99,7 +99,7 @@ async function boot() {
     const devtools = await import('./ui/devtools.js');
     devtools.init({ machine, stars });
     // test hook for automated QA; exists only in dev mode
-    window.__game = { world, machine, save, input, dialogue, orb, composer, clock, renderer: (await import('./core/renderer.js')).renderer };
+    window.__game = { world, machine, save, input, dialogue, orb, composer, clock, THREE, renderer: (await import('./core/renderer.js')).renderer };
   }
 
   // --- loop -----------------------------------------------------------

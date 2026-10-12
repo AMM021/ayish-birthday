@@ -724,9 +724,9 @@ def export():
         export_house.scale_uv0(o, tiles)
     # the islands' ground in the levels' light: soft, pale, never olive or
     # asphalt-dark (hue kept; saturation down, value up, a touch of lilac)
-    pastel = {'lv_grass': (0.62, 1.75, (1.0, 0.98, 1.04)), 'lv_moss': (0.6, 1.6, (1.0, 0.98, 1.04)),
-              'lv_gravel': (0.35, 1.85, (1.02, 0.99, 1.08)), 'lv_path': (0.5, 1.45, (1.02, 0.99, 1.07)),
-              'lv_earth': (0.7, 1.3, (1.0, 0.97, 1.05))}
+    pastel = {'lv_grass': (0.62, 1.45, (1.0, 0.98, 1.04)), 'lv_moss': (0.6, 1.35, (1.0, 0.98, 1.04)),
+              'lv_gravel': (0.35, 1.5, (1.02, 0.99, 1.08)), 'lv_path': (0.5, 1.2, (1.02, 0.99, 1.07)),
+              'lv_earth': (0.7, 1.12, (1.0, 0.97, 1.05))}
     for img in bpy.data.images:
         key = next((k for k in pastel if img.name.startswith(k)), None)
         if not key:

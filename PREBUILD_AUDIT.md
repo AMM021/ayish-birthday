@@ -116,6 +116,8 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 39. **The early rooms rebuilt (owner, 2026-10-12: "since we're using the older rooms in the beginning, can we fix its furnitures as well? it's bugging me"):** the entry hall and the gaming room are now built and baked in Blender like the house (same materials, CC0 furniture, glitch audit at 0, placement check at 0), with their gameplay anchors unchanged. Their photos: desk frame + two wall frames. Checked in-game: the entry-hall note and door flow, FINAL's laptop → letter → REVEAL, and the hug.
 40. **The hug, round two (owner: "her arms are going straight through my body… going from one state to another in a robotic motion"):** the hands are placed on the other's real posed body and clothes, the arms travel round each other's sides on arcs and are pushed clear of the other's body, and she takes a last small step in, a little to his left. A Blender check measures arm-into-body depth per frame.
 
+41. **Owner feedback, 2026-10-12 (afternoon):** his hands in the hug looked crooked (the finger spread was inverted; fixed: fingers together, wrapping her back); the bedroom pod is re-arranged against its curved walls (wall-snapping by raycast) with lighter linens house-wide; the levels move to the kit (realistic, the house's look; real flowers modelled where the CC0 ones read as leaves); PETALS' logs are real lengths; STARS' lit stars rise and the heart gets more orbs; TORII brings her back to the start after each playback; the bouquet is rebuilt.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
