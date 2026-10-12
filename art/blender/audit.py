@@ -309,6 +309,9 @@ def run(house, put, rooms, garden=None):
             ctr += q
         ctr /= len(pts)
         samples = [ctr] + [ctr.lerp(q, 0.6) for q in pts[:4]]
+        # two faces flicker only where they share an area: one sample point
+        # on another face is just a crossing (two leaves through each other)
+        hits = []
         for sp in samples:
             if sp.z < -0.03:
                 continue  # underground
@@ -329,12 +332,14 @@ def run(house, put, rooms, garden=None):
                     hit = j
                     break
             if hit is not None:
-                ga, gb = owner[idx], owner[hit]
-                k = tuple(sorted((ga.obj.name, gb.obj.name)))
-                if k not in seen and k not in REVIEWED:
-                    seen.add(k)
-                    problems.append(f'ZFIGHT {k[0]} × {k[1]} at {plan(sp)}')
-                break
+                hits.append((hit, sp))
+        if len(hits) >= 2 or (len(hits) == 1 and len(samples) == 1):
+            hit, sp = hits[0]
+            ga, gb = owner[idx], owner[hit]
+            k = tuple(sorted((ga.obj.name, gb.obj.name)))
+            if k not in seen and k not in REVIEWED:
+                seen.add(k)
+                problems.append(f'ZFIGHT {k[0]} × {k[1]} at {plan(sp)}')
     print('audit: zfight done')
 
     # --- LEAK / INTRUDE / floors per room ----------------------------------------

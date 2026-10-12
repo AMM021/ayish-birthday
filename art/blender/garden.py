@@ -631,6 +631,7 @@ class Garden:
         x0, z0, x1, z1 = SITE
         culms = Builder()
         leaves = {'leaf_green': Builder(), 'leaf_green2': Builder()}
+        placed = {}  # (cell) → [(centre, normal)] of leaves so far: none may lie on another
         for side, x in ((-1, x0 + 0.8), (1, x1 - 0.8)):
             z = z0 + 0.6
             while z < z1 - 1.0:
@@ -648,25 +649,34 @@ class Garden:
                     # leaf sprays from the upper nodes: 5–7 narrow leaves each
                     for node in range(2, segs):
                         t = (node + 0.02) / segs
-                        for _s in range(4):
+                        for _s in range(7):
                             ca = at(t)
                             ya = GROUND + h * t
                             twig = self.rnd.uniform(0, 360)
-                            tx, tz = polar(*ca, self.rnd.uniform(0.15, 0.65), twig)
+                            tx, tz = polar(*ca, self.rnd.uniform(0.15, 0.9), twig)
                             ty = ya + self.rnd.uniform(-0.05, 0.12)
                             mat = self.rnd.choice(list(leaves))
                             bm = leaves[mat].bm
-                            for j in range(self.rnd.randint(6, 9)):
-                                a_ = twig + self.rnd.uniform(-75, 75)
+                            nl = self.rnd.randint(6, 9)
+                            for j in range(nl):
+                                # fanned out evenly: no two leaves of a spray lie on each other
+                                a_ = twig - 75 + 150 * j / (nl - 1) + self.rnd.uniform(-4, 4)
                                 L = self.rnd.uniform(0.3, 0.5)
                                 tip = polar(tx, tz, L, a_)
                                 w1 = polar(tx, tz, L * 0.42, a_ - 11)
                                 w2 = polar(tx, tz, L * 0.42, a_ + 11)
                                 droop = self.rnd.uniform(0.08, 0.2)
                                 yl = ty + j * 0.006  # each leaf its own height: no two share a plane
-                                jit = lambda: self.rnd.uniform(-0.02, 0.02)  # each leaf its own tilt: never two in one plane
-                                v = [bm.verts.new(P(tx, tz, yl + jit())), bm.verts.new(P(*w1, yl - droop * 0.3 + jit())), bm.verts.new(P(*tip, yl - droop + jit())), bm.verts.new(P(*w2, yl - droop * 0.3 + jit()))]
-                                bm.faces.new(v)
+                                jit = lambda: self.rnd.uniform(-0.02, 0.02)  # each leaf its own tilt
+                                q = [P(tx, tz, yl + jit()), P(*w1, yl - droop * 0.3 + jit()), P(*tip, yl - droop + jit()), P(*w2, yl - droop * 0.3 + jit())]
+                                c = (q[0] + q[1] + q[2] + q[3]) / 4
+                                nrm = (q[2] - q[0]).cross(q[3] - q[1]).normalized()
+                                key = (round(c.x / 0.1), round(c.y / 0.1), round(c.z / 0.1))
+                                near = [e for dx in (-1, 0, 1) for dy in (-1, 0, 1) for dz in (-1, 0, 1) for e in placed.get((key[0] + dx, key[1] + dy, key[2] + dz), ())]
+                                if any((c - pc).length < 0.2 and abs(nrm.dot(pn)) > 0.9 for pc, pn in near):
+                                    continue  # it would lie on a leaf already there
+                                placed.setdefault(key, []).append((c, nrm))
+                                bm.faces.new([bm.verts.new(x) for x in q])
                 z += 0.33
         self.add(culms, 'bamboo', M['bamboo'])
         for mat, b in leaves.items():
