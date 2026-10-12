@@ -114,6 +114,45 @@ Detailed implementation specs. Grep by `##` heading.
   bouquet laid on the desk, two stone lanterns, four blossom trees, rim
   flowers kept off her way in, drifting mossy rocks. The seated frame is
   unchanged.
+- **The overhaul (owner, 2026-10-12: "overhaul this whole entire
+  experience… make it feel full… the orb is something she has to follow"):**
+  - *The orb is a guide* (`orb.guide(route, { lead, stop, height })`,
+    `orb.leadTo(goal)`): with a route it goes `ORB_LEAD` (3.4 m) ahead of
+    her along it and waits, bobbing back toward her now and then; past
+    `ORB_FAR` (7.5 m) it comes back for her, until she is within
+    `ORB_NEAR`; it never waits further away than she can follow. Without a
+    route it keeps her company a little ahead of where she *walks* (not
+    where she looks) and stays put while she stands. While a story line
+    plays it comes to a spot in front of her and stays there. It tracks its
+    target's speed, so it keeps its lead as she walks. Routes: HUB along the
+    path to the portal; COMPILE to the desk, then (after the bloom) to the
+    portal; TORII and STARS (once done) to the portal; FINAL to her chair.
+    PETALS is unchanged (the orb is the light she follows).
+  - *Every level is full* (`objects/nature.js`: `meadow`, `grove`, `isles`;
+    all instanced, split in sectors for culling): HUB and TORII get rings
+    of blossom trees with solid trunks, thick meadows with flowers in
+    drifts, and wooded isles floating on the horizon. COMPILE's garden
+    waits as a ghost of itself: the trees stand bare and pale lavender (she
+    walks through them) and turn real, with a little pop, as the bloom
+    reaches them; the bloom grows far more (grass, periwinkle, ferns,
+    flowers); a paved way with stone lanterns leads to the desk. STARS'
+    lake gets a shore: a pebble beach, reeds and lavender, a ring of
+    twilight blossom trees, sixteen glowing stone lanterns, paper lanterns
+    adrift on the water. PETALS' forest goes on beyond the trail's walls on
+    every side. FINAL's void garden reaches the void's edge over a rocky
+    underside, with more trees, a meadow and isles in the haze; its stones
+    drift.
+  - *The passcode screen*: the torii stands low and far, beneath the digit
+    boxes, never behind the words.
+  - *The house*: a deep oval tub for two (2.24 × 1.48 m) on an oak plinth,
+    with pillows, a tray, a floor filler and candles; a towel ladder,
+    towels, filled shelves and plants in the bathroom; a lounge in the
+    studio (coffee table with a tea set, an armchair, art over the sofa);
+    prints, a runner and a vase in the genkan; a print and decor in the
+    kitchen. The entry hall's back wall gets a sideboard and a print.
+  - *His turn* (REVEAL): he stands with his back to her while she gets up,
+    then turns round to her (clip `turn`, 2 s: head first, then shoulders,
+    hips last, his feet stepping round on leg IK) and only then calls her.
 
 ## v2 redesign (2026-10-10) — read first; overrides older sections
 
@@ -561,8 +600,9 @@ Exports `create()` returning a Group with:
 - Halo sphere `radius 0.5`, additive transparent lavender, `enableBloom()`.
 - `PointLight(gold, 0.8, 12)`.
 - Trail: 30-segment ribbon via `BufferGeometry`, updated per frame.
-Per-frame: bob via `sin(t * ORB_BOB_SPEED) * ORB_BOB_AMP`, follow
-player at `ORB_FOLLOW_DIST` with `ORB_FOLLOW_DAMP`. `say(line, opts)` calls
+Per-frame: bob via `sin(t * ORB_BOB_SPEED) * ORB_BOB_AMP`; it moves as a
+free guide (see v3 → the overhaul: `guide()`, `leadTo()`; `follow()` is the
+guide without a route). `say(line, opts)` calls
 `dialogue.say(this, line, opts)`. Color shifts per room via
 `setColor(hex)` (core stays gold, halo shifts).
 

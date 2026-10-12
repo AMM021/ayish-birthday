@@ -122,6 +122,8 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 
 42. **Placement double-check (owner, 2026-10-12: "double check for any badly placed furnitures, walls, doors and any other items"):** a placement lint (`art/blender/lint.py`, `--lint` on build.py and rooms.py) now runs next to the glitch audit. It flags wall pieces standing off their wall, fronts against a wall, blocked fronts, and furniture within a step of a door. It found the library shelves 26 cm off the wall, the living-room cabinet off its wall, a balcony lounger by the pod's slider and a sunroom chair by the divider's slider; all are fixed, and the room outlines now follow the wall's real inner face (r 17.49). The house, the entry hall and the gaming room report audit 0, lint 0, placement 0. The levels' checker tests each piece against the real rotated colliders; HUB, TORII, COMPILE, STARS, PETALS and FINAL report 0 (FINAL's laptop on the desk is intended). PETALS becomes a narrow forest trail and FINAL's table a small void garden (SPECS → v3). Leftover inline colours in the level code moved into PALETTE (`bark`, and texture tints `neutral`, `stoneLilac`, `stoneShade`).
 
+43. **The overhaul (owner, 2026-10-12):** the orb leads instead of being held (it goes ahead, waits, comes back for her, comes to her to talk); every level is filled with nature (no bare ground or empty horizon anywhere); the bathroom has a tub for two; he turns round naturally before he calls her; the passcode torii no longer sits behind the words. Details in SPECS → v3 → the overhaul. The owner chose compliments (not minigames or a laptop to watch things on) for when she comes back to him: one at random each time, none repeated until all have been said. The new lines (the orb's right-answer lines, PETALS' "stay in my light" instruction and progress lines, his longer goodbye, the compliments) are drafted and wait for the owner's approval; until then the game plays the approved TEXT.md.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
@@ -136,6 +138,7 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 - [x] Music tracks added by the owner (2026-10-11).
 - [x] Photos added (2026-10-11). No video is needed any more.
 - [ ] Decide on the Vite chunk-size warning (three.js alone is ~500 kB; the deploy skill wants a clean build, SPECS fixes vite.config).
+- [ ] Approve or edit the new lines drafted 2026-10-12: the orb's right-answer lines (TORII rounds, COMPILE words, STARS milestones), PETALS' "stay in my light" instruction and progress lines, his longer goodbye in the house, the compliments.
 - [ ] Deploy to Netlify (needs the owner's Netlify login).
 
 ## Build gate / acceptance criteria
