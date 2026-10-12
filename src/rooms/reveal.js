@@ -9,7 +9,6 @@ import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as overlay from '../ui/overlay.js';
 import { buildScene } from './final.js';
-import * as models from '../house/models.js';
 import * as gamingRoom from '../house/gamingRoom.js';
 import * as avatars from '../house/avatars.js';
 import { orb } from '../objects/orb.js';
@@ -167,7 +166,7 @@ export default {
     // The FINAL set carries over; rebuild it if we were jumped here.
     group = world.getGroup('final');
     if (!group.children.length) {
-      await models.preload(gamingRoom.MODELS);
+      await gamingRoom.preload();
       buildScene();
       world.setPlayer(new THREE.Vector3(gamingRoom.HER_SEAT.x, gamingRoom.HER_SEAT.y, gamingRoom.HER_SEAT.z), Math.PI, 0);
     }

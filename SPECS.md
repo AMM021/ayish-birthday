@@ -143,9 +143,18 @@ Detailed implementation specs. Grep by `##` heading.
   stands behind her chair (holder scale 0.72) and REVEAL drifts toward it.
   A refresh after the letter resumes seated in the gaming room.
 - **THRESHOLD (phase 4):** the entry hall of the dream house: oak floor, lilac
-  walls, walnut wainscot, a bench with her bag, a coat on hooks, a console
-  with a mirror, lamp and plant, stairs going up (blocked by a collider),
-  plants, frames and a pendant light. The extra door and note are unchanged.
+  walls, oak wainscot, a bench with her bag, a coat stand, a console with a
+  washi lamp, a sofa corner, plants, frames and washi pendants. The extra door
+  (plum lacquer, recessed in the west wall) keeps its glowing frame and note.
+- **The entry hall and the gaming room are built and baked in Blender** like
+  Tsuki House (`art/blender/rooms.py -- --room=threshold|gaming [--audit]
+  [--preview] [--export]` → `public/models/rooms/`; glitch audit at zero).
+  Gameplay anchors are unchanged (her seat, the portal, his spot, the extra
+  door). Her laptop screen, the desk photo and two wall frames are separate
+  surfaces the game fills (`house/baked.js`): photo 1 on the desk, photos 2
+  and 3 on the wall, each cover-fitted. Walls are one continuous boolean
+  shell (no lightmap seams). If the files cannot load, the earlier simple
+  rooms (Kenney kit) are used.
 - **house/props.js:** shared procedural furniture (plants, toy cars, laptop,
   mug, books, frame, lamp, fairy lights, rug, beanbag, gaming chair, shelf
   with an LED strip). The phase 6 house reuses them.
@@ -186,10 +195,8 @@ Detailed implementation specs. Grep by `##` heading.
     facing the house; the orb follows; the TEXT "AFTER END" line; `hub` music. The
     whole world is three point lights plus the sun.
   - *END* fades into EXPLORE after 12 s. A refresh after the reveal resumes in EXPLORE.
-- **THRESHOLD furniture:** kit pieces (sofa with pillows and a teddy, coffee
-  table, armchair, bookcase with books and a radio, floor lamp, console with a mirror
-  and lamp, coat rack, bench with her bag, doormat, plants, rugs). The stairs
-  were removed (their rail clipped through the steps).
+- **THRESHOLD furniture:** (superseded 2026-10-12: rebuilt in Blender, see
+  "The entry hall and the gaming room are built and baked in Blender".)
 - **Older sections below** that describe free flight, the hub gates, door 5,
   lantern hunting in COMPILE or "follow the guide" in PETALS are superseded.
 

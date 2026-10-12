@@ -3,10 +3,15 @@ import { PALETTE } from '../core/config.js';
 import * as P from './props.js';
 import * as M from './models.js';
 import * as treeObj from '../objects/tree.js';
+import * as baked from './baked.js';
+import { enableBloom } from '../world/layers.js';
 
 // The couple's work/gaming room in the dream house: minimal, full of
 // plants, a little whimsical, soft purple. One long oak desk under a big
 // window: her laptop at x 0, his at x 1.3, his toy cars, a photo frame.
+// Built and baked in Blender like Tsuki House (art/blender/rooms.py
+// --room=gaming); the simple version below is only the fallback if the
+// files cannot load.
 //
 // Her seat is at the origin's front (chair at z 1.0, facing −z) so FINAL's
 // seated pose and REVEAL's fallback stay simple. The portal for "turn
@@ -22,13 +27,60 @@ export const HIM_SPOT = new THREE.Vector3(0.5, 0, 2.9);
 
 const CAR_COLORS = ['vermillion', 'gold', 'lavender', 'softPink', 'matcha', 'wisteria', 'blush', 'walnut'];
 
-// Kenney models used here (preload before build).
+// Kenney models of the fallback room.
 export const MODELS = ['bear', 'speakerSmall', 'lampRoundFloor', 'pottedPlant', 'bookcaseOpenLow', 'rugRounded', 'pillow', 'plantSmall2', 'radio'];
 
+let bakedOk = false;
+// preload() before build(): the baked room, or the fallback's models
+export async function preload() {
+  bakedOk = await baked.preloadRoom('gaming');
+  if (!bakedOk) await M.preload(MODELS);
+}
+
+// one warm light at the washi pendant: the avatars in REVEAL are lit live
+// (the baked room needs none; point lights ≤ 4)
+const PENDANT = new THREE.Vector3(0.6, 2.3, 1.4);
+
+// build(group, { photos }) → { solid, herScreen, hisScreen }. photos: image
+// URLs — the first stands in the frame on the desk, the next two hang on
+// the left wall.
+export function build(group, { photos = [], light: withLight = true } = {}) {
+  const r = bakedOk && baked.room('gaming');
+  if (!r) {
+    let photo = null;
+    if (photos.length) {
+      photo = new THREE.TextureLoader().load(photos[0]);
+      photo.colorSpace = THREE.SRGBColorSpace;
+    }
+    return buildSimple(group, { photo, light: withLight });
+  }
+  group.add(r.root);
+  r.glow.forEach((o) => enableBloom(o, 1.35));
+  const slots = [['photo', 0], ['wallPhoto0', 1], ['wallPhoto1', 2]];
+  for (const [role, i] of slots) {
+    const m = r.kept.get(role);
+    if (!m) continue;
+    if (photos[i]) baked.showPhoto(m, photos[i], baked.aspectOf(m));
+    else m.material.color.set(role === 'photo' ? PALETTE.paper : i === 1 ? PALETTE.lavender : PALETTE.blush);
+  }
+  const herScreen = r.kept.get('herScreen');
+  const hisScreen = r.kept.get('hisScreen');
+  hisScreen?.material.color.set(PALETTE.lilacHaze);
+  if (withLight) {
+    const light = new THREE.PointLight(PALETTE.gold, 4, 10, 1.4);
+    light.position.copy(PENDANT);
+    group.add(light);
+  }
+  // (glTF UVs: a texture laid on a screen must not be flipped)
+  if (herScreen) herScreen.userData.flipY = false;
+  return { solid: [r.colliders], herScreen, hisScreen };
+}
+
+// The first, simple room (Kenney kit + boxes): the fallback.
 // options: outside (meadow + trees beyond the window; off inside the
 // house), light (its own ceiling point light), door (a doorway in the
 // front wall at local x `door`).
-export function build(group, { photo = null, outside = true, light: withLight = true, door = null } = {}) {
+function buildSimple(group, { photo = null, outside = true, light: withLight = true, door = null } = {}) {
   const solid = [];
   const add = (o, isSolid = false) => {
     group.add(o);

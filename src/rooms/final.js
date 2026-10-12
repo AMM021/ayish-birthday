@@ -16,7 +16,6 @@ import * as laptop from '../ui/laptop.js';
 import * as transitions from '../world/transitions.js';
 import * as props from '../house/props.js';
 import * as gamingRoom from '../house/gamingRoom.js';
-import * as models from '../house/models.js';
 import * as avatars from '../house/avatars.js';
 import { TEXT } from '../ui/text.js';
 
@@ -138,13 +137,9 @@ export function buildScene() {
   if (group.children.length) return group;
   const room = new THREE.Group();
   room.name = 'final-room';
-  let photo = null;
-  if (PHOTOS.length) {
-    photo = new THREE.TextureLoader().load(PHOTOS[0]);
-    photo.colorSpace = THREE.SRGBColorSpace;
-  }
-  const built = gamingRoom.build(room, { photo });
+  const built = gamingRoom.build(room, { photos: PHOTOS });
   const tex = screenTexture();
+  if (built.herScreen.userData.flipY === false) tex.flipY = false;
   built.herScreen.material.map = tex;
   built.herScreen.material.color.set(PALETTE.moonlight);
   built.herScreen.material.needsUpdate = true;
@@ -256,7 +251,7 @@ export default {
   name: 'final',
 
   async enter() {
-    await models.preload(gamingRoom.MODELS);
+    await gamingRoom.preload();
     buildScene();
     portal = group.userData.portal;
     portal.disable();

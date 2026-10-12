@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { PALETTE, REDUCED_MOTION } from '../core/config.js';
+import { REDUCED_MOTION } from '../core/config.js';
 import * as assets from '../core/assets.js';
 import { enableBloom } from '../world/layers.js';
+import * as baked from './baked.js';
 
 // Tsuki House and its garden, as baked in Blender (art/blender/build.py
 // -- --export → public/models/house/). Baked surfaces carry their light in
@@ -33,53 +34,9 @@ const ease = (x) => x * x * (3 - 2 * x);
 export async function build(group) {
   const [root, colRoot, info] = await preload();
   if (!root || !colRoot || !info) return null;
-  const K = info.K;
-  const doorInfo = new Map(info.doors.map((d) => [d.name, d]));
-  const swaps = new Map();
   const doorNodes = [];
-
   // one game material per source material (they are shared across meshes)
-  function convert(m, kind, lm) {
-    const key = m.uuid + kind;
-    if (swaps.has(key)) return swaps.get(key);
-    let out;
-    if (kind === 'glass') {
-      out = new THREE.MeshBasicMaterial({ color: PALETTE.lilacHaze, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide });
-    } else if (kind === 'pond' || kind === 'pool') {
-      out = new THREE.MeshLambertMaterial({ color: m.color, transparent: true, opacity: kind === 'pool' ? 0.78 : 0.68, depthWrite: false });
-    } else if (kind === 'glow') {
-      const c = (m.emissive && m.emissive.getHex() ? m.emissive : m.color).clone();
-      out = new THREE.MeshBasicMaterial({ color: c });
-    } else if (kind === 'veg') {
-      out = new THREE.MeshLambertMaterial({ map: m.map, color: m.color, alphaTest: 0.5, side: THREE.DoubleSide });
-    } else if (lm && m.aoMap) {
-      const light = m.aoMap;
-      light.colorSpace = THREE.SRGBColorSpace;
-      // (its UV set comes from the file: TEXCOORD_1, or _2 where a model had two)
-      out = new THREE.MeshBasicMaterial({ map: m.map, color: m.color, lightMap: light, lightMapIntensity: K * Math.PI, alphaTest: m.alphaTest || (m.transparent ? 0.5 : 0), side: m.side });
-    } else {
-      out = new THREE.MeshLambertMaterial({ map: m.map, color: m.color });
-    }
-    out.name = m.name;
-    swaps.set(key, out);
-    return out;
-  }
-
-  // extras sit on the glTF node; a node with several materials becomes a
-  // Group of meshes, so look up the tree
-  const tag = (o, k) => {
-    for (let p = o; p && p !== root; p = p.parent) if (p.userData[k] !== undefined) return p.userData[k];
-    return undefined;
-  };
-  const glowMeshes = [];
-  root.traverse((o) => {
-    if (!o.isMesh) return;
-    // sliding doors carry their glass as one more material of the leaf
-    const kind = o.material.name.startsWith('glass') ? 'glass' : tag(o, 'kind');
-    const lm = tag(o, 'lm');
-    o.material = convert(o.material, kind || (lm ? 'lm' : 'plain'), lm);
-    if (kind === 'glow') glowMeshes.push(o);
-  });
+  const { glow: glowMeshes } = baked.convert(root, info.K);
   // the doors: a pivot per leaf (hinge and orbit turn, slides translate)
   root.traverse((o) => {
     const raw = o.userData.door;

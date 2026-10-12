@@ -4,6 +4,8 @@ import * as world from '../world/world.js';
 import * as physics from '../world/physics.js';
 import * as P from '../house/props.js';
 import * as M from '../house/models.js';
+import * as baked from '../house/baked.js';
+import { enableBloom } from '../world/layers.js';
 
 const KIT = ['rugDoormat', 'coatRackStanding', 'benchCushion', 'pottedPlant', 'rugRectangle', 'loungeSofaLong', 'pillow', 'bear',
   'tableCoffee', 'books', 'plantSmall1', 'loungeChair', 'lampRoundFloor', 'bookcaseOpen', 'radio', 'sideTable', 'lampRoundTable',
@@ -18,7 +20,9 @@ import { TEXT } from '../ui/text.js';
 
 // She is home — the entry hall of the dream house: warm oak, lilac walls,
 // plants, her bag on the bench. An extra door is on the side wall with a
-// note taped to it.
+// note taped to it. The hall is built and baked in Blender like Tsuki House
+// (art/blender/rooms.py --room=threshold); its glowing rim and the note are
+// added here. The simple hall (Kenney kit) is only the fallback.
 
 const ROOM = { w: 8, d: 8, h: 3.2 };
 const DOOR_RADIUS = 2;
@@ -36,6 +40,51 @@ let ready = false; // note closed: door pulses
 let leaving = false;
 let t = 0;
 const tmp = new THREE.Vector3();
+
+// the extra door's leaf in the baked hall: recessed in the west wall
+// (centre line x −4.1, leaf 44 mm thick), its opening z −1.35 … −0.25
+const LEAF_X = -4.078;
+const OPENING = { z0: -1.35, z1: -0.25, h: 2.25 };
+
+function buildBaked(r) {
+  group.add(r.root);
+  r.glow.forEach((o) => enableBloom(o, 1.35));
+  solid = [r.colliders];
+  // a faint lavender glow round the door's frame (it pulses once she has
+  // read the note)
+  rimMat = new THREE.MeshBasicMaterial({
+    color: PALETTE.lavender,
+    transparent: true,
+    opacity: 0.35,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const x = -ROOM.w / 2 + 0.006; // on the wall's face, round the lining
+  const { z0, z1, h } = OPENING;
+  const bar = 0.06;
+  for (const [dz, dy, sz, sy] of [
+    [z0 - 0.045, h / 2, bar, h + 0.09],
+    [z1 + 0.045, h / 2, bar, h + 0.09],
+    [(z0 + z1) / 2, h + 0.045, z1 - z0 + 0.15, bar]
+  ]) {
+    const m = P.box(0.004, sy, sz, rimMat);
+    m.position.set(x, dy, dz);
+    m.userData.noCollide = true;
+    group.add(m);
+  }
+  const zc = (z0 + z1) / 2;
+  const note = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.32, 0.4),
+    new THREE.MeshLambertMaterial({ map: assets.get('paper'), color: PALETTE.paper })
+  );
+  note.position.set(LEAF_X + 0.004, 1.35, zc);
+  note.rotation.set(0, Math.PI / 2, 0.06);
+  const tape = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.04), new THREE.MeshBasicMaterial({ color: PALETTE.paper, transparent: true, opacity: 0.6 }));
+  tape.position.set(LEAF_X + 0.006, 1.54, zc);
+  tape.rotation.set(0, Math.PI / 2, -0.1);
+  note.userData.noCollide = tape.userData.noCollide = true;
+  group.add(note, tape);
+}
 
 function build() {
   const { w, d, h } = ROOM;
@@ -190,8 +239,12 @@ export default {
     ready = false;
     leaving = false;
     t = 0;
-    await M.preload(KIT);
-    build();
+    const r = (await baked.preloadRoom('threshold')) && baked.room('threshold');
+    if (r) buildBaked(r);
+    else {
+      await M.preload(KIT);
+      build();
+    }
     world.sky.visible = false;
     world.setAtmosphere('indoor');
     world.setPlayer(new THREE.Vector3(1.4, 1.6, 2.6), 0.35, 0);
