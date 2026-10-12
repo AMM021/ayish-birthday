@@ -99,6 +99,20 @@ function numbered(name) {
   return items;
 }
 
+// A section that may not be there yet (new copy waiting for the owner's
+// approval): its numbered items, or [] when the section is absent.
+function optionalNumbered(name) {
+  const has = sections[name] || Object.keys(sections).some((k) => k.startsWith(name));
+  return has ? numbered(name) : [];
+}
+
+// His beats after the end: numbered beats when the section has them,
+// otherwise its one line.
+function beats(name) {
+  const n = numbered(name);
+  return n.length ? n : [body(name)];
+}
+
 // First non-empty, non-parenthetical body (for single-line sections).
 function body(name) {
   return prose(section(name).filter((l) => !/^\(.*\)$/.test(l.trim())));
@@ -170,7 +184,8 @@ export const TEXT = {
   revealWords: prose(section('FINAL REVEAL — his words')),
   endcard: section('END card').map((l) => l.trim()).filter(Boolean),
   afterEnd: numbered('AFTER END — orb goodbye'),
-  afterEndHim: body('AFTER END — his line'),
+  afterEndHim: beats('AFTER END — his line'),
+  compliments: optionalNumbered('HOUSE — his compliments'),
   lookHint: ui['Look hint'],
   controlsHint: ui['Controls hint'],
   touchNotice: ui['Keyboard-first notice (if touch-only device detected)']

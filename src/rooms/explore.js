@@ -38,6 +38,13 @@ let petals = null;
 let fish = null;
 let phase = 'free'; // goodbye | farewell | him | free
 let greeted = false;
+// his compliments: one each time she comes back to him, none twice until
+// every one has been said (a shuffled bag, for this visit)
+let bag = [];
+const AWAY_FOR = 15; // s away (and at least AWAY_DIST m) before he says another
+const AWAY_DIST = 4;
+let awayT = AWAY_FOR; // seconds she has been away from him (a later visit: he greets her first)
+let speaking = false;
 
 function chairFrame(c) {
   const f = new THREE.Vector3(Math.cos(THREE.MathUtils.degToRad(c.face)), 0, Math.sin(THREE.MathUtils.degToRad(c.face)));
@@ -73,8 +80,30 @@ async function hisLine() {
   if (!him) return;
   await him.play('sit_look', { once: true, fade: 0.3 });
   him.play('sit_look_idle', { fade: 0.2 });
-  await dialogue.say(call, TEXT.afterEndHim, { mode: 'story', speaker: 'him' });
+  for (const line of TEXT.afterEndHim) await dialogue.say(call, line, { mode: 'story', speaker: 'him' });
   him?.play('sit_type', { fade: 0.9 });
+}
+
+function nextCompliment() {
+  if (!bag.length) {
+    bag = TEXT.compliments.map((_, i) => i);
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+  return TEXT.compliments[bag.pop()];
+}
+
+// she came back to him: he looks up and tells her something sweet
+async function compliment() {
+  if (!him || speaking || !TEXT.compliments.length) return;
+  speaking = true;
+  await him.play('sit_look', { once: true, fade: 0.3 });
+  him.play('sit_look_idle', { fade: 0.2 });
+  await dialogue.say(call, nextCompliment(), { mode: 'ambient', speaker: 'him' });
+  him?.play('sit_type', { fade: 0.9 });
+  speaking = false;
 }
 
 async function goodbye() {
@@ -98,6 +127,7 @@ async function goodbye() {
   phase = 'him';
   await hisLine();
   greeted = true;
+  awayT = 0; // (he has just spoken to her)
   if (phase !== 'him') return;
   phase = 'free';
   world.setControls({ move: true, look: true });
@@ -168,12 +198,23 @@ export default {
     if (p.y < 0.9 && ((p.x + 9) / 7.8) ** 2 + ((p.z - 10.5) / 7.0) ** 2 < 1.05) {
       world.setPlayer(new THREE.Vector3(-6.2, STAND_HEIGHT, 19.2), 0, 0);
     }
-    // a later visit: he greets her once when she comes to him
-    if (phase === 'free' && !greeted && him && house.chair) {
+    if (phase === 'free' && him && house.chair) {
       const s = house.chair.pos;
-      if (Math.hypot(p.x - s[0], p.z - s[1]) < NEAR_HIM && Math.abs(p.y - house.chair.y - STAND_HEIGHT) < 1) {
-        greeted = true;
-        hisLine();
+      const d = Math.hypot(p.x - s[0], p.z - s[1]);
+      const near = d < NEAR_HIM && Math.abs(p.y - house.chair.y - STAND_HEIGHT) < 1;
+      if (!TEXT.compliments.length) {
+        // a later visit: he greets her once when she comes to him
+        if (near && !greeted) {
+          greeted = true;
+          hisLine();
+        }
+      } else {
+        // each time she comes back to him (after a while away), a compliment
+        if (d > AWAY_DIST || Math.abs(p.y - house.chair.y - STAND_HEIGHT) >= 1) awayT += dt;
+        if (near && awayT >= AWAY_FOR && !dialogue.isStoryActive()) {
+          awayT = 0;
+          compliment();
+        }
       }
     }
   },
@@ -184,6 +225,9 @@ export default {
 
   exit() {
     phase = 'free';
+    bag = [];
+    awayT = AWAY_FOR;
+    speaking = false;
     him?.dispose();
     him = null;
     call = null;
