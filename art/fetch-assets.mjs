@@ -15,13 +15,18 @@ export const MODELS = [
   'ceramic_vase_01', 'ceramic_vase_03', 'book_encyclopedia_set_01', 'tea_set_01', 'wooden_bowl_01', 'wicker_basket_01',
   'rubber_duck_toy', 'modern_ceiling_lamp_01', 'desk_lamp_arm_01', 'stone_fire_pit', 'wooden_lantern_01', 'planter_box_01',
   'jacaranda_tree', 'island_tree_01', 'island_tree_02', 'tree_small_02', 'shrub_01', 'shrub_02', 'fern_02',
-  'boulder_01', 'rock_moss_set_01', 'grass_medium_01', 'moss_01'
+  'boulder_01', 'rock_moss_set_01', 'grass_medium_01', 'moss_01',
+  // the levels' kit (art/blender/kit.py) and the bouquet
+  'flower_heliophila', 'periwinkle_plant', 'flower_gazania', 'flower_ursinia', 'flower_empodium', 'celandine_01', 'dandelion_01',
+  'dead_tree_trunk_02', 'tree_stump_01', 'dry_branches_medium_01', 'bark_debris_01', 'root_cluster_01',
+  'rock_moss_set_02', 'stone_01', 'namaqualand_stones_01', 'grass_medium_02', 'shrub_03', 'shrub_04', 'island_tree_03',
+  'throw_pillows_01'
 ];
 export const HDRI = 'kloppenheim_06_puresky';
 export const MATERIALS = [
   'WoodFloor051', 'Plaster003', 'Wood092', 'Wood049', 'Wood051', 'Plaster001', 'Concrete044D', 'Concrete034', 'Fabric030', 'Fabric061',
   'Leather037', 'Marble012', 'Travertine009', 'Tiles107', 'Gravel023', 'Gravel043', 'PavingStones146', 'Grass004',
-  'Ground037', 'Rock064', 'Terrazzo013'
+  'Ground037', 'Rock064', 'Terrazzo013', 'Bark007', 'Bark012'
 ];
 
 async function get(url) {
