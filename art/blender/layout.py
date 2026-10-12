@@ -290,7 +290,7 @@ def furnish(M, coll):
     x, z = pol(14.7, 277.5)
     put['studio_coffee'] = ('studio', F.coffee_round(coll, M, 0.95, 'studio_coffee').place(x, z, y1))
     put['studio_tea'] = ('studio', A.piece('tea_set_01', coll, 'studio_tea', height=0.14, kind='decor', solid=False).place(x, z, y1 + 0.38))
-    x, z = pol(13.1, 279.5)
+    x, z = pol(14.9, 271.5)  # (off the way in from the stair, which runs past r 13)
     put['studio_arm'] = ('studio', A.piece('modern_arm_chair_01', coll, 'studio_arm').place(x, z, y1, face_point(x, z, *pol(14.7, 277.5))))
     x, z, f = against_wall(*pol(16.0, 286.5), y1 + 1.5, 286.5, 1.2, 0.0, gap=0.004)
     put['studio_art'] = ('studio', F.wall_art(coll, M, 'studio_art', 1.2, 0.75).place(x, z, y1 + 1.2, f))
