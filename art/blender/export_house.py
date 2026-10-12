@@ -118,9 +118,15 @@ def game_materials(objs):
             w, h = img.size
             px = np.array(img.pixels[:], dtype=np.float32).reshape(-1, 4)
             if mix:
+                # the shader tints in linear light: do the same (the pixels
+                # are sRGB-encoded; a linear tint applied to them directly
+                # darkens every colour, dark tints most)
                 tint = np.array(mix.inputs['B'].default_value[:3], dtype=np.float32)
                 f = mix.inputs['Factor'].default_value
-                px[:, :3] = px[:, :3] * (1 - f + f * tint)
+                c = np.clip(px[:, :3], 0, 1)
+                lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+                lin = lin * (1 - f + f * tint)
+                px[:, :3] = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(np.clip(lin, 0, 1), 1 / 2.4) - 0.055)
             new = bpy.data.images.new(m.name + '_albedo', w, h)
             new.pixels = px.ravel().tolist()
             new.filepath_raw = os.path.join(TEX, m.name + '_albedo.png')
@@ -220,12 +226,33 @@ def lightmap_uv(objs, size):
         lm = me.uv_layers.get('lm') or me.uv_layers.new(name='lm')
         me.uv_layers.active = lm
         me.uv_layers[0].active_render = True
+    # curved walls arrive with their own continuous islands (geo.wrap_lm,
+    # face layer 'lm_preset'); everything else is unwrapped automatically
+    for o in objs:
+        me = o.data
+        flag = me.attributes.get('lm_preset')
+        for p in me.polygons:
+            p.select = not (flag and flag.data[p.index].value)
+        log('lm preset faces', o.name, sum(1 for p in me.polygons if not p.select), 'of', len(me.polygons))
     select(objs)
+    # face select mode: in vertex mode a wall face whose corners are all
+    # shared with selected neighbours would be selected too (and re-cut)
+    bpy.context.tool_settings.mesh_select_mode = (False, False, True)
+    # UV operators act on the mesh selection (else on a UV selection of
+    # their own, and the preset islands would be left out of the packing)
+    bpy.context.tool_settings.use_uv_select_sync = True
     bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.0, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.average_islands_scale()  # one texel density for all islands
     bpy.ops.uv.pack_islands(rotate=True, margin=4.0 / size)
     bpy.ops.object.mode_set(mode='OBJECT')
+    # every lightmap UV inside the atlas (else it would tile the atlas)
+    for o in objs:
+        lm = o.data.uv_layers['lm'].data
+        out = sum(1 for d in lm if not (-1e-4 <= d.uv.x <= 1.0001 and -1e-4 <= d.uv.y <= 1.0001))
+        if out:
+            raise RuntimeError(f'lightmap UVs outside the atlas: {o.name} {out} loops')
 
 
 def bake(objs, img):
@@ -249,6 +276,19 @@ def bake(objs, img):
     select(objs)
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
+    # on the GPU when there is one (OptiX, then CUDA): many times faster
+    try:
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        for kind in ('OPTIX', 'CUDA'):
+            prefs.compute_device_type = kind
+            prefs.get_devices()
+            if any(d.type == kind for d in prefs.devices):
+                for d in prefs.devices:
+                    d.use = d.type == kind
+                sc.cycles.device = 'GPU'
+                break
+    except Exception:
+        pass
     sc.cycles.samples = SAMPLES
     sc.render.bake.use_pass_direct = True
     sc.render.bake.use_pass_indirect = True

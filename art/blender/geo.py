@@ -63,6 +63,61 @@ def wrap_uv(bm, wraps, size=1.0):
                 l[uv].uv = (u / size, l.vert.co.z / size)
 
 
+def wrap_lm(bm, wraps, gap=2.0):
+    """Lightmap UVs ('lm') for the faces of curved walls that face across
+    the curve: laid out along it (u = distance along, v = height), the
+    wall's two sides apart, so each side is one continuous island with no
+    seam on the wall (an automatic unwrap cuts curves into pieces, and the
+    cuts show as lines in the baked light). Marked in the face layer
+    'lm_preset'; everything else is unwrapped automatically later."""
+    if not wraps:
+        return
+    lm = bm.loops.layers.uv.get('lm') or bm.loops.layers.uv.new('lm')
+    flag = bm.faces.layers.int.get('lm_preset') or bm.faces.layers.int.new('lm_preset')
+    bm.faces.ensure_lookup_table()
+    for first, end, curve in wraps:
+        for i in range(first, min(end, len(bm.faces))):
+            f = bm.faces[i]
+            if abs(f.normal.z) > 0.5:
+                continue
+            c = f.calc_center_median()
+            x, z = c.x, -c.y
+            if curve[0] == 'arc':
+                _, cx, cz, r = curve
+                ox, oz = x - cx, z - cz
+            else:
+                pts = curve[1]
+                best = None
+                for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+                    dx, dz = x1 - x0, z1 - z0
+                    L2 = dx * dx + dz * dz or 1e-9
+                    t = max(0.0, min(1.0, ((x - x0) * dx + (z - z0) * dz) / L2))
+                    d = math.hypot(x - (x0 + dx * t), z - (z0 + dz * t))
+                    if best is None or d < best[0]:
+                        best = (d, -dz, dx)
+                ox, oz = best[1], best[2]
+            L = math.hypot(ox, oz) or 1
+            nx, nz = f.normal.x, -f.normal.y
+            across = (nx * ox + nz * oz) / L
+            if abs(across) < 0.8:
+                continue  # a jamb or an end: unwrapped automatically
+            side = 0.0 if across > 0 else 1.0
+            us = []
+            for l in f.loops:
+                vx, vz = l.vert.co.x, -l.vert.co.y
+                if curve[0] == 'arc':
+                    us.append(math.atan2(vz - curve[2], vx - curve[1]) * curve[3])
+                else:
+                    us.append(_along(curve[1], vx, vz))
+            if curve[0] == 'arc':
+                period = 2 * math.pi * curve[3]
+                ref = us[0]
+                us = [u + period * round((ref - u) / period) for u in us]
+            for l, u in zip(f.loops, us):
+                l[lm].uv = (u, l.vert.co.z + side * (40.0 + gap))
+            f[flag] = 1
+
+
 def _along(pts, x, z):
     best, acc, bd = 0.0, 0.0, 1e9
     for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
@@ -128,6 +183,7 @@ class Builder:
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         box_uv(bm, uv)
         wrap_uv(bm, self.wraps, uv)
+        wrap_lm(bm, self.wraps)
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
         bm.free()
