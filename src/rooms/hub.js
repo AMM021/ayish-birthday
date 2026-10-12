@@ -13,6 +13,7 @@ import * as sakura from '../objects/sakura.js';
 import * as bouquet from '../objects/bouquet.js';
 import * as treeObj from '../objects/tree.js';
 import * as kit from '../objects/kit.js';
+import * as nature from '../objects/nature.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
@@ -33,6 +34,7 @@ let portal = null;
 let petals = null;
 let leaving = false;
 let ready = false; // intro + beat 5 done: the portal is open
+let isles = null;
 
 function buildIsland() {
   const solid = [];
@@ -144,19 +146,39 @@ function buildIsland() {
     ...spots.map(([x, z]) => ({ x, z, r: 1.2 })),
     ...Array.from({ length: 12 }, (_, i) => ({ x: 0, z: 10 - i * 2, r: 1.9 })) // the path
   ];
-  kit.scatter(group, {
-    r0: 3, r1: ISLAND_R - 1.6, keepOut, seed: 3,
+  // a belt of blossom trees round the rim (solid trunks), then the garden
+  // thick under and between them; floating isles all round in the distance
+  const rim = nature.grove(group, {
+    r0: 12.4, r1: ISLAND_R - 0.4, seed: 11, spacing: 2.9,
+    keepOut: [{ x: PORTAL_POS.x, z: PORTAL_POS.z, r: 4.8 }, { x: SPAWN.x, z: SPAWN.z, r: 3.2 }, ...spots.map(([x, z]) => ({ x, z, r: 2.4 }))],
     kinds: [
-      { name: 'flowers_pink', count: 16, height: [0.35, 0.5], pad: 0.5 },
-      { name: 'flowers_blush', count: 12, height: [0.32, 0.45], pad: 0.5 },
-      { name: 'flowers_white', count: 8, height: [0.3, 0.42], pad: 0.5 },
-      { name: 'flowers_lav', count: 12, height: [0.45, 0.6], pad: 0.55 },
-      { name: 'grass_tall', count: 24, height: [0.4, 0.6], pad: 0.35 },
-      { name: 'fern', count: 8, height: [0.5, 0.7], pad: 0.7 },
-      { name: 'rock1', count: 4, height: [0.35, 0.55], pad: 0.9 },
-      { name: 'rock0', count: 3, height: [0.3, 0.5], pad: 0.9 }
+      { name: 'sakura_lite', count: 12, height: [3.4, 4.6] },
+      { name: 'sakura', count: 6, height: [3.6, 4.4] },
+      { name: 'sakura_lilac', count: 5, height: [3.2, 4.2] }
     ]
   });
+  for (const t of rim) {
+    const c = physics.solidBox(0.55, 3, 0.55);
+    c.position.set(t.x, 1.5, t.z);
+    group.add(c);
+    solid.push(c);
+  }
+  nature.meadow(group, {
+    r0: 2.2, r1: ISLAND_R - 0.5, seed: 3,
+    keepOut: [...keepOut, ...rim.map((t) => ({ x: t.x, z: t.z, r: 0.5 }))],
+    kinds: [
+      { name: 'grass_tall', count: 560, height: [0.35, 0.65] },
+      { name: 'periwinkle', count: 200, height: [0.12, 0.2], drifts: [10, 2.4] },
+      { name: 'flowers_pink', count: 150, height: [0.34, 0.5], pad: 0.1, drifts: [8, 2.2] },
+      { name: 'flowers_blush', count: 120, height: [0.32, 0.46], pad: 0.1, drifts: [7, 2] },
+      { name: 'flowers_white', count: 90, height: [0.3, 0.42], pad: 0.1, drifts: [6, 1.8] },
+      { name: 'flowers_lav', count: 110, height: [0.42, 0.6], pad: 0.15, drifts: [6, 2.2] },
+      { name: 'fern', count: 70, height: [0.5, 0.75], pad: 0.2 },
+      { name: 'rock1', count: 12, height: [0.3, 0.55], pad: 0.4, spacing: 1.5 },
+      { name: 'rock0', count: 10, height: [0.25, 0.45], pad: 0.4, spacing: 1.5 }
+    ]
+  });
+  isles = nature.isles(group, { rMin: 45, rMax: 100, count: 12, yMin: -6, yMax: -1, seed: 5 });
 
   // the gate framing the portal
   const gate = toriiObj.create();
@@ -213,8 +235,9 @@ export default {
     world.setControls({ move: true, look: true });
     orb.setVisible(true);
     orb.setColor(PALETTE.lavender);
-    orb.follow();
     orb.place();
+    // it leads her along the path to the portal, and waits for her by it
+    orb.guide([SPAWN.clone().setY(0), PORTAL_POS.clone().setY(0)], { stop: 3.2 });
     fragments.show();
     audio.play('hub');
 
@@ -228,6 +251,7 @@ export default {
 
   update(dt) {
     petals.update(dt);
+    isles?.update(dt);
     portal.update(dt);
     if (leaving) return;
     const p = world.camera.position;
@@ -246,5 +270,6 @@ export default {
     world.clearBounds();
     world.disposeGroup('hub');
     group = null;
+    isles = null;
   }
 };

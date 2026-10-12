@@ -81,8 +81,9 @@ export default {
     orb?.setVisible(false);
 
     gate = torii.create({ dim: true });
-    gate.group.position.set(0, 0, -34);
-    gate.group.scale.setScalar(1.6);
+    // far off and low, beneath the digit boxes (never behind the words)
+    gate.group.position.set(0, -17, -50);
+    gate.group.scale.setScalar(2.0);
     group.add(gate.group);
 
     root = document.createElement('div');

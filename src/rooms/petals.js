@@ -13,6 +13,7 @@ import * as portalObj from '../objects/portal.js';
 import * as sakura from '../objects/sakura.js';
 import * as treeObj from '../objects/tree.js';
 import * as kit from '../objects/kit.js';
+import * as nature from '../objects/nature.js';
 import * as assets from '../core/assets.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
@@ -352,6 +353,7 @@ function buildTrail() {
 
   buildTrailObstacles(rnd);
   buildForest(rnd, S, inChannel);
+  buildOuterForest();
   buildShared();
 }
 
@@ -521,6 +523,49 @@ function hangWisteria(c, dir, half, y, rnd) {
 
 // the forest: dense undergrowth at the trail's edges, trees and lanterns
 // behind (instanced: one draw per kind)
+// Beyond the trail's walls the forest goes on: forest floor all round the
+// level and a deep ring of blossom trees, so there is never an edge to see
+// (she cannot get there; the trail's edge colliders stay as they are).
+const OUTER_X = 44;
+const OUTER_Z = HALF_LEN + 26;
+function buildOuterForest() {
+  const fx = FOREST_HALF;
+  const fz = HALF_LEN + 1;
+  const mat = (w, l) => {
+    const t = kit.ground('moss', 1, 3.5);
+    t.repeat.set(w / 3.5, l / 3.5);
+    return new THREE.MeshLambertMaterial({ map: t, color: kit.GRASS_TINT });
+  };
+  for (const [x, z, w, l] of [
+    [-(fx + OUTER_X) / 2, 0, OUTER_X - fx, OUTER_Z * 2], [(fx + OUTER_X) / 2, 0, OUTER_X - fx, OUTER_Z * 2],
+    [0, (fz + OUTER_Z) / 2, fx * 2, OUTER_Z - fz], [0, -(fz + OUTER_Z) / 2, fx * 2, OUTER_Z - fz]
+  ]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), mat(w, l));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, -0.01, z);
+    m.userData.noCollide = true;
+    group.add(m);
+  }
+  const outside = (x, z) => (Math.abs(x) > fx + 0.4 || Math.abs(z) > fz + 0.4) && Math.abs(x) < OUTER_X - 1 && Math.abs(z) < OUTER_Z - 1;
+  const seam = (x, z) => outside(x, z) && Math.abs(x) < fx + 4.5 && Math.abs(z) < fz + 4.5;
+  nature.grove(group, {
+    r0: 0, r1: Math.hypot(OUTER_X, OUTER_Z), accept: outside, seed: 41, spacing: 4.4, sectors: 10, name: 'outer-trees',
+    kinds: [
+      { name: 'sakura_lite', count: 110, height: [5, 7] },
+      { name: 'sakura', count: 24, height: [5, 6.5] },
+      { name: 'sakura_lilac', count: 16, height: [4.6, 6] }
+    ]
+  });
+  nature.meadow(group, {
+    r0: 0, r1: Math.hypot(OUTER_X, OUTER_Z), accept: seam, seed: 43, sectors: 10, name: 'outer-cover',
+    kinds: [
+      { name: 'fern', count: 320, height: [0.8, 1.3] },
+      { name: 'grass_tall', count: 420, height: [0.7, 1.1] },
+      { name: 'flowers_lav', count: 110, height: [0.6, 0.9], drifts: [16, 2.5] }
+    ]
+  });
+}
+
 function buildForest(rnd, S, inChannel) {
   const total = S[S.length - 1].d;
   const at = (d) => S[Math.min(S.length - 1, Math.max(0, Math.round((d / total) * (S.length - 1))))];

@@ -112,6 +112,15 @@ export const ORB_FOLLOW_DIST = 3;
 export const ORB_FOLLOW_DAMP = 0.9;
 export const ORB_BOB_AMP = 0.15;
 export const ORB_BOB_SPEED = 1.4;
+// the orb as a guide (objects/orb.js → guide()): it goes ahead of her along
+// a room's route and waits; past ORB_FAR it comes back to her (until it is
+// within ORB_NEAR), and it comes to her side to talk
+export const ORB_LEAD = 3.4; // m ahead of her along the route
+export const ORB_FAR = 7.5; // m: she has fallen behind, it comes back
+export const ORB_NEAR = 3.2; // m: close enough again, it leads on
+export const ORB_ESCORT = 2.6; // m ahead of where she walks, without a route
+export const ORB_TALK = 2.3; // m in front of her while it talks
+export const ORB_MAX_SPEED = 8.5; // m/s (she runs at about 7)
 export const PORTAL_TRIGGER_RADIUS = 3;
 export const ROOM_BOUNDS_RADIUS = 100;
 export const HINT_DISTANCE = 60;

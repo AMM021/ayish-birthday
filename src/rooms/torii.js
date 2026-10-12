@@ -12,6 +12,7 @@ import * as toriiObj from '../objects/torii.js';
 import * as portalObj from '../objects/portal.js';
 import * as treeObj from '../objects/tree.js';
 import * as kit from '../objects/kit.js';
+import * as nature from '../objects/nature.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
 import { TEXT } from '../ui/text.js';
@@ -70,6 +71,7 @@ function makeRounds() {
 
 const ISLAND_R = 30;
 let solid = [];
+let isles = null;
 
 function build() {
   solid = [];
@@ -112,6 +114,7 @@ function build() {
     gates.push({ gate: g, cool: 0, center: pos.clone().add(new THREE.Vector3(0, 1.6, 0)) });
   }
   // blossom trees behind the arc
+  const arcTrees = [];
   for (let i = 0; i < 10; i++) {
     const a = THREE.MathUtils.degToRad(-110 + i * 24 + (i % 2) * 6);
     const r = 24 + (i % 3) * 1.5;
@@ -119,6 +122,7 @@ function build() {
     t.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r);
     group.add(t);
     solid.push(t.userData.collider);
+    arcTrees.push({ x: t.position.x, z: t.position.z, r: 2.6 });
   }
   const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), ISLAND_R - 1.5);
   group.add(edge);
@@ -140,19 +144,47 @@ function build() {
     ...gates.map((g) => ({ x: g.center.x, z: g.center.z, r: 3.4 })),
     { x: 0, z: 4, r: 3 }, { x: 0, z: 10, r: 3.5 }, { x: -3.2, z: 6.5, r: 0.8 }, { x: 3.2, z: 6.5, r: 0.8 }
   ];
-  kit.scatter(group, {
-    r0: 2, r1: ISLAND_R - 2.5, keepOut, seed: 7,
+  // a ring of blossom trees round the field (solid trunks; the gates, her
+  // start and the way to the portal stay open), then the meadow thick
+  // everywhere: low enough between the gates that every gate stays in view
+  const ring = nature.grove(group, {
+    r0: 20.5, r1: ISLAND_R - 2, seed: 17, spacing: 3.1,
+    keepOut: [...gates.map((g) => ({ x: g.center.x, z: g.center.z, r: 4.5 })), { x: 0, z: 10, r: 5 }, { x: 0, z: 16, r: 6 }, ...arcTrees],
     kinds: [
-      { name: 'flowers_pink', count: 34, height: [0.35, 0.5], pad: 0.5 },
-      { name: 'flowers_blush', count: 26, height: [0.32, 0.45], pad: 0.5 },
-      { name: 'flowers_white', count: 18, height: [0.3, 0.42], pad: 0.5 },
-      { name: 'flowers_lav', count: 26, height: [0.45, 0.6], pad: 0.55 },
-      { name: 'grass_tall', count: 50, height: [0.4, 0.6], pad: 0.35 },
-      { name: 'fern', count: 14, height: [0.5, 0.7], pad: 0.7 },
-      { name: 'rock1', count: 6, height: [0.35, 0.55], pad: 0.9 },
-      { name: 'rock0', count: 5, height: [0.3, 0.5], pad: 0.9 }
+      { name: 'sakura_lite', count: 26, height: [3.6, 5] },
+      { name: 'sakura', count: 10, height: [3.8, 4.8] },
+      { name: 'sakura_lilac', count: 8, height: [3.4, 4.6] }
     ]
   });
+  for (const t of ring) {
+    const c = physics.solidBox(0.55, 3, 0.55);
+    c.position.set(t.x, 1.5, t.z);
+    group.add(c);
+    solid.push(c);
+  }
+  const trunks = ring.map((t) => ({ x: t.x, z: t.z, r: 0.5 }));
+  nature.meadow(group, {
+    r0: 2, r1: ISLAND_R - 1.2, seed: 7, keepOut: [...keepOut.map((o) => ({ ...o, r: o.r * 0.8 })), ...trunks],
+    kinds: [
+      { name: 'grass_tall', count: 1500, height: [0.3, 0.65] },
+      { name: 'periwinkle', count: 420, height: [0.12, 0.2], drifts: [18, 3] },
+      { name: 'flowers_pink', count: 300, height: [0.32, 0.48], drifts: [14, 2.6] },
+      { name: 'flowers_blush', count: 240, height: [0.3, 0.44], drifts: [12, 2.4] },
+      { name: 'flowers_white', count: 160, height: [0.28, 0.4], drifts: [10, 2.2] },
+      { name: 'flowers_lav', count: 200, height: [0.4, 0.58], drifts: [10, 2.6] },
+      { name: 'rock1', count: 16, height: [0.3, 0.55], pad: 0.4, spacing: 2 },
+      { name: 'rock0', count: 14, height: [0.25, 0.45], pad: 0.4, spacing: 2 }
+    ]
+  });
+  // ferns and taller cover only under the trees, out of the field
+  nature.meadow(group, {
+    r0: 19.5, r1: ISLAND_R - 1.2, seed: 8, keepOut: [...trunks, { x: 0, z: 10, r: 4 }],
+    kinds: [
+      { name: 'fern', count: 160, height: [0.6, 0.95] },
+      { name: 'flowers_lav', count: 80, height: [0.5, 0.7] }
+    ]
+  });
+  isles = nature.isles(group, { rMin: 55, rMax: 115, count: 14, yMin: -6, yMax: -1, seed: 9 });
 
   portal = portalObj.create();
   portal.group.position.set(0, 1.9, 10);
@@ -298,6 +330,7 @@ function complete() {
   audio.chimeUp();
   dialogue.say(orb.anchor, TEXT.torii.complete, { mode: 'story' });
   fragments.grant('torii');
+  orb.leadTo(portal.group.position.clone().setY(0), { stop: 2.6 });
 }
 
 async function leave() {
@@ -349,6 +382,7 @@ export default {
       g.cool = Math.max(0, g.cool - dt);
     });
     portal.update(dt);
+    isles?.update(dt);
     if (leaving) return;
     const p = world.camera.position;
     const prev = world.player.prev;
@@ -408,6 +442,7 @@ export default {
     view = null;
     world.clearBounds();
     world.disposeGroup('torii');
+    isles = null;
     gates = [];
     group = null;
   }

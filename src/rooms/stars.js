@@ -11,6 +11,7 @@ import * as dialogue from '../ui/dialogue.js';
 import * as portalObj from '../objects/portal.js';
 import { enableBloom } from '../world/layers.js';
 import * as kit from '../objects/kit.js';
+import * as nature from '../objects/nature.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
 import * as prompts from '../ui/prompts.js';
@@ -72,6 +73,7 @@ let splash = false;
 let beads = []; // per trail piece: [{ mesh, t }]
 let glow = null; // the warm light above the last star she lit
 let lastLit = -1;
+let floaters = null; // paper lanterns drifting on the lake: { mesh, data }
 const seg = new THREE.Vector3();
 const toC = new THREE.Vector3();
 
@@ -402,12 +404,103 @@ function build() {
   sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
   const sparkle = new THREE.Points(sg, new THREE.PointsMaterial({ map: haloTex, color: PALETTE.lavender, size: 0.35, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }));
   group.add(sparkle);
+  buildShore();
 
   portal = portalObj.create();
   portal.group.position.copy(HEART_CENTER).setY(CENTER_TOP + 1.9);
   portal.group.lookAt(PLATS[8].x, CENTER_TOP + 1.9, PLATS[8].z);
   portal.group.visible = false;
   group.add(portal.group);
+}
+
+// The lake's shore, beyond where she can go: a pebble beach with reeds and
+// lavender at the water, a deep ring of twilight blossom trees behind it,
+// stone lanterns glowing all round, and paper lanterns afloat on the water.
+const SHORE_R = 75;
+function buildShore() {
+  const im = kit.islandMaterials(SHORE_R);
+  if (!im) return;
+  const bank = new THREE.Mesh(new THREE.RingGeometry(LAKE_R - 0.6, SHORE_R, 96, 1), im[1]);
+  bank.rotation.x = -Math.PI / 2;
+  bank.position.y = 0.12;
+  const pebbles = kit.ground('gravel', 1, 1.2);
+  if (pebbles) {
+    pebbles.repeat.set(60, 2);
+    const beach = new THREE.Mesh(new THREE.RingGeometry(LAKE_R - 0.6, LAKE_R + 2.4, 96, 1), new THREE.MeshLambertMaterial({ map: pebbles, color: PALETTE.stoneLilac }));
+    beach.rotation.x = -Math.PI / 2;
+    beach.position.y = 0.14;
+    beach.userData.noCollide = true;
+    group.add(beach);
+  }
+  bank.userData.noCollide = true;
+  group.add(bank);
+  nature.meadow(group, {
+    r0: LAKE_R + 1.4, r1: LAKE_R + 7, y: 0.12, seed: 31, sectors: 10,
+    kinds: [
+      { name: 'grass_tall', count: 900, height: [0.6, 1.0] },
+      { name: 'flowers_lav', count: 260, height: [0.55, 0.8], drifts: [22, 2.4] },
+      { name: 'flowers_white', count: 160, height: [0.35, 0.5], drifts: [16, 2] },
+      { name: 'fern', count: 160, height: [0.7, 1.1] },
+      { name: 'rock0', count: 40, height: [0.3, 0.7], spacing: 2 },
+      { name: 'boulder', count: 12, height: [0.8, 1.6], spacing: 9, sink: 0.1 }
+    ]
+  });
+  nature.grove(group, {
+    r0: LAKE_R + 5, r1: SHORE_R - 6, y: 0.12, seed: 33, spacing: 4.2, sectors: 10,
+    kinds: [
+      { name: 'sakura_lilac', count: 50, height: [4.5, 6.5] },
+      { name: 'sakura_lite', count: 80, height: [4.5, 6.5] },
+      { name: 'sakura', count: 30, height: [4.5, 6] }
+    ]
+  });
+  // stone lanterns round the shore, their windows lit
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + 0.1;
+    const t = kit.get('toro', { height: 1.9, rotY: a });
+    if (!t) break;
+    t.position.set(Math.cos(a) * (LAKE_R + 3.4), 0.12, Math.sin(a) * (LAKE_R + 3.4));
+    t.traverse((o) => { o.userData.noCollide = true; });
+    group.add(t);
+  }
+  // paper lanterns afloat (clear of the heart's platforms and the paths)
+  const N = 46;
+  const geo = new THREE.CylinderGeometry(0.16, 0.2, 0.34, 10);
+  const mat = new THREE.MeshBasicMaterial({ color: PALETTE.gold });
+  const mesh = new THREE.InstancedMesh(geo, mat, N);
+  enableBloom(mesh, 1.6);
+  const data = [];
+  for (let tries = 0; data.length < N && tries < 2000; tries++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 6 + Math.sqrt(Math.random()) * (LAKE_R - 9);
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (PLATS.some((p) => Math.hypot(p.x - x, p.z - z) < 4) || Math.hypot(SPAWN_ISLAND.x - x, SPAWN_ISLAND.z - z) < 5 || Math.hypot(HEART_CENTER.x - x, HEART_CENTER.z - z) < 6) continue;
+    data.push({ x, z, ph: Math.random() * 6, drift: (Math.random() - 0.5) * 0.12 });
+  }
+  mesh.count = data.length;
+  mesh.userData.noCollide = true;
+  group.add(mesh);
+  floaters = { mesh, data };
+  updateFloaters(0);
+}
+
+const fm4 = new THREE.Matrix4();
+function updateFloaters(dt) {
+  if (!floaters) return;
+  for (let i = 0; i < floaters.data.length; i++) {
+    const d = floaters.data[i];
+    if (!REDUCED_MOTION) {
+      d.ph += dt;
+      // a slow circling drift round the lake
+      const a = Math.atan2(d.z, d.x) + d.drift * dt * 0.1;
+      const r = Math.hypot(d.x, d.z);
+      d.x = Math.cos(a) * r;
+      d.z = Math.sin(a) * r;
+    }
+    fm4.makeTranslation(d.x, 0.17 + Math.sin(d.ph * 0.9) * 0.03, d.z);
+    floaters.mesh.setMatrixAt(i, fm4);
+  }
+  floaters.mesh.instanceMatrix.needsUpdate = true;
 }
 
 function solidNow() {
@@ -525,6 +618,7 @@ function complete() {
   audio.chimeUp();
   dialogue.say(orb.anchor, TEXT.stars.complete, { mode: 'story' });
   fragments.grant('stars');
+  orb.leadTo(portal.group.position.clone().setY(CENTER_TOP), { stop: 2.6 });
   // rise gently above the lake so she sees the whole heart, then come back
   world.setControls({ move: false });
   const up = new THREE.Vector3(HEART_CENTER.x, 24, HEART_CENTER.z + 15);
@@ -608,6 +702,7 @@ export default {
   update(dt) {
     t += dt;
     portal.update(dt);
+    updateFloaters(dt);
     updatePaths(dt);
     if (rise) updateRise(REDUCED_MOTION ? RISE_END : dt);
     // lit stars rise out of her way; the warm light follows the last one
@@ -696,6 +791,7 @@ export default {
   exit() {
     world.clearBounds();
     world.disposeGroup('stars');
+    floaters = null;
     stars = [];
     segments = [];
     paths = [];

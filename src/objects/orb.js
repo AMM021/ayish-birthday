@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
-  PALETTE, ORB_FOLLOW_DIST, ORB_FOLLOW_DAMP, ORB_BOB_AMP, ORB_BOB_SPEED, REDUCED_MOTION
+  PALETTE, ORB_FOLLOW_DIST, ORB_BOB_AMP, ORB_BOB_SPEED, REDUCED_MOTION,
+  ORB_LEAD, ORB_FAR, ORB_NEAR, ORB_ESCORT, ORB_TALK, ORB_MAX_SPEED
 } from '../core/config.js';
 import { enableBloom } from '../world/layers.js';
 import { camera } from '../world/world.js';
@@ -17,6 +18,10 @@ const off = new THREE.Vector3();
 const toCam = new THREE.Vector3();
 const tangent = new THREE.Vector3();
 const side = new THREE.Vector3();
+const her = new THREE.Vector3();
+const flat = new THREE.Vector3();
+const goal = new THREE.Vector3();
+const acc = new THREE.Vector3();
 
 export function create() {
   const root = new THREE.Group();
@@ -90,8 +95,113 @@ export function create() {
   const history = Array.from({ length: TRAIL }, () => new THREE.Vector3());
   const trailColor = new THREE.Color(PALETTE.lavender);
 
+  // guide mode: a route (ground points to the goal, cumulative lengths), the
+  // way she is walking (smoothed), and whether it has gone back for her
+  const g = {
+    route: null, lens: null, total: 0, height: 1.5, lead: ORB_LEAD, stop: 2.2,
+    heading: new THREE.Vector3(0, 0, -1), lastHer: new THREE.Vector3(), haveLast: false,
+    returning: false, talkSpot: null, rest: null, vel: new THREE.Vector3(), waitT: 0,
+    prevGoal: new THREE.Vector3(), goalVel: new THREE.Vector3(), haveGoal: false
+  };
+
+  function projectOnRoute(p) {
+    // arc length of the point on the route nearest p (on the ground plane)
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < g.route.length - 1; i++) {
+      const a = g.route[i], b = g.route[i + 1];
+      const abx = b.x - a.x, abz = b.z - a.z;
+      const len2 = abx * abx + abz * abz || 1e-6;
+      const k = Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.z - a.z) * abz) / len2));
+      const x = a.x + abx * k, z = a.z + abz * k;
+      const d = (p.x - x) ** 2 + (p.z - z) ** 2;
+      if (d < bd) { bd = d; best = g.lens[i] + Math.sqrt(len2) * k; }
+    }
+    return best;
+  }
+
+  function pointOnRoute(s, out) {
+    s = Math.max(0, Math.min(g.total, s));
+    for (let i = 0; i < g.route.length - 1; i++) {
+      const l = g.lens[i + 1] - g.lens[i];
+      if (s <= g.lens[i + 1] || i === g.route.length - 2) {
+        return out.copy(g.route[i]).lerp(g.route[i + 1], l > 1e-6 ? (s - g.lens[i]) / l : 1);
+      }
+    }
+    return out.copy(g.route[g.route.length - 1]);
+  }
+
+  // where the guide wants to be this frame
+  function guideTarget(dt, out) {
+    her.copy(camera.position);
+    // the way she is walking (not the way she is looking)
+    if (g.haveLast && dt > 0) {
+      flat.subVectors(her, g.lastHer).setY(0);
+      const v = flat.length() / dt;
+      if (v > 0.6) g.heading.lerp(flat.normalize(), 1 - Math.pow(0.04, dt)).normalize();
+    }
+    g.lastHer.copy(her);
+    g.haveLast = true;
+    flat.subVectors(state.base, her).setY(0);
+    const dist = flat.length();
+    // it talks: to a spot in front of her, re-picked only when it has left
+    // her view (so it does not swing about each time she looks around)
+    if (dialogue.isStoryActive()) {
+      camera.getWorldDirection(tmp).setY(0).normalize();
+      const spotOk = g.talkSpot && (() => {
+        flat.subVectors(g.talkSpot, her).setY(0);
+        const d = flat.length();
+        return d > 1.2 && d < ORB_TALK + 1.5 && flat.normalize().dot(tmp) > 0.8;
+      })();
+      if (!spotOk) {
+        off.set(-tmp.z, 0, tmp.x); // her right
+        g.talkSpot = (g.talkSpot || new THREE.Vector3()).copy(her).addScaledVector(tmp, ORB_TALK).addScaledVector(off, 0.65);
+        g.talkSpot.y = her.y - 0.1;
+      }
+      g.rest = null;
+      return out.copy(g.talkSpot);
+    }
+    g.talkSpot = null;
+    // she has fallen behind: it comes back for her
+    if (dist > ORB_FAR) g.returning = true;
+    else if (dist < ORB_NEAR) g.returning = false;
+    if (g.returning) {
+      flat.normalize();
+      g.rest = null;
+      return out.copy(her).addScaledVector(flat, 2.4).setY(her.y - 0.1);
+    }
+    if (g.route) {
+      const sHer = projectOnRoute(her);
+      const s = Math.min(g.total - g.stop, sHer + g.lead * (state.hint ? 0.7 : 1));
+      pointOnRoute(Math.max(0, s), out);
+      out.y = Math.max(out.y + g.height, her.y - 0.2);
+      // never further from her than she can follow (off the route, it waits
+      // toward the way on, where she can see it)
+      flat.subVectors(out, her).setY(0);
+      const reach = ORB_FAR - 2.5;
+      if (flat.length() > reach) out.set(her.x, out.y, her.z).addScaledVector(flat.setLength(reach), 1);
+      flat.subVectors(state.base, her).setY(0);
+      // it waits: now and then it bobs back toward her, as if to say "this way"
+      const waiting = s >= g.total - g.stop - 0.05 || dist > g.lead + 0.6;
+      g.waitT = waiting ? g.waitT + dt : 0;
+      if (waiting && g.waitT > 3) {
+        const k = Math.max(0, Math.sin((g.waitT - 3) * 1.6));
+        flat.normalize();
+        out.addScaledVector(flat, -0.6 * k);
+        if (Math.abs((g.waitT - 3) % 4) < dt) api.pulse();
+      }
+      return out;
+    }
+    // no route: keep her company a little ahead of where she walks; stay put
+    // while she stands still, unless she has drifted off from it
+    off.set(-g.heading.z, 0, g.heading.x);
+    const want = goal.copy(her).addScaledVector(g.heading, state.hint ? 1.8 : ORB_ESCORT).addScaledVector(off, 0.8);
+    want.y = her.y - 0.1;
+    if (!g.rest || g.rest.distanceTo(want) > 1.6 || dist > ORB_ESCORT + 2.2) g.rest = (g.rest || new THREE.Vector3()).copy(want);
+    return out.copy(g.rest);
+  }
+
   const state = {
-    mode: 'follow', // follow | hold | goto
+    mode: 'follow', // guide | hold | goto ('follow' is the guide with no route)
     target: new THREE.Vector3(),
     speed: 4,
     t: 0,
@@ -130,10 +240,47 @@ export function create() {
       if (pos) state.base.copy(pos);
       else followTarget(state.base);
       body.position.copy(state.base);
+      g.vel.set(0, 0, 0);
+      g.goalVel.set(0, 0, 0);
+      g.haveGoal = false;
+      g.rest = null;
       resetTrail();
     },
+    // A free guide: with a route (ground points to a goal) it goes ahead of
+    // her along it and waits for her there; without one it keeps her
+    // company. Either way it comes back if she falls behind, and comes to
+    // her to talk. opts: { lead, stop (m short of the goal), height }
+    guide(route = null, opts = {}) {
+      state.mode = 'guide';
+      g.route = route && route.length > 1 ? route.map((p) => p.clone()) : null;
+      g.lens = null;
+      g.total = 0;
+      if (g.route) {
+        g.lens = [0];
+        for (let i = 1; i < g.route.length; i++) g.lens.push(g.lens[i - 1] + Math.hypot(g.route[i].x - g.route[i - 1].x, g.route[i].z - g.route[i - 1].z));
+        g.total = g.lens[g.lens.length - 1];
+      }
+      g.lead = opts.lead ?? ORB_LEAD;
+      g.stop = opts.stop ?? 2.2;
+      g.height = opts.height ?? 1.5;
+      g.returning = false;
+      g.rest = null;
+      g.haveLast = false;
+      g.waitT = 0;
+      g.vel.set(0, 0, 0);
+      g.goalVel.set(0, 0, 0);
+      g.haveGoal = false;
+      camera.getWorldDirection(g.heading).setY(0);
+      if (g.heading.lengthSq() < 1e-6) g.heading.set(0, 0, -1);
+      g.heading.normalize();
+    },
+    // Lead her from where she is now straight to a goal (ground point).
+    leadTo(goalPos, opts) {
+      api.guide([tmp.copy(camera.position).setY(goalPos.y), goalPos], opts);
+    },
+    // (the guide without a route)
     follow() {
-      state.mode = 'follow';
+      api.guide(null);
     },
     hold(pos) {
       state.mode = 'hold';
@@ -167,9 +314,19 @@ export function create() {
     },
     update(dt) {
       state.t += dt;
-      if (state.mode === 'follow') {
-        followTarget(tmp);
-        state.base.lerp(tmp, 1 - Math.pow(ORB_FOLLOW_DAMP, dt * 60));
+      if (state.mode === 'guide' || state.mode === 'follow') {
+        // a soft spring toward where it wants to be, never faster than she runs
+        guideTarget(dt, goal);
+        // (tracks the target's own speed too, so it keeps its lead as she walks)
+        if (g.haveGoal && dt > 0) g.goalVel.lerp(tmp.subVectors(goal, g.prevGoal).divideScalar(dt), 1 - Math.pow(0.02, dt));
+        g.prevGoal.copy(goal);
+        g.haveGoal = true;
+        if (g.goalVel.length() > ORB_MAX_SPEED) g.goalVel.setLength(ORB_MAX_SPEED);
+        const w = 2.6;
+        acc.subVectors(goal, state.base).multiplyScalar(w * w).addScaledVector(tmp.subVectors(g.goalVel, g.vel), 2 * w);
+        g.vel.addScaledVector(acc, Math.min(dt, 0.05));
+        if (g.vel.length() > ORB_MAX_SPEED) g.vel.setLength(ORB_MAX_SPEED);
+        state.base.addScaledVector(g.vel, Math.min(dt, 0.05));
       } else if (state.mode === 'goto') {
         tmp.subVectors(state.target, state.base);
         const d = tmp.length();

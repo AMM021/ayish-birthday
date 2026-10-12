@@ -15,6 +15,7 @@ import * as portalObj from '../objects/portal.js';
 import * as sakura from '../objects/sakura.js';
 import * as treeObj from '../objects/tree.js';
 import * as kit from '../objects/kit.js';
+import * as nature from '../objects/nature.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
@@ -41,6 +42,9 @@ let flowers = null; // { heads, stems, data }
 let trees = [];
 let cottage = null;
 let screenMat = null;
+let isles = null;
+let treeSolid = []; // the trees' trunks: solid only once the garden is real
+let ghosts = []; // the ghost materials the trees wear until then
 const challenge = { done: false, progress: 0, total: 4 };
 let phase = 'intro'; // intro | walk | editing | blooming | done
 let bloomT = -1;
@@ -51,8 +55,49 @@ let groundFrom = new THREE.Color(PALETTE.lilacMist);
 let groundTo = new THREE.Color(PALETTE.meadow);
 let groundMat = null; // the island's top (it blooms from the void's lilac to grass)
 
+// The ghost of a tree: each of its materials swapped for a see-through
+// lavender copy (keeping the leaf cut-outs). → false for the simple trees.
+function ghostTree(tr) {
+  const cache = new Map();
+  let any = false;
+  tr.traverse((o) => {
+    if (!o.isMesh || !o.visible) return;
+    const m = o.material;
+    if (!cache.has(m)) {
+      const gm = m.clone();
+      gm.color = new THREE.Color(PALETTE.lavender);
+      gm.transparent = true;
+      gm.opacity = 0.3;
+      gm.depthWrite = false;
+      if (gm.emissive) {
+        gm.emissive.set(PALETTE.lavender);
+        gm.emissiveIntensity = 0.5;
+      }
+      cache.set(m, gm);
+      ghosts.push(gm);
+    }
+    o.userData.realMaterial = m;
+    o.material = cache.get(m);
+    any = true;
+  });
+  tr.userData.ghost = any;
+  return any;
+}
+
+function makeReal(tr) {
+  tr.userData.ghost = false;
+  tr.traverse((o) => {
+    if (o.userData.realMaterial) {
+      o.material = o.userData.realMaterial;
+      delete o.userData.realMaterial;
+    }
+  });
+}
+
 function build() {
   solid = [];
+  treeSolid = [];
+  ghosts = [];
   const im = kit.islandMaterials(ISLAND_R);
   if (im) {
     // grass under a lilac veil, until the garden blooms
@@ -86,6 +131,46 @@ function build() {
   top.position.set(DESK.x, 0.93, DESK.z);
   group.add(desk, top);
   solid.push(desk);
+  // before the code runs: a paved way from where she arrives to the desk, a
+  // round terrace under it, mossy boulders resting on the veiled grass
+  const paving = kit.ground('path', 1, 1.6);
+  if (paving) {
+    const way = paving.clone();
+    way.repeat.set(2.4 / 1.6, 12 / 1.6);
+    way.needsUpdate = true;
+    const walk = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 12), new THREE.MeshLambertMaterial({ map: way, color: PALETTE.stoneLilac }));
+    walk.rotation.x = -Math.PI / 2;
+    walk.position.set(0, 0.012, 4.6);
+    const ter = paving.clone();
+    ter.repeat.set(5.6 / 1.6, 5.6 / 1.6);
+    ter.needsUpdate = true;
+    const terrace = new THREE.Mesh(new THREE.CircleGeometry(2.8, 48), new THREE.MeshLambertMaterial({ map: ter, color: PALETTE.stoneLilac }));
+    terrace.rotation.x = -Math.PI / 2;
+    terrace.position.set(DESK.x, 0.014, DESK.z);
+    walk.userData.noCollide = terrace.userData.noCollide = true;
+    group.add(walk, terrace);
+  }
+  nature.meadow(group, {
+    r0: 6, r1: ISLAND_R - 2.5, seed: 21,
+    keepOut: [{ x: DESK.x, z: DESK.z, r: 5 }, { x: 0, z: 4, r: 4.5 }, { x: 0, z: 10, r: 3 }, { x: 0, z: -13, r: 4 }],
+    kinds: [
+      { name: 'boulder', count: 7, height: [0.8, 1.5], spacing: 7, sink: 0.08 },
+      { name: 'rock1', count: 14, height: [0.3, 0.6], spacing: 3 },
+      { name: 'rock0', count: 10, height: [0.25, 0.5], spacing: 3 }
+    ]
+  });
+  isles = nature.isles(group, { rMin: 50, rMax: 110, count: 12, yMin: -6, yMax: -1, seed: 13 });
+  // stone lanterns along the way in (unlit, like everything here, until the code runs)
+  for (const [x, z] of WAY_LANTERNS) {
+    const t = kit.get('toro', { height: 1.6, rotY: Math.PI / 4 });
+    if (!t) break;
+    t.position.set(x, 0, z);
+    group.add(t);
+    const post = physics.solidBox(0.45, 1.7, 0.45);
+    post.position.set(x, 0.85, z);
+    group.add(post);
+    solid.push(post);
+  }
   const shell = new THREE.MeshStandardMaterial({ color: PALETTE.lavender, roughness: 0.45, metalness: 0.2 });
   const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.025, 0.34), shell);
   base.position.set(DESK.x, 0.985, DESK.z + 0.05);
@@ -111,21 +196,23 @@ function build() {
   });
 
   // the garden, waiting to grow (hidden until `npm run dev`)
-  buildFlowers();
   trees = [];
-  const spots = 16;
+  const spots = 34;
   for (let i = 0; i < spots; i++) {
-    const a = (i / spots) * Math.PI * 2 + 0.2;
-    const r = 13 + (i % 3) * 3.5;
+    const a = (i / spots) * Math.PI * 2 + 0.2 + (i % 2) * 0.06;
+    const r = 11 + (i % 4) * 3.6;
     const tr = treeObj.create({ height: 3 + (i % 4) * 0.5, tint: i % 3 === 1 ? 'lavender' : 'softPink', seed: 0.07 + i * 0.061 });
     tr.position.set(Math.cos(a) * r, 0, Math.sin(a) * r + 2);
     tr.userData.baseScale = tr.scale.x; // (a kit tree's scale is its size)
-    tr.scale.setScalar(0.001);
     tr.userData.delay = 0.4 + (r / ISLAND_R) * 1.6;
+    // until the code runs, the garden is there only as a ghost of itself: a
+    // faint lavender silhouette she can walk through
+    if (!ghostTree(tr)) tr.scale.setScalar(0.001);
     group.add(tr);
     trees.push(tr);
-    solid.push(tr.userData.collider);
+    treeSolid.push(tr.userData.collider);
   }
+  buildFlowers();
   cottage = buildCottage();
   cottage.position.set(0, -20, -52);
   cottage.visible = false;
@@ -146,29 +233,43 @@ function build() {
 
 // The garden's flowers: real clumps (cosmos and lavender, from the kit),
 // instanced; each grows in as the bloom reaches it.
-const FLOWER_KINDS = [['flowers_pink', 0.42], ['flowers_blush', 0.4], ['flowers_white', 0.36], ['flowers_lav', 0.5]];
-const PER_KIND = 34;
+// [kind, height (m), count, nearest to the desk (m)]
+const FLOWER_KINDS = [
+  ['grass_tall', 0.5, 1000, 3], ['periwinkle', 0.16, 300, 3], ['flowers_pink', 0.42, 220, 3], ['flowers_blush', 0.4, 180, 3],
+  ['flowers_white', 0.36, 130, 3], ['flowers_lav', 0.5, 170, 4], ['fern', 0.75, 120, 9]
+];
+const FLOWER_SECTORS = 6; // each kind in sectors round the desk (frustum culling)
+const WAY_LANTERNS = [[-2.1, 7.5], [2.1, 7.5], [-2.1, 2.5], [2.1, 2.5]]; // stone lanterns along the way in
 function buildFlowers() {
   const data = [];
   const sets = [];
-  for (const [name, h] of FLOWER_KINDS) {
-    const set = kit.instanced(name, PER_KIND);
-    if (!set) continue;
-    sets.push(set);
-    for (let i = 0; i < PER_KIND; i++) {
+  const trunkAt = [...trees.map((t) => t.position), ...WAY_LANTERNS.map(([x, z]) => ({ x, z }))];
+  for (const [name, h, count, near] of FLOWER_KINDS) {
+    if (!kit.has(name)) continue;
+    const native = kit.size(name).y || 0.5;
+    const spots = Array.from({ length: FLOWER_SECTORS }, () => []);
+    for (let i = 0; i < count; i++) {
       let x;
       let z;
+      let tries = 0;
       do {
         const a = Math.random() * Math.PI * 2;
-        const r = 3 + Math.sqrt(Math.random()) * (ISLAND_R - 5);
+        const r = 3 + Math.sqrt(Math.random()) * (ISLAND_R - 4);
         x = Math.cos(a) * r;
         z = Math.sin(a) * r;
-      } while (Math.hypot(x - DESK.x, z - DESK.z) < 3 || (Math.abs(x) < 1.6 && z > -14 && z < 12));
-      data.push({ set, i, x, z, rot: Math.random() * Math.PI * 2, s: (h * (0.8 + Math.random() * 0.4)) / 0.5,
+      } while (++tries < 20 && (Math.hypot(x - DESK.x, z - DESK.z) < near || (Math.abs(x) < 1.6 && z > -14 && z < 12) || trunkAt.some((p) => Math.hypot(x - p.x, z - p.z) < 0.5)));
+      const sector = Math.min(FLOWER_SECTORS - 1, Math.floor(((Math.atan2(z - DESK.z, x - DESK.x) + Math.PI) / (Math.PI * 2)) * FLOWER_SECTORS));
+      spots[sector].push({ x, z, rot: Math.random() * Math.PI * 2, s: (h * (0.8 + Math.random() * 0.4)) / native,
         delay: (Math.hypot(x, z - DESK.z) / ISLAND_R) * 2.2 + Math.random() * 0.4 });
     }
-    set.group.userData.noCollide = true;
-    group.add(set.group);
+    for (const list of spots) {
+      if (!list.length) continue;
+      const set = kit.instanced(name, list.length);
+      sets.push(set);
+      list.forEach((f, i) => data.push({ ...f, set, i }));
+      set.group.userData.noCollide = true;
+      group.add(set.group);
+    }
   }
   if (!sets.length) return buildFlowersSimple();
   flowers = { sets, data, kit: true };
@@ -335,7 +436,14 @@ function updateBloom(dt) {
   writeFlowers(bloomT * 1.4);
   for (const tr of trees) {
     const tk = THREE.MathUtils.clamp((bloomT - tr.userData.delay) / 1.2, 0, 1);
-    tr.scale.setScalar(Math.max(0.001, (tr.userData.baseScale || 1) * (1 - Math.pow(1 - tk, 3))));
+    const base = tr.userData.baseScale || 1;
+    if (tr.userData.ghost !== undefined) {
+      // the ghost turns real as the bloom reaches it, with a little pop
+      if (tk > 0 && tr.userData.ghost) makeReal(tr);
+      tr.scale.setScalar(base * (tk > 0 ? 1 + Math.sin(Math.min(1, tk) * Math.PI) * 0.08 : 1));
+    } else {
+      tr.scale.setScalar(Math.max(0.001, base * (1 - Math.pow(1 - tk, 3))));
+    }
   }
   cottage.visible = true;
   cottage.position.y = -20 + 20 * (1 - Math.pow(1 - THREE.MathUtils.clamp((bloomT - 1.2) / 3.2, 0, 1), 3));
@@ -348,12 +456,15 @@ function updateBloom(dt) {
 
 function complete() {
   challenge.done = true;
+  solid.push(...treeSolid);
   world.setColliders(solid); // the grown trees are solid now
+  ghosts.forEach((m) => m.dispose());
+  ghosts = [];
   portal.group.visible = true;
   portal.enable();
   dialogue.say(orb.anchor, TEXT.compile.complete, { mode: 'story' });
   fragments.grant('compile');
-  orb.follow();
+  orb.leadTo(portal.group.position.clone().setY(0), { stop: 2.6 });
 }
 
 async function leave() {
@@ -389,8 +500,8 @@ export default {
     world.setControls({ move: true, look: true });
     orb.setVisible(true);
     orb.setColor(PALETTE.lavender);
-    orb.follow();
     orb.place();
+    orb.guide([SPAWN.clone().setY(0), DESK.clone()], { stop: 2.4 }); // the desk with his broken code
     fragments.show();
     audio.play('challenge');
     dialogue.say(orb.anchor, TEXT.compile.intro, { mode: 'story' }).then(() => {
@@ -401,6 +512,7 @@ export default {
   update(dt) {
     lanterns.forEach((l) => l.update(dt));
     petals.update(dt);
+    isles?.update(dt);
     portal.update(dt);
     if (leaving) return;
     const p = world.camera.position;
@@ -434,6 +546,9 @@ export default {
     editor.closeEditor();
     world.clearBounds();
     world.disposeGroup('compile');
+    isles = null;
+    ghosts.forEach((m) => m.dispose()); // (left before the bloom: dev jumps)
+    ghosts = [];
     lanterns = [];
     trees = [];
     group = null;

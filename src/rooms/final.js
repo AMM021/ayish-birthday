@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, TURN_ASSIST_DELAY, TURN_ASSIST_DURATION } from '../core/config.js';
+import { PALETTE, TURN_ASSIST_DELAY, TURN_ASSIST_DURATION, REDUCED_MOTION } from '../core/config.js';
 import * as world from '../world/world.js';
 import * as physics from '../world/physics.js';
 import * as save from '../core/save.js';
@@ -19,6 +19,7 @@ import * as props from '../house/props.js';
 import * as gamingRoom from '../house/gamingRoom.js';
 import * as avatars from '../house/avatars.js';
 import { TEXT } from '../ui/text.js';
+import * as nature from '../objects/nature.js';
 
 // FINAL — the void: a table, a chair, his laptop. Seated, she types the
 // four fragments (H·O·M·E) and the code carries her into their work/gaming
@@ -126,6 +127,7 @@ function voidFloor(set, extra = []) {
     new THREE.MeshLambertMaterial({ color: PALETTE.lilacMist, transparent: true, opacity: 0.8, depthWrite: false })
   );
   floor.rotation.x = -Math.PI / 2;
+  floor.name = 'void-floor';
   set.add(floor);
   const ground = physics.solidBox(20, 1, 20);
   ground.position.y = -0.5;
@@ -232,6 +234,46 @@ function buildVoidGarden() {
     set.add(g);
     placed.push([x, z]);
   }
+  // the garden reaches the void's edge: moss all the way out over a rocky
+  // underside, a meadow and more blossom trees (her way in stays open),
+  // and small isles floating round it in the haze
+  const outerMoss = kit.ground('moss', 1, 1);
+  outerMoss.repeat.set(19 / 2.5, 19 / 2.5);
+  const outer = new THREE.Mesh(new THREE.RingGeometry(4.6, 9.4, 96), new THREE.MeshLambertMaterial({ map: outerMoss, color: kit.GRASS_TINT }));
+  outer.rotation.x = -Math.PI / 2;
+  outer.position.y = 0.003;
+  const rockTex = kit.ground('earth', 1, 1);
+  rockTex.repeat.set(12, 2);
+  const under = new THREE.Mesh(new THREE.ConeGeometry(9.4, 6.5, 56, 2, true), new THREE.MeshLambertMaterial({ map: rockTex, color: PALETTE.wisteria, side: THREE.DoubleSide }));
+  under.rotation.x = Math.PI;
+  under.position.y = -3.25;
+  outer.userData.noCollide = under.userData.noCollide = true;
+  set.add(outer, under);
+  const clear = (x, z) => way(x, z) > 1.7 && Math.hypot(x + 6.5, z - 3.5) > 1.8;
+  const more = nature.grove(set, {
+    r0: 5.6, r1: 8.5, seed: 23, spacing: 2.8, accept: (x, z) => way(x, z) > 2.4,
+    keepOut: [{ x: 3.9, z: -3.6, r: 2 }, { x: -4.3, z: -3.1, r: 2 }, { x: 4.6, z: 2.4, r: 2 }, { x: -1.2, z: -5.2, r: 2 }],
+    kinds: [{ name: 'sakura_lite', count: 5, height: [3.6, 4.6] }, { name: 'sakura', count: 3, height: [3.8, 4.6] }, { name: 'sakura_lilac', count: 3, height: [3.4, 4.4] }]
+  });
+  for (const t of more) {
+    const c = physics.solidBox(0.5, 2.4, 0.5);
+    c.position.set(t.x, 1.2, t.z);
+    set.add(c);
+    extra.push(c);
+  }
+  nature.meadow(set, {
+    r0: 4.7, r1: 9.1, seed: 25, accept: clear, keepOut: more.map((t) => ({ x: t.x, z: t.z, r: 0.45 })),
+    kinds: [
+      { name: 'grass_tall', count: 320, height: [0.35, 0.65] },
+      { name: 'periwinkle', count: 90, height: [0.12, 0.2], drifts: [8, 1.6] },
+      { name: 'flowers_pink', count: 80, height: [0.34, 0.5], drifts: [7, 1.4] },
+      { name: 'flowers_blush', count: 60, height: [0.32, 0.46], drifts: [6, 1.4] },
+      { name: 'flowers_lav', count: 70, height: [0.42, 0.62], drifts: [6, 1.6] },
+      { name: 'flowers_white', count: 40, height: [0.3, 0.42], drifts: [5, 1.2] },
+      { name: 'fern', count: 50, height: [0.55, 0.85] }
+    ]
+  });
+  set.userData.isles = nature.isles(set, { rMin: 17, rMax: 36, count: 9, yMin: -6, yMax: -1, seed: 19 });
   // mossy stones adrift in the void round the garden
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2 + 0.4;
@@ -242,7 +284,25 @@ function buildVoidGarden() {
     g.userData.drift = { y: g.position.y, ph: i * 1.3 };
     set.add(g);
   }
-  return voidFloor(set, extra);
+  const v = voidFloor(set, extra);
+  set.getObjectByName('void-floor').visible = false; // (the garden is the floor now)
+  return v;
+}
+
+// the void's slow life: stones and isles drifting
+let voidT = 0;
+function animateVoid(dt) {
+  const set = group?.userData?.voidSet;
+  if (!set?.visible || REDUCED_MOTION) return;
+  voidT += dt;
+  set.userData.isles?.update(dt);
+  for (const o of set.children) {
+    const d = o.userData.drift;
+    if (d) {
+      o.position.y = d.y + Math.sin(voidT * 0.5 + d.ph) * 0.18;
+      o.rotation.y += dt * 0.05;
+    }
+  }
 }
 
 // Builds the FINAL sets (the void and the gaming room) into the `final`
@@ -393,12 +453,13 @@ export default {
     phase = 'approach';
     world.setPlayer(SPAWN, SPAWN_YAW, -0.12);
     world.setControls({ move: true, look: true });
-    orb.follow();
     orb.place();
+    orb.guide([SPAWN.clone().setY(VOID.y), CHAIR.clone().setY(VOID.y)], { stop: 1.4 }); // to the desk, by her chair
   },
 
   update(dt) {
     portal?.update(dt);
+    animateVoid(dt);
     if (phase === 'approach') {
       const p = world.camera.position;
       const d = Math.hypot(p.x - CHAIR.x, p.z - CHAIR.z);

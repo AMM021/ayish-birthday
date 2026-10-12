@@ -60,6 +60,15 @@ export function preload() {
 export const ready = () => !!pieces;
 export const has = (name) => !!pieces?.has(name);
 
+// size(name) → the piece's bounding box size (a Vector3; cached), or null
+const sizes = new Map();
+export function size(name) {
+  const src = pieces?.get(name);
+  if (!src) return null;
+  if (!sizes.has(name)) sizes.set(name, new THREE.Box3().setFromObject(src).getSize(new THREE.Vector3()));
+  return sizes.get(name);
+}
+
 // get(name, { height, scale, rotY }) → a fresh Group (shared geometry and
 // materials) standing on y = 0, or null if the kit is not in.
 export function get(name, { height = null, scale = 1, rotY = 0 } = {}) {
