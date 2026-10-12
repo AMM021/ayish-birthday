@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { PALETTE } from '../core/config.js';
 import * as world from '../world/world.js';
 import * as audio from '../core/audio.js';
 import * as overlay from '../ui/overlay.js';

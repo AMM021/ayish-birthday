@@ -267,8 +267,10 @@ function buildVoidGarden() {
   set.userData.isles = nature.isles(set, { rMin: 17, rMax: 36, count: 9, yMin: -6, yMax: -1, seed: 19, sectors: 3 });
   // mossy stones adrift in the void round the garden
   for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2 + 0.4;
+    let a = (i / 9) * Math.PI * 2 + 0.4;
     const r = 6.5 + (i % 3) * 1.2;
+    // step round the ring until it hangs clear of every tree
+    for (let k = 0; k < 12 && more.some((t) => Math.hypot(Math.cos(a) * r - t.x, Math.sin(a) * r - t.z) < 1.6); k++) a += 0.12;
     const g = kit.get(i % 2 ? 'rock0' : 'rock1', { height: 0.5 + (i % 3) * 0.25, rotY: a * 3 });
     g.position.set(Math.cos(a) * r, 1.4 + (i % 4) * 0.7, Math.sin(a) * r);
     g.rotation.z = (i % 5) * 0.3;

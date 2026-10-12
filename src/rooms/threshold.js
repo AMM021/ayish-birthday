@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE, REDUCED_MOTION } from '../core/config.js';
 import * as world from '../world/world.js';
-import * as physics from '../world/physics.js';
 import * as P from '../house/props.js';
 import * as M from '../house/models.js';
 import * as baked from '../house/baked.js';
