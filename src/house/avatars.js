@@ -47,8 +47,9 @@ export async function create(key) {
   });
 
   // play(name, { once }) cross-fades to the clip; `once` holds its last frame
-  // and resolves when it ends.
-  function play(name, { once = false, fade = FADE } = {}) {
+  // and resolves when it ends. `paused` holds its first frame (until the clip
+  // is played again).
+  function play(name, { once = false, fade = FADE, paused = false } = {}) {
     const clip = clips[name];
     if (!clip) return Promise.resolve();
     const action = mixer.clipAction(clip);
@@ -58,6 +59,7 @@ export async function create(key) {
     action.enabled = true;
     if (current && current !== action) action.crossFadeFrom(current, fade, false);
     action.play();
+    action.paused = paused;
     current = action;
     if (!once) return Promise.resolve();
     return new Promise((resolve) => {
@@ -75,6 +77,7 @@ export async function create(key) {
     root,
     head,
     play,
+    has: (name) => !!clips[name],
     update(dt) {
       mixer.update(dt);
     },

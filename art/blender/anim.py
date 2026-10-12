@@ -7,7 +7,8 @@ Poses are written as world-space intentions — "lean the spine forward 6°",
 game only has to play bone rotations.
 
 Clips (30 fps):
-  him:   idle (loop), open_arms (once, holds), open_idle (loop), hug_in (once), hug (loop),
+  him:   idle (loop), turn (once: from his back to her round to facing her),
+         open_arms (once, holds), open_idle (loop), hug_in (once), hug (loop),
          sit_type (loop), sit_look (once, holds), sit_look_idle (loop) — at his laptop
   ayish: idle (loop), hug_in (once), hug (loop)
 The hug is played with both rigs in this file's layout: him at the origin
@@ -73,6 +74,23 @@ class Poser:
             c = rig.pose.bones['hand_' + s].constraints.new('LOCKED_TRACK')
             c.target, c.lock_axis, c.track_axis, c.influence = e, 'LOCK_Y', PALM_AXIS[s], 0.0
             self.palms[s] = (e, c)
+        # legs: IK to an ankle goal (knee toward a pole), and the foot held at
+        # a world turn — for stepping (off unless a pose plants the feet)
+        self.legs = {}
+        for s in 'lr':
+            tgt = bpy.data.objects.new(f'{rig.name}.leg_{s}', None)
+            pole = bpy.data.objects.new(f'{rig.name}.knee_{s}', None)
+            ft = bpy.data.objects.new(f'{rig.name}.foot_{s}', None)
+            ft.rotation_mode = 'QUATERNION'
+            for o in (tgt, pole, ft):
+                bpy.context.scene.collection.objects.link(o)
+            c = rig.pose.bones['calf_' + s].constraints.new('IK')
+            c.target, c.pole_target, c.chain_count, c.use_tail = tgt, pole, 2, True
+            c.pole_angle = math.radians(-90)
+            c.influence = 0.0
+            cr = rig.pose.bones['foot_' + s].constraints.new('COPY_ROTATION')
+            cr.target, cr.influence = ft, 0.0
+            self.legs[s] = (tgt, pole, ft, c, cr)
 
     def finish(self):
         """Drop the authoring constraints and helpers (clips are baked)."""
@@ -84,6 +102,9 @@ class Poser:
             bpy.data.objects.remove(pole)
         for e, c in list(self.aims.values()) + list(self.palms.values()):
             bpy.data.objects.remove(e)
+        for tgt, pole, ft, c, cr in self.legs.values():
+            for o in (tgt, pole, ft):
+                bpy.data.objects.remove(o)
 
     # -- helpers in world space ------------------------------------------------
     def to_arm(self, p):
@@ -164,6 +185,16 @@ class Poser:
             if a:
                 e.location = a[0]
                 e.keyframe_insert('location', frame=frame)
+        for s, (tgt, pole, ft, c, cr) in self.legs.items():
+            g = goals.get('leg_' + s)  # (ankle, knee pole, foot world quaternion)
+            c.influence = cr.influence = 1.0 if g else 0.0
+            c.keyframe_insert('influence', frame=frame)
+            cr.keyframe_insert('influence', frame=frame)
+            if g:
+                tgt.location, pole.location, ft.rotation_quaternion = g
+                tgt.keyframe_insert('location', frame=frame)
+                pole.keyframe_insert('location', frame=frame)
+                ft.keyframe_insert('rotation_quaternion', frame=frame)
 
     def bake(self, name, f0, f1):
         """Visual-key the clip into its own action, then clear the keys."""
@@ -198,6 +229,9 @@ class Poser:
             pole.animation_data_clear()
         for e, c in list(self.aims.values()) + list(self.palms.values()):
             e.animation_data_clear()
+        for tgt, pole, ft, c, cr in self.legs.values():
+            for o in (tgt, pole, ft):
+                o.animation_data_clear()
         rig.animation_data_clear()
         return act
 
@@ -241,6 +275,86 @@ def idle_pose(t):
         P.curl('r', 0.25, thumb=0.2)
         return arms_down(P)
     return f
+
+
+def smooth(x):
+    x = max(0.0, min(1.0, x))
+    return x * x * (3 - 2 * x)
+
+
+TURN_F = 60  # 2 s
+
+
+def turn_pose(f):
+    """From his back to her round to facing her, as a person turns: his head
+    goes first, then his shoulders, his hips last; his feet step round
+    (left, right, a small last left), lifting a little, the leg he is not
+    stepping with carrying him; arms hanging and swinging softly."""
+    def yaw_at(f0, f1):
+        return 180.0 * (1 - smooth((f - f0) / (f1 - f0)))
+
+    def f_(P):
+        # rest positions, from the skeleton's rest data (the posed bones still
+        # carry the last key's leg IK while this key is being made)
+        mw = P.rig.matrix_world
+        bones = P.rig.data.bones
+        piv = mw @ bones['pelvis'].head_local
+        rest_ankle = {s: mw @ bones['foot_' + s].head_local for s in 'lr'}
+        rest_q = {s: (mw @ bones['foot_' + s].matrix_local).to_quaternion() for s in 'lr'}
+        hips, chest, head = yaw_at(8, 52), yaw_at(4, 46), yaw_at(0, 36)
+        # the steps: (foot, frame from, frame to, yaw from, yaw to)
+        steps = {'l': [(10, 24, 180, 95), (40, 52, 95, 0)], 'r': [(22, 38, 180, 20), (48, 58, 20, 0)]}
+        legs = {}
+        stepping = 0.0
+        for s in 'lr':
+            yaw, lift = 180.0, 0.0
+            for (a, b, y0, y1) in steps[s]:
+                if f >= b:
+                    yaw = y1
+                elif f > a:
+                    k = (f - a) / (b - a)
+                    yaw = y0 + (y1 - y0) * smooth(k)
+                    lift = math.sin(math.pi * k) * 0.07
+                    stepping = max(stepping, math.sin(math.pi * k))
+                    break
+                else:
+                    yaw = y0
+                    break
+            R = Matrix.Rotation(math.radians(yaw), 4, 'Z')
+            off = rest_ankle[s] - piv
+            off.z = 0
+            ankle = V(piv.x, piv.y, rest_ankle[s].z) + (R @ off.to_4d()).to_3d() + V(0, 0, lift)
+            fwd = (R @ V(0, -1, 0, 0)).to_3d()
+            knee = ankle + fwd * 0.6 + V(0, 0, 0.45)
+            q = Matrix.Rotation(math.radians(yaw), 4, 'Z').to_quaternion() @ rest_q[s]
+            legs['leg_' + s] = (ankle, knee, q)
+        # the body: hips first in the hierarchy (it carries everything), then
+        # the spine and the head each a little further round
+        P.move('pelvis', (0, 0, -0.025 * stepping))
+        P.turn('pelvis', (0, 0, 1), hips)
+        d = chest - hips
+        for b, w in (('spine_01', 0.3), ('spine_02', 0.3), ('spine_03', 0.4)):
+            P.turn(b, (0, 0, 1), d * w)
+        P.turn('neck_01', (0, 0, 1), (head - chest) * 0.5)
+        P.turn('head', (0, 0, 1), (head - chest) * 0.5)
+        # a breath, and the chin coming up as he sees her
+        breathe(P, f / 120, 0.5)
+        P.turn('head', (1, 0, 0), -3 * smooth((f - 30) / 20))
+        for s in 'lr':
+            P.curl(s, 0.25, thumb=0.2)
+        # arms hanging from the turned shoulders, swinging a little with the turn
+        g = {}
+        Rc = Matrix.Rotation(math.radians(chest), 4, 'Z')
+        swing = math.sin(math.pi * smooth(f / 50)) * 0.08
+        for s, sx in (('l', 1), ('r', -1)):
+            sh = P.to_arm(P.bone_head('upperarm_' + s))
+            L = arm_len(P, s)
+            o = (Rc @ V(sx * 0.08, -0.05 + sx * swing, -0.93 * L, 0)).to_3d()
+            po = (Rc @ V(sx * 0.12, 0.5, -0.3, 0)).to_3d()
+            g[s] = (mw @ (sh + o), mw @ (sh + po))
+        g.update(legs)
+        return g
+    return f_
 
 
 def open_arms_pose(k, t=0.0):
@@ -534,6 +648,8 @@ def build_clips(rigs):
     # idle: 4 s loop
     for P in (him, her):
         clip(P, 'idle', [(f, idle_pose(f / 120)) for f in range(0, 121, 10)], None)
+    # him: turning round to her (2 s; it ends on the idle's stance)
+    clip(him, 'turn', [(f, turn_pose(f)) for f in range(0, TURN_F + 1, 2)], None)
     # him: open arms 1.4 s, then hold with breathing
     clip(him, 'open_arms', [(f, open_arms_pose(ease(f / 42), f / 120)) for f in range(0, 43, 6)], None)
     clip(him, 'open_idle', [(f, open_arms_pose(1.0, f / 120)) for f in range(0, 121, 10)], None)
@@ -617,6 +733,15 @@ def preview(rigs, clips):
         sc.frame_set(frame)
 
     os.makedirs(OUT, exist_ok=True)
+    if '--turn' in ARGS:
+        # his turn, frame by frame, from where she stands (and from the side)
+        for o in rigs['ayish'].children_recursive:
+            o.hide_render = True
+        for fr in (0, 10, 20, 30, 40, 50, 60):
+            play('him', 'turn', fr)
+            shot(os.path.join(OUT, f'anim_turn_{fr:02d}.png'), (0.3, -3.2, 1.35), (0, 0, 1.0))
+            shot(os.path.join(OUT, f'anim_turn_{fr:02d}_side.png'), (3.0, -0.6, 1.2), (0, 0, 0.9))
+        return
     if '--sit' in ARGS:
         for o in rigs['ayish'].children_recursive:
             o.hide_render = True

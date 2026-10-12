@@ -73,7 +73,9 @@ async function placeThem() {
   him.root.position.copy(SPOT);
   him.root.rotation.y = Math.atan2(gamingRoom.HER_SEAT.x - SPOT.x, gamingRoom.HER_SEAT.z - SPOT.z);
   group.add(him.root);
-  him.play('idle');
+  // his back to her while she gets up; he turns round once she is standing
+  if (him.has('turn')) him.play('turn', { once: true, paused: true, fade: 0 });
+  else him.play('idle');
   her.root.visible = false; // she is the camera until the hug
   group.add(her.root);
   call = new THREE.Object3D();
@@ -87,6 +89,16 @@ function wordsOnly() {
   phase = 'words';
   world.setControls({ move: false, look: false });
   showWords();
+}
+
+// he turns round to her (his whole body, his head first, stepping round),
+// then calls her
+async function hisTurn() {
+  phase = 'turning';
+  if (him?.has('turn')) await him.play('turn', { once: true, fade: 0 });
+  if (phase !== 'turning') return;
+  him.play('idle', { fade: 0.35 });
+  hisCall();
 }
 
 async function hisCall() {
@@ -209,7 +221,7 @@ export default {
       look(fromYaw + (standYaw - fromYaw) * e, fromPitch + (standPitch - fromPitch) * e);
       if (t >= 1) {
         world.setPlayer(standAt, standYaw, standPitch);
-        if (phase === 'rising') hisCall();
+        if (phase === 'rising') hisTurn();
         else wordsOnly();
       }
     } else if (phase === 'walk') {
