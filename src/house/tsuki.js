@@ -37,8 +37,13 @@ const ease = (x) => x * x * (3 - 2 * x);
 // build(group) → { root, colliders, doors, moon, moonFace, chair, spawn, update(dt, eye) } or
 // null if the files are missing.
 export async function build(group) {
-  const [root, colRoot, info] = await preload();
-  if (!root || !colRoot || !info) return null;
+  const [src, colSrc, info] = await preload();
+  if (!src || !colSrc || !info) return null;
+  // fresh copies each visit: the doors below are re-parented onto pivots,
+  // which must never happen twice to the cached file (a second visit — the
+  // reveal replayed, a dev jump — threw every leaf off its hinge)
+  const root = src.clone(true);
+  const colRoot = colSrc.clone(true);
   const doorNodes = [];
   // one game material per source material (they are shared across meshes)
   const { glow: glowMeshes } = baked.convert(root, info.K);
