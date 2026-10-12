@@ -8,7 +8,7 @@ import * as assets from '../core/assets.js';
 // The hug is authored as a pair: him at the origin facing +z, her HUG_D in
 // front of him facing −z (`hugPartner`).
 
-export const HUG_D = 0.42;
+export const HUG_D = 0.32; // close: they stand hip to hip (art/blender/anim.py)
 const FILES = { ayish: 'models/avatars/ayish.glb', him: 'models/avatars/him.glb' };
 const CUTOUT = /hair|eyebrow|eyelash|glasses/i;
 const FADE = 0.35;

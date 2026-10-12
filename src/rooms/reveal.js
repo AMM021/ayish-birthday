@@ -135,6 +135,7 @@ const ORBIT_A = THREE.MathUtils.degToRad(65);
 const ORBIT_SWING = THREE.MathUtils.degToRad(12);
 const lp = new THREE.Vector3();
 function placeOrbitCamera(dt) {
+  if (import.meta.env.DEV && window.__debugCam) return; // (test harness films from elsewhere)
   orbit.t += dt;
   const a = ORBIT_A + (REDUCED_MOTION ? 0 : Math.sin(orbit.t * 0.15) * ORBIT_SWING);
   const r = him.root;
