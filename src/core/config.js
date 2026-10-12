@@ -27,7 +27,12 @@ export const PALETTE = {
   oak: '#c9a27e',
   walnut: '#8b6450',
   linen: '#f6efe9',
-  peach: '#ffcfa6' // sunset horizon
+  peach: '#ffcfa6', // sunset horizon
+  bark: '#b59a86', // weathered timber (the avenue's trellis)
+  // texture tints: multiplied over a photo texture, never seen as colours
+  neutral: '#ffffff', // the texture as it is
+  stoneLilac: '#f2ecf8', // pale stone, a breath of lilac
+  stoneShade: '#e6dff0' // the same stone in shade (block sides)
 };
 
 export const PASSCODE = '1010';

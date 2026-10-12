@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as assets from '../core/assets.js';
 import { enableBloom } from '../world/layers.js';
+import { PALETTE } from '../core/config.js';
 
 // The levels' kit (art/blender/kit.py → public/models/kit/kit.glb): the
 // torii, stone lanterns, sakura trees, flowers, grass, ferns, rocks, logs,
@@ -138,7 +139,7 @@ export function islandMaterials(radius, { top = 'grass', side = 'earth', tint = 
   const s = ground(side, radius * 6, 2.5);
   if (s) s.repeat.set(radius * 6 / 2.5, 0.5);
   const topMat = new THREE.MeshLambertMaterial({ map: t, color: tint });
-  const sideMat = new THREE.MeshLambertMaterial({ map: s, color: 0xffffff });
+  const sideMat = new THREE.MeshLambertMaterial({ map: s, color: PALETTE.neutral });
   return [sideMat, topMat, sideMat];
 }
 

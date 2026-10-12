@@ -132,6 +132,7 @@ function voidFloor(set, extra = []) {
   const tableCol = physics.solidBox(2, 0.8, 1);
   tableCol.position.set(0, 0.4, 0);
   const edge = physics.ringWall(new THREE.Vector3(0, 0, 0), 8.6);
+  edge.name = 'edge';
   set.add(ground, tableCol, edge);
   return { set, solid: [ground, tableCol, edge, ...extra] };
 }
@@ -150,7 +151,7 @@ function buildVoidGarden() {
   // the terrace: paving, a ring of moss round it
   const stone = kit.ground('path', 1, 1);
   stone.repeat.set(6.4 / 1.4, 6.4 / 1.4);
-  const terrace = new THREE.Mesh(new THREE.CircleGeometry(3.2, 64), new THREE.MeshLambertMaterial({ map: stone, color: 0xf6f0fa }));
+  const terrace = new THREE.Mesh(new THREE.CircleGeometry(3.2, 64), new THREE.MeshLambertMaterial({ map: stone, color: PALETTE.stoneLilac }));
   terrace.rotation.x = -Math.PI / 2;
   terrace.position.y = 0.006;
   const moss = kit.ground('moss', 1, 1);

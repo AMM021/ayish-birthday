@@ -54,7 +54,7 @@ export function create({ dim = false, rune = null } = {}) {
     });
     mat = new THREE.MeshStandardMaterial({
       map: red?.map || null,
-      color: 0xffffff,
+      color: PALETTE.neutral,
       roughness: 0.55,
       emissive: PALETTE.vermillion,
       emissiveIntensity: DIM_EMISSIVE
@@ -96,7 +96,7 @@ export function create({ dim = false, rune = null } = {}) {
   check.visible = false;
   gate.add(check);
 
-  const base = fromKit ? new THREE.Color(0xffffff) : new THREE.Color(PALETTE.vermillion); // the material's colour
+  const base = fromKit ? new THREE.Color(PALETTE.neutral) : new THREE.Color(PALETTE.vermillion); // the material's colour
   const glowRed = new THREE.Color(PALETTE.vermillion);
   const lav = new THREE.Color(PALETTE.lavender);
   let lit = false;

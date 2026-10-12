@@ -65,7 +65,7 @@ function buildIsland() {
   if (slabTex && legTex) {
     slabTex.repeat.set(1.3 / 1.4, 0.6 / 1.4);
     legTex.repeat.set(0.6, 0.35);
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.6), new THREE.MeshLambertMaterial({ map: slabTex, color: 0xf2ecf6 }));
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.6), new THREE.MeshLambertMaterial({ map: slabTex, color: PALETTE.stoneLilac }));
     slab.position.set(ALTAR.x, 0.5, ALTAR.z);
     slab.rotation.y = -0.5;
     group.add(slab);

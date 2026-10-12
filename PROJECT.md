@@ -107,6 +107,14 @@ The orb is his last act of love.
 | dusk        | `#9a7cc9` | STARS horizon, the lake          |
 | meadow      | `#b9dca4` | Garden grass after the bloom     |
 | sunlit      | `#fff1d6` | Garden horizon, sunshine         |
+| oak         | `#c9a27e` | House wood                       |
+| walnut      | `#8b6450` | Dark wood, logs (fallback)       |
+| linen       | `#f6efe9` | Soft linen                       |
+| peach       | `#ffcfa6` | Sunset horizon                   |
+| bark        | `#b59a86` | Weathered timber (avenue trellis) |
+| neutral     | `#ffffff` | Texture tint only (map as it is) |
+| stoneLilac  | `#f2ecf8` | Texture tint: pale lilac stone   |
+| stoneShade  | `#e6dff0` | Texture tint: stone in shade     |
 
 ## File Structure
 

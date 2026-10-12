@@ -96,7 +96,7 @@ function buildAvenue() {
     const t = kit.ground(y0 === 0 ? 'grass' : 'earth', 1, 3.5);
     if (!t) return groundMat;
     t.repeat.set((HALF_W * 2 + 2) / 3.5, len / 3.5);
-    return new THREE.MeshLambertMaterial({ map: t, color: y0 === 0 ? kit.GRASS_TINT : 0xffffff });
+    return new THREE.MeshLambertMaterial({ map: t, color: y0 === 0 ? kit.GRASS_TINT : PALETTE.neutral });
   };
   const laneFor = (len) => {
     const t = kit.ground('gravel', 1, 1.6);
@@ -264,7 +264,7 @@ function buildTrail() {
   const floorMat = (len, bed) => {
     const t = kit.ground(bed ? 'earth' : 'moss', 1, 3.5);
     t.repeat.set((FOREST_HALF * 2) / 3.5, len / 3.5);
-    return new THREE.MeshLambertMaterial({ map: t, color: bed ? 0xffffff : kit.GRASS_TINT });
+    return new THREE.MeshLambertMaterial({ map: t, color: bed ? PALETTE.neutral : kit.GRASS_TINT });
   };
   const piece = (z0, z1, y0, bed) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(FOREST_HALF * 2, 1, z0 - z1), floorMat(z0 - z1, bed));
@@ -336,6 +336,7 @@ function buildTrail() {
       const w = physics.solidBox(0.3, 6, len);
       w.position.set(mid.x + n.x * (TRAIL_HALF + 0.35) * side, 2, mid.z + n.z * (TRAIL_HALF + 0.35) * side);
       w.rotation.y = Math.atan2(b.p.x - a.p.x, b.p.z - a.p.z);
+      w.name = 'edge'; // invisible: the undergrowth is the wall
       group.add(w);
       solid.push(w);
     }
@@ -343,6 +344,7 @@ function buildTrail() {
   for (const z of [HALF_LEN + 0.5, -HALF_LEN - 0.5]) {
     const w = physics.solidBox(FOREST_HALF * 2, 6, 1);
     w.position.set(0, 3, z);
+    w.name = 'edge';
     group.add(w);
     solid.push(w);
   }
@@ -382,7 +384,7 @@ function buildTrailObstacles(rnd) {
       solid.push(col);
       const side = rnd() < 0.5 ? -1 : 1;
       const st = kit.get('stump', { height: 0.55, rotY: rnd() * 6 });
-      st.position.copy(f.p).addScaledVector(dir, side * (half + 0.5));
+      st.position.copy(f.p).addScaledVector(dir, side * (half + 0.8)); // its roots clear of the trunk's end
       group.add(st);
       for (const k of [-1, 1]) {
         const br = kit.get('branch', { height: 0.3, rotY: rnd() * 6 });
@@ -494,7 +496,7 @@ function hangWisteria(c, dir, half, y, rnd) {
   const budGeo = new THREE.IcosahedronGeometry(0.035, 0);
   const RACEMES = 34;
   const PER = 9;
-  const buds = new THREE.InstancedMesh(budGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), RACEMES * PER);
+  const buds = new THREE.InstancedMesh(budGeo, new THREE.MeshLambertMaterial({ color: PALETTE.neutral }), RACEMES * PER);
   const m4 = new THREE.Matrix4();
   const top = new THREE.Color(PALETTE.wisteria);
   const tip = new THREE.Color(PALETTE.lilacHaze);
@@ -721,7 +723,7 @@ function buildObstacles(groundMat) {
     } else if (o.kind === 'trellis') {
       // a low wisteria trellis: beam 1.3–1.8 m (crouch), strands hanging
       const barkTex = kit.ground('earth', 1, 1);
-      const timber = barkTex ? new THREE.MeshLambertMaterial({ map: barkTex, color: 0xb59a86 }) : wood;
+      const timber = barkTex ? new THREE.MeshLambertMaterial({ map: barkTex, color: PALETTE.bark }) : wood;
       if (barkTex) barkTex.repeat.set(W / 1.2, 0.5);
       const beam = new THREE.Mesh(new THREE.BoxGeometry(W, 0.5, 0.4), timber);
       beam.position.set(0, 1.55, o.z);
@@ -739,7 +741,7 @@ function buildObstacles(groundMat) {
       const budGeo = new THREE.IcosahedronGeometry(0.035, 0);
       const RACEMES = 90;
       const PER = 9;
-      const buds = new THREE.InstancedMesh(budGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), RACEMES * PER);
+      const buds = new THREE.InstancedMesh(budGeo, new THREE.MeshLambertMaterial({ color: PALETTE.neutral }), RACEMES * PER);
       const m4 = new THREE.Matrix4();
       const top = new THREE.Color(PALETTE.wisteria);
       const tip = new THREE.Color(PALETTE.lilacHaze);

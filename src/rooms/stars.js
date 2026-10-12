@@ -103,10 +103,10 @@ function makeMats() {
   });
   if (red) {
     lacquer.map = red.map;
-    lacquer.color.set(0xffffff);
+    lacquer.color.set(PALETTE.neutral);
     lacquer.emissiveIntensity = 0.05;
   }
-  if (black) beam.map = black.map, beam.color.set(0xffffff);
+  if (black) beam.map = black.map, beam.color.set(PALETTE.neutral);
   return { stone, rim, lacquer, beam, lamp, hedge, bridge, stoneTex: kit.ground('path', 1, 1), rockTex: kit.ground('earth', 1, 1) };
 }
 
@@ -118,7 +118,7 @@ function stoneFor(w, l) {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(Math.max(1, w / 1.6), Math.max(1, l / 1.6));
   t.needsUpdate = true;
-  return new THREE.MeshLambertMaterial({ map: t, color: 0xf2ecf8, emissive: PALETTE.wisteria, emissiveIntensity: 0.18 });
+  return new THREE.MeshLambertMaterial({ map: t, color: PALETTE.stoneLilac, emissive: PALETTE.wisteria, emissiveIntensity: 0.18 });
 }
 
 const cylGeo = new THREE.CylinderGeometry(1, 0.82, 1, 32);
@@ -143,7 +143,7 @@ function discMats(r, thick) {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(Math.max(1, (2 * Math.PI * r) / 2.2), Math.max(0.3, thick / 2.2));
   t.needsUpdate = true;
-  const side = new THREE.MeshLambertMaterial({ map: t, color: 0xe6dff0, emissive: PALETTE.wisteria, emissiveIntensity: 0.12 });
+  const side = new THREE.MeshLambertMaterial({ map: t, color: PALETTE.stoneShade, emissive: PALETTE.wisteria, emissiveIntensity: 0.12 });
   return [side, top, side];
 }
 

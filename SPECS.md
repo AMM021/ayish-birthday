@@ -91,6 +91,24 @@ Detailed implementation specs. Grep by `##` heading.
   to ×0.78 from 1 m before to 4 m past each obstacle. Gusts also push her
   sideways (~0.85 m/s) but never start within 6 m of an obstacle. With the
   obstacles: `OUT_LIMIT` 4 s (was 3) and the end radius 2.4 (was 2.1).
+- **PETALS (v4, the forest trail, owner 2026-10-12: "the path should be
+  narrow for a much more natural obstacle course… we need to make it
+  immersive"):** with the kit loaded the light walks a 4 m gravel trail
+  (`TRAIL_HALF` 2.0) that winds through a blossom forest (`FOREST_HALF` 18:
+  instanced undergrowth, sakura close on both sides, 3200 fallen petals).
+  The undergrowth is the wall (invisible edge colliders, named `edge`).
+  Along the trail (`TRAIL_COURSE`, fractions of the light's path): single
+  trunks fallen across it, their stump beside it and branches by it
+  (0.56 m: jump); wisteria arbours on two bark posts and trunks leaning on
+  a boulder (underside 1.3 m: crouch); two brooks, one with stepping
+  stones; boulders to weave between. Same speeds, gusts, `OUT_LIMIT` and
+  `EASE_MULT`. Without the kit the v3 avenue is the fallback.
+- **FINAL's void set (2026-10-12):** with the kit loaded the table becomes a
+  small garden adrift in the void: a stone terrace (r 3.2) with a mossy
+  rim, the oak desk, her chair, the laptop, a washi lamp, her mug, the
+  bouquet laid on the desk, two stone lanterns, four blossom trees, rim
+  flowers kept off her way in, drifting mossy rocks. The seated frame is
+  unchanged.
 
 ## v2 redesign (2026-10-10) — read first; overrides older sections
 
