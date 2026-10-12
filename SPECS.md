@@ -146,6 +146,24 @@ Detailed implementation specs. Grep by `##` heading.
   walls, oak wainscot, a bench with her bag, a coat stand, a console with a
   washi lamp, a sofa corner, plants, frames and washi pendants. The extra door
   (plum lacquer, recessed in the west wall) keeps its glowing frame and note.
+- **The levels' kit (2026-10-12):** `art/blender/kit.py -- [--preview|--closeup=<piece>] --export` →
+  `public/models/kit/kit.glb`, loaded by `objects/kit.js` (lit live, shared, never
+  disposed). Pieces: a lacquered myōjin torii (same gameplay frame), a stone tōrō,
+  sakura trees (pink, lilac), cosmos clumps (pink, blush, white) and lavender
+  bushes, grass, ferns, mossy rocks, logs 1.8 / 1.2 m, a stump, branches, a hanging
+  lantern, the bouquet (roses, lavender, baby's breath, eucalyptus, lilac washi,
+  satin bow), and ground swatches (grass, moss, stone path, rock, gravel; pale,
+  never olive). `torii.js`, `tree.js` and `bouquet.js` use it when it is loaded and
+  fall back to their simple shapes. HUB, TORII, COMPILE, STARS and PETALS dress their
+  islands with it (textured ground, lanterns, flowers scattered clear of every gate,
+  path, obstacle and spawn). PETALS' fallen logs are rows of real-length logs
+  (~2.5 m) with stumps and branches; its trellis carries wisteria racemes; its
+  stones are mossy rocks; STARS' walkways are pale stone, its gates lacquered, its
+  hurdles mossy logs. Gameplay colliders are unchanged.
+- **STARS lights (2026-10-12):** a star she lights rises to 4.2 m (out of her way)
+  with a warm point light over the next stretch; small orbs fill the outline
+  between the risen stars, so the heart reads in the air.
+- **TORII (2026-10-12):** every playback returns her to the start, facing the gates.
 - **The entry hall and the gaming room are built and baked in Blender** like
   Tsuki House (`art/blender/rooms.py -- --room=threshold|gaming [--audit]
   [--preview] [--export]` → `public/models/rooms/`; glitch audit at zero).

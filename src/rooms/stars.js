@@ -10,6 +10,7 @@ import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as portalObj from '../objects/portal.js';
 import { enableBloom } from '../world/layers.js';
+import * as kit from '../objects/kit.js';
 import { orb } from '../objects/orb.js';
 import * as fragments from '../ui/fragments.js';
 import * as prompts from '../ui/prompts.js';
@@ -92,7 +93,32 @@ function makeMats() {
   const lamp = new THREE.MeshBasicMaterial({ color: PALETTE.gold });
   const hedge = new THREE.MeshLambertMaterial({ color: PALETTE.blush, emissive: PALETTE.softPink, emissiveIntensity: 0.2 });
   const bridge = new THREE.MeshBasicMaterial({ color: PALETTE.lavender, transparent: true, opacity: 0.85 });
-  return { stone, rim, lacquer, beam, lamp, hedge, bridge };
+  // with the kit: the torii's lacquer and black for the gates
+  let red = null;
+  let black = null;
+  kit.get('torii')?.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.material.name.startsWith('torii_red')) red = red || o.material;
+    else black = black || o.material;
+  });
+  if (red) {
+    lacquer.map = red.map;
+    lacquer.color.set(0xffffff);
+    lacquer.emissiveIntensity = 0.05;
+  }
+  if (black) beam.map = black.map, beam.color.set(0xffffff);
+  return { stone, rim, lacquer, beam, lamp, hedge, bridge, stoneTex: kit.ground('path', 1, 1), rockTex: kit.ground('earth', 1, 1) };
+}
+
+// pale stone for a piece of `w` × `l` m (its own tiling; the lake's dusk
+// glow kept in the emissive)
+function stoneFor(w, l) {
+  if (!mats.stoneTex) return mats.stone;
+  const t = mats.stoneTex.clone();
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(Math.max(1, w / 1.6), Math.max(1, l / 1.6));
+  t.needsUpdate = true;
+  return new THREE.MeshLambertMaterial({ map: t, color: 0xf2ecf8, emissive: PALETTE.wisteria, emissiveIntensity: 0.18 });
 }
 
 const cylGeo = new THREE.CylinderGeometry(1, 0.82, 1, 32);
@@ -109,8 +135,20 @@ function lamp(parent, x, y, z) {
   parent.add(l);
 }
 
+// a platform: rough rock round its side, pale paving on top
+function discMats(r, thick) {
+  const top = stoneFor(2 * r, 2 * r);
+  if (!mats.rockTex) return top;
+  const t = mats.rockTex.clone();
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(Math.max(1, (2 * Math.PI * r) / 2.2), Math.max(0.3, thick / 2.2));
+  t.needsUpdate = true;
+  const side = new THREE.MeshLambertMaterial({ map: t, color: 0xe6dff0, emissive: PALETTE.wisteria, emissiveIntensity: 0.12 });
+  return [side, top, side];
+}
+
 function disc(parent, solid, at, r, top, thick = 0.5) {
-  const m = new THREE.Mesh(cylGeo, mats.stone);
+  const m = new THREE.Mesh(cylGeo, discMats(r, thick));
   m.scale.set(r, thick, r);
   m.position.set(at.x, top - thick / 2, at.z);
   parent.add(m);
@@ -157,6 +195,15 @@ function hurdle(parent, solid, c, dir, top) {
   const side = new THREE.Vector3(dir.z, 0, -dir.x);
   const m = slab(parent, solid, c, side, 1.4, 0.3, top + 0.62, 0.62, mats.hedge);
   m.rotation.y = Math.atan2(side.x, side.z);
+  // a mossy log lying across the walk (its box is the solid)
+  const lg = kit.get('log_short');
+  if (lg) {
+    m.visible = false;
+    lg.scale.set(1.5 / 1.2, 1.8, 1.8);
+    lg.position.set(c.x, top, c.z);
+    lg.rotation.y = Math.atan2(side.x, side.z) - Math.PI / 2;
+    parent.add(lg);
+  }
 }
 
 // One stretch: from the edge of platform A to the edge of platform B.
@@ -169,7 +216,7 @@ function buildPath(kind, A, hA, rA, B, hB, rB) {
   const L = dist - rA - rB;
   const at = (s, lateral = 0) => new THREE.Vector3(A.x, 0, A.z).addScaledVector(dir, rA + s).add(new THREE.Vector3(dir.z, 0, -dir.x).multiplyScalar(lateral));
   const h = (s) => hA + (hB - hA) * Math.max(0, Math.min(1, s / L));
-  const walk = (s0, s1, top, width = 1.3) => slab(g, solid, at((s0 + s1) / 2), dir, s1 - s0, width, top, 0.35, mats.stone);
+  const walk = (s0, s1, top, width = 1.3) => slab(g, solid, at((s0 + s1) / 2), dir, s1 - s0, width, top, 0.35, stoneFor(width, s1 - s0));
   // the route (dev tools/tests): where to jump, where to duck, waypoints
   const route = { kind, A: [A.x, A.z], dir: [dir.x, dir.z], rA, L, jumps: [], ducks: [], points: [], run: false };
   const hurdleAt = (s) => { route.jumps.push(s - 0.75); };
@@ -526,6 +573,7 @@ export default {
   nudgeLine: TEXT.stars.hint,
 
   async enter() {
+    await kit.preload();
     group = world.getGroup('stars');
     challenge.done = false;
     leaving = false;
