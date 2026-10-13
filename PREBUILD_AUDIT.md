@@ -143,7 +143,7 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 - [x] Planning handoff approved.
 - [x] Music tracks added by the owner (2026-10-11).
 - [x] Photos added (2026-10-11). No video is needed any more.
-- [ ] Decide on the Vite chunk-size warning (three.js alone is ~500 kB; the deploy skill wants a clean build, SPECS fixes vite.config).
+- [x] The Vite chunk-size warning (2026-10-13, a technical call): three.js gets its own chunk (cached apart from the game; ~684 kB, 178 kB gzipped, imported whole so it cannot shrink), the warning limit sits just above it (720 kB); the build is clean.
 - [x] Approved by the owner (2026-10-12) and in TEXT.md: the new lines drafted 2026-10-12: the orb's right-answer lines (TORII rounds, COMPILE words, STARS milestones), PETALS' "stay in my light" instruction and progress lines, his longer goodbye in the house, the compliments.
 - [x] The pause menu's labels approved by the owner (2026-10-13).
 - [x] The longer level introductions approved by the owner (2026-10-13) and in TEXT.md (`ROOM: X — intro`).

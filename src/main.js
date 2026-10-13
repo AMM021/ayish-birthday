@@ -2,7 +2,7 @@ import './styles/overlay.css';
 import './styles/issuecard.css';
 import * as THREE from 'three';
 import { PALETTE, DEV } from './core/config.js';
-import { initRenderer, hasWebGL } from './core/renderer.js';
+import { initRenderer, hasWebGL, renderer } from './core/renderer.js';
 import * as composer from './core/composer.js';
 import * as clock from './core/clock.js';
 import * as input from './core/input.js';
@@ -102,7 +102,7 @@ async function boot() {
     const devtools = await import('./ui/devtools.js');
     devtools.init({ machine, stars });
     // test hook for automated QA; exists only in dev mode
-    window.__game = { world, machine, save, input, dialogue, orb, composer, clock, THREE, renderer: (await import('./core/renderer.js')).renderer };
+    window.__game = { world, machine, save, input, dialogue, orb, composer, clock, THREE, renderer };
   }
 
   // --- loop -----------------------------------------------------------
