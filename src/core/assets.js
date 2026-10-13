@@ -5,12 +5,11 @@ import { PALETTE } from './config.js';
 // registry, and lazily loaded GLB models.
 
 const BASE = import.meta.env.BASE_URL;
-const FILES = {
-  petal: 'textures/petal.png',
-  star: 'textures/star.png',
-  paper: 'textures/paper.jpg',
-  shoji: 'textures/shoji.png'
-};
+// Files that replace the procedural textures when present in
+// public/textures/ (none ship: the drawn ones are the look, and asking for
+// a missing file only puts a 404 in the console). Add an entry, e.g.
+// petal: 'textures/petal.png', when a real file is dropped in.
+const FILES = {};
 
 const textures = new Map();
 const loader = new THREE.TextureLoader();

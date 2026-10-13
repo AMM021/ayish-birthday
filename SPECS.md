@@ -568,7 +568,8 @@ Procedural fallbacks: if a texture file is missing (`petal`, `star`,
 (petal = soft pink teardrop, star = radial glow, paper = warm noise in
 `paper`, shoji = pale grid). The build never breaks on missing art, and
 real files can be dropped into `public/textures/` later with the same
-names.
+names — and listed in `FILES` in core/assets.js (2026-10-13: none ship, so
+none are asked for; a missing file only put a 404 in the console).
 
 ## core/audio.js
 

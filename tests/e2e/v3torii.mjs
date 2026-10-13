@@ -7,7 +7,7 @@ const dbg = () => window.__game.machine.current._debug?.();
 const cam = () => page.evaluate(() => { const w = window.__game.world; return { cam: w.camera.position.toArray().map((v) => +v.toFixed(2)), eye: w.player.eye.toArray().map((v) => +v.toFixed(2)), move: w.player.canMove, look: w.player.canLook, phase: window.__game.machine.current._debug().phase }; });
 await jump(page, 'TORII'); await sleep(1200);
 console.log('start', await cam());
-await drainStory(page, 2);
+await drainStory(page, 6);
 await waitFor(page, () => window.__game.machine.current._debug().phase === 'playback', 10000);
 await sleep(1600);
 console.log('during', await cam());

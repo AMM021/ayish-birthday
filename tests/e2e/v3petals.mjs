@@ -5,7 +5,7 @@ await waitFor(page, () => !!window.__game?.machine?.currentName, 20000);
 await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); ['torii','compile','stars'].forEach((r) => s.setRoomDone(r)); });
 await jump(page, 'PETALS');
 await waitFor(page, () => !window.__game.machine.isTransitioning(), 30000);
-await drainStory(page, 2);
+await drainStory(page, 6);
 await page.evaluate(() => {
   const G = window.__game, w = G.world;
   const key = (type, code) => window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));

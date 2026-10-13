@@ -5,7 +5,7 @@ await waitFor(page, () => !!window.__game?.machine?.currentName, 20000);
 await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); s.setRoomDone('torii'); });
 await jump(page, 'COMPILE');
 await sleep(1500);
-await drainStory(page, 3);
+await drainStory(page, 6);
 const room = () => window.__game.machine.current._debug();
 console.log('after intro', await page.evaluate(room));
 // walk to the desk

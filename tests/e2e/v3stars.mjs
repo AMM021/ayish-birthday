@@ -5,7 +5,7 @@ await waitFor(page, () => !!window.__game?.machine?.currentName, 20000);
 await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); ['torii','compile'].forEach((r) => s.setRoomDone(r)); });
 await jump(page, 'STARS');
 await waitFor(page, () => !window.__game.machine.isTransitioning(), 30000);
-await drainStory(page, 2);
+await drainStory(page, 6);
 await page.screenshot({ path: '../v3-stars-start.png' });
 // in-page autopilot: steers along the route, jumps at takeoff points, ducks at gates
 await page.evaluate(() => {
