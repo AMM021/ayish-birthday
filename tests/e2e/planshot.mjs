@@ -1,0 +1,10 @@
+import puppeteer from 'puppeteer-core';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome-stable', headless: 'new', args: ['--no-sandbox'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1200, height: 900 });
+const errs = [];
+page.on('pageerror', (e) => errs.push(e.message));
+await page.goto('file:///tmp/claude-1000/-home-amm-021-Projects-WIFES-BIRTHDAY/8aa8d4c6-811b-4815-99da-23f160374e35/scratchpad/plan/dream-house-plan.html', { waitUntil: 'networkidle0' });
+await page.screenshot({ path: '../plan-full.png', fullPage: true });
+console.log('errors', errs, 'scrollW', await page.evaluate(() => document.body.scrollWidth));
+await browser.close();

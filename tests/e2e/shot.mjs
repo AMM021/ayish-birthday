@@ -1,0 +1,11 @@
+import { launch, BASE, sleep, jump } from './lib.mjs';
+const [out, state, wait='2500', setup='{}'] = process.argv.slice(2);
+const { browser, page, logs } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await page.evaluate((s) => { localStorage.clear(); localStorage.setItem('ayish.progress', s); }, setup);
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await jump(page, state); await sleep(+wait);
+await page.evaluate(()=>{ const d=document.querySelector('.devtools'); if(d) d.style.display='none'; });
+await page.screenshot({ path: `${out}/${state.toLowerCase()}.png` });
+console.log(logs.filter(l=>!l.includes('vite')).join('\n'));
+await browser.close();

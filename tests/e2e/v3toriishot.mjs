@@ -1,0 +1,10 @@
+import { launch, BASE, sleep, jump, drainStory, waitFor } from './lib.mjs';
+const { browser, page } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await waitFor(page, () => !!window.__game?.machine?.currentName, 20000);
+await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); });
+await jump(page, 'TORII'); await sleep(1200); await drainStory(page, 2);
+await waitFor(page, () => window.__game.world.camera.position.y > 7.95, 120000);
+await page.evaluate(() => document.querySelector('.devtools, #devtools, [class*=dev]')?.style.setProperty('display', 'none'));
+await page.screenshot({ path: '../torii-overview.png' });
+await browser.close();

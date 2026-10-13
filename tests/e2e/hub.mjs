@@ -1,0 +1,41 @@
+import { launch, BASE, sleep, jump, bubbleState, waitFor } from './lib.mjs';
+const out = process.argv[2];
+const { browser, page, logs } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await page.evaluate(() => { localStorage.clear(); localStorage.setItem('ayish.progress', JSON.stringify({unlocked:true})); });
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+const G = (f, ...a) => page.evaluate(f, ...a);
+await jump(page, 'HUB');
+const typingBubble = () => waitFor(page, () => { const b=document.querySelector('.bubble.show'); return b && !b.querySelector('.bubble-hint') && b.querySelector('.bubble-text').textContent.length>2; });
+for (let i=0;i<4;i++){
+  await typingBubble();
+  const before = await bubbleState(page);
+  await page.keyboard.press('Enter'); await sleep(120);
+  const mid = await bubbleState(page);
+  await sleep(200);
+  const mid2 = await bubbleState(page);
+  console.log(`beat ${i+1}: typing=${before[0].text.length<before[0].full.length} | after Enter → complete=${mid[0]?.text===mid[0]?.full} still shown=${mid.length===1} ready=${mid2[0]?.ready}`);
+  // repeated keydown must not double-advance: send a repeat event
+  await page.keyboard.down('Enter'); await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent('keydown',{code:'Enter',repeat:true}))); await page.keyboard.up('Enter');
+  await sleep(100);
+  const after = await bubbleState(page);
+  console.log(`   dismissed=${after.length===0} text="${before[0].full}"`);
+}
+await sleep(800);
+console.log('after intro bubbles:', (await bubbleState(page)).length);
+const tp = (x,y,z) => G((x,y,z)=>{const w=window.__game.world; w.camera.position.set(x,y,z); w.player.prev.set(x,y,z);}, x,y,z);
+const gp = (deg,k=1) => { const a=deg*Math.PI/180; return [Math.sin(a)*18*k, 1.6, -Math.cos(a)*18*k]; };
+await tp(...gp(-30,0.55)); await sleep(1500);
+let s = await bubbleState(page); console.log('second bubble:', s[0]?.full);
+await waitFor(page, ()=>!!document.querySelector('.bubble-hint')); await page.keyboard.press('Enter'); await sleep(800);
+await tp(...gp(-30)); await sleep(1500);
+s = await bubbleState(page); console.log('locked compile gate:', s[0]?.full, '| state', await G(()=>window.__game.machine.currentName));
+await page.screenshot({ path: out + '/hub-locked.png' });
+await sleep(6000);
+await tp(...gp(0,0.95)); await sleep(1500);
+s = await bubbleState(page); console.log('door5:', s[0]?.full);
+await sleep(6000);
+await tp(...gp(-60,0.7)); await sleep(300); await tp(...gp(-60)); await sleep(2500);
+console.log('open torii gate → state', await G(()=>window.__game.machine.currentName));
+console.log(logs.filter(l=>!l.includes('vite')).join('\n'));
+await browser.close();

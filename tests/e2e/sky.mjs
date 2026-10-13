@@ -1,0 +1,13 @@
+import { launch, BASE, sleep } from './lib.mjs';
+const out = process.argv[2];
+const { browser, page, logs } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await sleep(3000);
+await page.evaluate(() => { const s = window.__game.world.sky; s.children[0].visible = false; });
+await sleep(500);
+await page.screenshot({ path: out + '/nonebula.png' });
+await page.evaluate(() => { const s = window.__game.world.sky; s.children[0].visible = true; s.children[1].visible=false; });
+await sleep(500);
+await page.screenshot({ path: out + '/nostars.png' });
+console.log(logs.filter(l=>!l.includes('vite')).join('\n'));
+await browser.close();

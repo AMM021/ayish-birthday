@@ -1,0 +1,13 @@
+const shot = async (n) => { await page.screenshot({ path: `../rv_${n}.png` }); console.log('shot', n, await page.evaluate(() => window.__game.machine.room()?._debug?.().phase)); };
+await sleep(800); await shot('0_enter');
+await waitFor(page, () => window.__game.machine.room()?._debug?.().phase === 'call', 60000);
+await shot('1_call');
+await drainStory(page, 2);
+await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true })));
+await sleep(1200); await shot('2_walk');
+await waitFor(page, () => ['hugging', 'words'].includes(window.__game.machine.room()?._debug?.().phase), 60000);
+await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', bubbles: true })));
+await sleep(1500); await shot('3_hug');
+await sleep(5000); await shot('4_words');
+console.log(logs.filter((l) => /error|warn/i.test(l)).slice(0, 10).join('\n'));
+await browser.close();

@@ -1,0 +1,9 @@
+{
+  "name": "ayish-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Headless-Chrome tests for the game (puppeteer-core + the system Chrome). See README.md.",
+  "dependencies": {
+    "puppeteer-core": "^25.13.0"
+  }
+}

@@ -1,0 +1,11 @@
+import { launch, BASE, sleep, jump, waitFor, drainStory } from './lib.mjs';
+const { browser, page } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await waitFor(page, () => !!window.__game?.machine?.currentName, 30000);
+await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); ['torii','compile'].forEach((r) => s.setRoomDone(r)); });
+await jump(page, 'STARS'); await sleep(3000); await drainStory(page, 6);
+await page.screenshot({ path: '../heart_0_start.png' });
+await page.evaluate(() => [...document.querySelectorAll('.devtools button')].find((b) => /Complete challenge/.test(b.textContent)).click());
+await sleep(3800);
+await page.screenshot({ path: '../heart_1_rise.png' });
+await browser.close();

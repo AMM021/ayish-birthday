@@ -1,0 +1,10 @@
+import { launch, BASE, sleep } from './lib.mjs';
+const out = process.argv[2];
+const { browser, page, logs } = await launch();
+await page.goto(BASE, { waitUntil: 'load' });
+await sleep(4000);
+await page.screenshot({ path: out + '/passcode.png' });
+const txt = await page.evaluate(() => document.querySelector('.passcode')?.innerText);
+console.log('PASSCODE TEXT:', JSON.stringify(txt));
+console.log(logs.join('\n'));
+await browser.close();

@@ -1,0 +1,20 @@
+import { launch, BASE, sleep, waitFor } from './lib.mjs';
+const { browser, page, logs } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await page.evaluate(() => { localStorage.clear(); localStorage.setItem('ayish.progress', JSON.stringify({unlocked:true, roomsDone:['torii','compile','stars','petals'], reachedFinal:true, seenLetter:true})); });
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await waitFor(page, () => window.__game?.machine?.currentName === 'FINAL' && !window.__game.machine.isTransitioning(), 20000);
+await page.evaluate(() => {
+  const real = HTMLMediaElement.prototype.play; let n = 0;
+  HTMLMediaElement.prototype.play = function () { if (this.tagName === 'VIDEO' && n++ === 0) return Promise.reject(new DOMException('blocked', 'NotAllowedError')); return real.call(this); };
+  window.__game.machine.go('REVEAL');
+});
+await waitFor(page, () => !!document.querySelector('.reveal-play'), 10000);
+console.log('play control shown:', await page.evaluate(()=>document.querySelector('.reveal-play')?.textContent));
+await sleep(9000);
+console.log('waited 9 s with Play shown → fallback?', await page.evaluate(()=>!!document.querySelector('.reveal-fallback')), '(must be false: waiting on her is not a failure)');
+await page.keyboard.press('Enter'); await sleep(2000);
+console.log('Enter → playing:', await page.evaluate(()=>!document.querySelector('.reveal video').paused));
+await waitFor(page, () => window.__game.machine.currentName === 'END', 60000);
+console.log('→', await page.evaluate(()=>window.__game.machine.currentName));
+await browser.close();

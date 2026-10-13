@@ -1,0 +1,35 @@
+const shot = async (n) => { await page.screenshot({ path: `../rv_${n}.png` }); console.log('shot', n, await page.evaluate(() => window.__game.machine.room()?._debug?.().phase)); };
+await sleep(800); await shot('0_enter');
+await waitFor(page, () => window.__game.machine.room()?._debug?.().phase === 'call', 60000);
+await shot('1_call');
+await drainStory(page, 2);
+await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true })));
+await sleep(1200); await shot('2_walk');
+await waitFor(page, () => ['hugging', 'words'].includes(window.__game.machine.room()?._debug?.().phase), 60000);
+await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', bubbles: true })));
+await sleep(1500); await shot('3_hug');
+
+const probeAt = (px, py) => page.evaluate(({ px, py }) => {
+  const G = window.__game, T = G.THREE, w = G.world;
+  const rc = new T.Raycaster();
+  rc.setFromCamera(new T.Vector2(px / innerWidth * 2 - 1, -(py / innerHeight) * 2 + 1), w.camera);
+  const hit = rc.intersectObjects(w.scene.children, true).find((h) => h.object.isMesh && h.object.material?.lightMap);
+  if (!hit) return 'no lm hit';
+  const o = hit.object, g = o.geometry, f = hit.face;
+  const uv1 = g.attributes.uv1;
+  const uvs = [f.a, f.b, f.c].map((i) => [uv1.getX(i), uv1.getY(i)]);
+  const lm = o.material.lightMap, im = lm.image;
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+  const sample = (u, v) => { const d = x.getImageData(Math.min(im.width - 1, Math.floor(u * im.width)), Math.min(im.height - 1, Math.floor(v * im.height)), 1, 1).data; return [d[0], d[1], d[2]]; };
+  const cu = (uvs[0][0] + uvs[1][0] + uvs[2][0]) / 3, cv = (uvs[0][1] + uvs[1][1] + uvs[2][1]) / 3;
+  return { mesh: o.name, mat: o.material.name, lm: lm.name, flipY: lm.flipY, uvs: uvs.map((p) => p.map((v) => +v.toFixed(5))), centre: sample(cu, cv), centreFlip: sample(cu, 1 - cv), dist: +hit.distance.toFixed(2), n: f.normal.toArray().map((v) => +v.toFixed(2)) };
+}, { px, py });
+console.log('middle shelf front', JSON.stringify(await probeAt(360, 253)));
+console.log('top shelf front', JSON.stringify(await probeAt(360, 178)));
+console.log('door casing right edge', JSON.stringify(await probeAt(1037, 300)));
+console.log('chair back top', JSON.stringify(await probeAt(150, 372)));
+console.log('wall', JSON.stringify(await probeAt(700, 150)));
+await sleep(5000); await shot('4_words');
+console.log(logs.filter((l) => /error|warn/i.test(l)).slice(0, 10).join('\n'));
+await browser.close();

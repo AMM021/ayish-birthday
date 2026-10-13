@@ -1,0 +1,13 @@
+import { launch, BASE, sleep, jump, drainStory } from './lib.mjs';
+const out = process.argv[2];
+const { browser, page } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await page.evaluate(() => { localStorage.clear(); localStorage.setItem('ayish.progress', JSON.stringify({unlocked:true})); });
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await jump(page, 'STARS'); await sleep(1000); await drainStory(page);
+await page.evaluate(()=>{ window.__game.machine.current.devComplete(); const d=document.querySelector('.devtools'); if(d) d.style.display='none'; window.__game.orb.setVisible(false); });
+await drainStory(page);
+await page.evaluate(()=>{ const g=window.__game.machine.current; /* hide portal for a clean front-on check */ window.__game.world.getGroup('stars').children.find(c=>c.name==='portal').visible=false; });
+await sleep(2500);
+await page.screenshot({ path: out + '/stars-heart.png' });
+await browser.close();

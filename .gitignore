@@ -6,3 +6,10 @@ dist/
 art/cache/
 art/out/
 __pycache__/
+
+# test outputs
+tests/*.png
+tests/*.jpg
+tests/*.log
+tests/snap/
+tests/e2e/node_modules/

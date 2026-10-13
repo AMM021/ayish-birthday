@@ -1,0 +1,15 @@
+import { launch, BASE, sleep, jump, waitFor, drainStory } from './lib.mjs';
+const { browser, page, logs } = await launch();
+await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await waitFor(page, () => !!window.__game?.machine?.currentName, 30000);
+await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); ['torii','compile'].forEach((r) => s.setRoomDone(r)); });
+await jump(page, 'STARS'); await sleep(2000); await drainStory(page, 6); await sleep(400);
+console.log('coach', await page.evaluate(() => { const c = document.querySelector('.prompt-coach'); return [c.textContent, c.classList.contains('show'), getComputedStyle(c).animationName]; }));
+await page.evaluate(() => window.__game.machine.room().devComplete()); await sleep(600);
+console.log('stars in the sky', await page.evaluate(() => window.__game.machine.room()._debug().done));
+await sleep(1500);
+await page.keyboard.press('Escape'); await sleep(300);
+console.log('pause menu', await page.evaluate(() => !!document.querySelector('.pause-menu')));
+console.log(logs.filter((l) => /error/i.test(l)).join('\n') || 'no errors');
+await browser.close();

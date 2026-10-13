@@ -1,0 +1,57 @@
+import { launch, BASE, sleep, jump, drainStory, waitFor, bubbleState } from './lib.mjs';
+const out = process.argv[2];
+const { browser, page, logs } = await launch();
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+await page.evaluate(() => { localStorage.clear(); localStorage.setItem('ayish.progress', JSON.stringify({unlocked:true, roomsDone:['torii','compile','stars','petals']})); });
+await page.goto(BASE + '?dev=true', { waitUntil: 'load' });
+const D = () => page.evaluate(() => window.__game.machine.current._debug?.());
+const S_ = () => page.evaluate(() => localStorage.getItem('ayish.progress'));
+await jump(page, 'FINAL'); await sleep(1500);
+console.log('entered FINAL save:', await S_());
+const preload0 = await page.evaluate(()=>[...document.querySelectorAll('video')].length);
+console.log('video elements before letter:', preload0);
+await drainStory(page);
+await page.evaluate(()=>{ const d=document.querySelector('.devtools'); if(d) d.style.display='none'; });
+await page.screenshot({ path: out + '/final.png' });
+await page.evaluate(()=>{const w=window.__game.world; w.camera.position.set(0,1.6,1.4);});
+await waitFor(page, () => !!document.querySelector('.overlay-letter'), 15000);
+console.log('letter open, phase', (await D()).phase, 'pointerlock-free, loop paused:', await page.evaluate(()=>window.__game.clock.isPaused()));
+await sleep(2000);
+console.log('video preload after letter opened:', await page.evaluate(()=>document.createElement('video') && (window.__game && [...document.querySelectorAll('video')].length)), );
+await page.screenshot({ path: out + '/letter.png' });
+// Enter during typing must NOT skip
+await page.keyboard.press('Enter'); await sleep(500);
+console.log('Enter while typing → still open:', await page.evaluate(()=>!!document.querySelector('.overlay-letter')), 'seenLetter', JSON.parse(await S_()).seenLetter);
+// deliberate skip via keyboard: Tab to skip, Enter
+await page.focus('.letter-skip'); await page.keyboard.press('Enter'); await sleep(1500);
+console.log('skip → letter closed:', await page.evaluate(()=>!document.querySelector('.overlay-letter')), 'seenLetter', JSON.parse(await S_()).seenLetter);
+await waitFor(page, () => !!document.querySelector('.bubble.show'), 10000);
+console.log('bubble:', (await bubbleState(page))[0]?.full, 'phase', (await D()).phase);
+// turning before dismissal must not trigger
+await page.evaluate(()=>{ window.__game.world.player.yaw += Math.PI; });
+await sleep(1000);
+console.log('turn before dismiss → state', await page.evaluate(()=>window.__game.machine.currentName), 'phase', (await D()).phase);
+await page.evaluate(()=>{ window.__game.world.player.yaw -= Math.PI; });
+await drainStory(page); await sleep(800);
+let d = await D(); console.log('after dismiss phase', d.phase);
+// refresh here → FINAL chair-facing + turn around, no letter
+await page.reload({ waitUntil: 'load' }); await sleep(3500);
+console.log('refresh after letter → state', await page.evaluate(()=>window.__game.machine.currentName), 'letter shown?', await page.evaluate(()=>!!document.querySelector('.overlay-letter')), 'bubble', (await bubbleState(page))[0]?.full);
+await drainStory(page); await sleep(800);
+d = await D(); console.log('phase', d.phase, '→ waiting for assist turn (8 s)…');
+await waitFor(page, () => window.__game.machine.currentName === 'REVEAL', 120000);
+console.log('assist → state', await page.evaluate(()=>window.__game.machine.currentName), 'seenReveal (must be false):', JSON.parse(await S_()).seenReveal, 'look hint shown:', await page.evaluate(()=>document.querySelector('.prompt-look').classList.contains('show')));
+await waitFor(page, () => !!document.querySelector('.reveal-fallback'), 20000);
+console.log('fallback line:', await page.evaluate(()=>document.querySelector('.reveal-fallback p')?.textContent));
+await sleep(1500);
+await page.screenshot({ path: out + '/reveal-fallback.png' });
+await page.keyboard.press('Enter');
+await waitFor(page, () => window.__game.machine.currentName === 'END', 60000);
+console.log('continue → state', await page.evaluate(()=>window.__game.machine.currentName), 'save', await S_());
+await sleep(9000);
+await page.screenshot({ path: out + '/end.png' });
+console.log('end text:', JSON.stringify(await page.evaluate(()=>document.querySelector('.endcard-lines')?.innerText)));
+await page.reload({ waitUntil: 'load' }); await sleep(3000);
+console.log('refresh after reveal → state', await page.evaluate(()=>window.__game.machine.currentName));
+console.log(logs.filter(l=>!l.includes('vite')).join('\n'));
+await browser.close();
