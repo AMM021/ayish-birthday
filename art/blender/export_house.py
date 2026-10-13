@@ -218,7 +218,114 @@ def weld_shells(o):
     bm.free()
 
 
-def lightmap_uv(objs, size):
+def uv_signature(objs):
+    """A fingerprint of the lightmap layout (every object's 'lm' UVs): a
+    lightmap baked earlier may only be reused for exactly this layout —
+    reused over a re-packed atlas, every surface reads somebody else's light
+    (the gaming room went black that way, 2026-10-12)."""
+    import hashlib
+    import numpy as np
+    h = hashlib.sha1()
+    for o in sorted(objs, key=lambda o: o.name):
+        lm = o.data.uv_layers.get('lm')
+        h.update(o.name.encode())
+        if not lm:
+            continue
+        a = np.empty(len(lm.data) * 2, dtype=np.float32)
+        lm.data.foreach_get('uv', a)
+        h.update(np.round(a, 4).tobytes())
+    return h.hexdigest()
+
+
+def reusable(done, objs):
+    """BAKE_REUSE: the baked file `done` if it was baked for this very UV
+    layout, else None (and the caller bakes afresh)."""
+    sig = done + '.uv'
+    if not (os.environ.get('BAKE_REUSE') and os.path.exists(done) and os.path.exists(sig)):
+        return None
+    if open(sig).read().strip() != uv_signature(objs):
+        log('reuse refused (the UV layout changed):', done)
+        return None
+    return done
+
+
+def mark_baked(done, objs):
+    with open(done + '.uv', 'w') as f:
+        f.write(uv_signature(objs))
+
+
+def widen_thin_islands(objs, size, min_px=4.0):
+    """Stretch each lightmap island narrower than `min_px` texels (in u or
+    v) about its centre to that width; returns how many were widened.
+    (A thin face inside a bigger island needs nothing: dilate() gives the
+    texels round every island their neighbours' light.)"""
+    from bpy_extras import bmesh_utils
+    need = min_px / size
+    widened = 0
+    for o in objs:
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        uv = bm.loops.layers.uv.get('lm')
+        if uv is None:
+            bm.free()
+            continue
+        changed = False
+        for faces in bmesh_utils.bmesh_linked_uv_islands(bm, uv):
+            loops = [l for f in faces for l in f.loops]
+            us = [l[uv].uv.x for l in loops]
+            vs = [l[uv].uv.y for l in loops]
+            for axis, vals in ((0, us), (1, vs)):
+                lo, hi = min(vals), max(vals)
+                w = hi - lo
+                if w >= need or w < 1e-9:
+                    continue  # wide enough, or no area at all (nothing to light)
+                c, k = (lo + hi) / 2, need / w
+                for l in loops:
+                    co = l[uv].uv
+                    if axis == 0:
+                        co.x = c + (co.x - c) * k
+                    else:
+                        co.y = c + (co.y - c) * k
+                changed = True
+                widened += 1
+        if changed:
+            bm.to_mesh(o.data)
+        bm.free()
+    log('lm thin islands widened', widened)
+    return widened
+
+
+def report_unexported(shown, extra_names=()):
+    """Everything the bake renders must be exported too: a mesh left out
+    still casts its light and shadow into the lightmaps (loose pillows
+    showed only as black patches on the sofas). Logs any such mesh."""
+    names = {o.name for o in shown} | set(extra_names)
+    for o in shown:
+        names.update(c.name for c in o.children_recursive)
+    def covered(o):
+        while o is not None:
+            if o.name in names:
+                return True
+            o = o.parent
+        return False
+    def rendered(o):
+        # in the render: not hidden, and every collection holding it is on
+        # (the asset library's source models sit in switched-off ones)
+        if o.hide_render or not o.visible_get():
+            return False
+        return any(not c.hide_render for c in o.users_collection)
+    missing = [o.name for o in bpy.context.view_layer.objects
+               if o.type in ('MESH', 'CURVE') and rendered(o) and not covered(o)]
+    import re
+    kinds = {}
+    for n in missing:
+        k = re.sub(r'(\.\d+|\d+)', '#', n)
+        kinds[k] = kinds.get(k, 0) + 1
+    log('NOT EXPORTED', len(missing), sorted(kinds.items(), key=lambda kv: -kv[1])[:60])
+    return missing
+
+
+def lightmap_uv(objs, size, uniform=True):
     for o in objs:
         me = o.data
         if not me.uv_layers:
@@ -226,6 +333,19 @@ def lightmap_uv(objs, size):
         lm = me.uv_layers.get('lm') or me.uv_layers.new(name='lm')
         me.uv_layers.active = lm
         me.uv_layers[0].active_render = True
+    if not uniform:
+        # furniture: the plain unwrap it always had (every face, each piece
+        # at its own scale) — it gives small things room to be lit
+        select(objs)
+        bpy.context.tool_settings.mesh_select_mode = (True, False, False)
+        bpy.context.tool_settings.use_uv_select_sync = False
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.0, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
+        bpy.ops.uv.pack_islands(rotate=True, margin=4.0 / size)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        check_atlas(objs)
+        return
     # curved walls arrive with their own continuous islands (geo.wrap_lm,
     # face layer 'lm_preset'); everything else is unwrapped automatically
     for o in objs:
@@ -244,9 +364,24 @@ def lightmap_uv(objs, size):
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.0, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.average_islands_scale()  # one texel density for all islands
+    # one texel density for all islands (no seams where walls meet)
+    bpy.ops.uv.average_islands_scale()
     bpy.ops.uv.pack_islands(rotate=True, margin=4.0 / size)
     bpy.ops.object.mode_set(mode='OBJECT')
+    # a sliver (a door lining's 8 mm edge) can fall between texel centres and
+    # get no light at all — it shows black: widen every island thinner than
+    # a few texels, then pack again
+    # (walls and floors only: furniture has tens of thousands of small
+    # islands, and widening them all makes the repack shrink everything)
+    if widen_thin_islands(objs, size):
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.pack_islands(rotate=True, margin=4.0 / size)
+        bpy.ops.object.mode_set(mode='OBJECT')
+    check_atlas(objs)
+
+
+def check_atlas(objs):
     # every lightmap UV inside the atlas (else it would tile the atlas)
     for o in objs:
         lm = o.data.uv_layers['lm'].data
@@ -297,7 +432,16 @@ def bake(objs, img):
     sc.render.bake.margin_type = 'EXTEND'
     sc.render.bake.target = 'IMAGE_TEXTURES'
     log('baking', img.name, len(objs), 'objects', SAMPLES, 'samples')
-    bpy.ops.object.bake(type='DIFFUSE', pass_filter={'DIRECT', 'INDIRECT'}, use_clear=True)
+    # Our own margin: the image starts transparent, the bake (no margin of
+    # its own) makes every texel it lights opaque, and dilate() then fills
+    # the rest from the nearest lit texels. Blender's margin left the gaps
+    # between islands black, and the denoiser smeared that black into every
+    # island's edge (dark rims on shelves, chairs, door linings).
+    w, h = img.size
+    img.pixels.foreach_set(np.zeros(w * h * 4, dtype=np.float32))
+    bpy.ops.object.bake(type='DIFFUSE', pass_filter={'DIRECT', 'INDIRECT'}, use_clear=False,
+                        uv_layer='lm', margin=0)
+    dilate(img)
     log('baked', img.name)
     for m in mats:
         for n in m.node_tree.nodes:
@@ -307,6 +451,33 @@ def bake(objs, img):
         n = m.node_tree.nodes.get('_lmbake')
         if n:
             m.node_tree.nodes.remove(n)
+
+
+def dilate(img, steps=16):
+    """Fill the texels no island covers (alpha 0) from their lit neighbours,
+    `steps` texels deep, so nothing samples black at an island's edge."""
+    w, h = img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    px = px.reshape(h, w, 4)
+    covered = px[:, :, 3] > 0.5
+    log('lightmap coverage %.1f%%' % (100 * covered.mean()))
+    rgb = np.where(covered[:, :, None], px[:, :, :3], 0)
+    for _ in range(steps):
+        if covered.all():
+            break
+        acc = np.zeros_like(rgb)
+        cnt = np.zeros(covered.shape, dtype=np.float32)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+            c = np.roll(np.roll(covered, dy, 0), dx, 1)
+            acc += np.roll(np.roll(rgb, dy, 0), dx, 1) * c[:, :, None]
+            cnt += c
+        grow = ~covered & (cnt > 0)
+        rgb[grow] = acc[grow] / cnt[grow][:, None]
+        covered = covered | grow
+    px[:, :, :3] = rgb
+    px[:, :, 3] = 1.0
+    img.pixels.foreach_set(px.ravel())
 
 
 def denoise(img):
@@ -491,6 +662,9 @@ def export(h, put, gd):
             veg.append(o)
         else:
             groups['garden'].append(o)
+    report_unexported([o for k in groups for o in groups[k]] + veg, door_names)
+    if os.environ.get('EXPORT_REPORT_ONLY'):
+        return  # (a quick check of what would be exported, no bake)
     doors = []
     for d in h.doors:
         doors.append((d, realize(d['obj'])))
@@ -543,10 +717,10 @@ def export(h, put, gd):
         if not objs:
             continue
         log('uv', k)
-        lightmap_uv(objs, size)
+        lightmap_uv(objs, size, uniform=k != 'interior')
         done = os.path.join(TEX, f'lm_{k}.png')
-        if os.environ.get('BAKE_REUSE') and os.path.exists(done):
-            lm = bpy.data.images.load(done)  # (the UVs come out the same: same meshes)
+        if reusable(done, objs):
+            lm = bpy.data.images.load(done)
             lm.name = f'lm_{k}'
             lm.colorspace_settings.name = 'Non-Color'
             log('reused', done)
@@ -555,6 +729,7 @@ def export(h, put, gd):
             bake(objs, img)
             dn = denoise(img)
             lm = encode(dn, f'lm_{k}')
+            mark_baked(done, objs)
         hook_lightmap(objs, k, lm)
         meta['atlases'][k] = size
         for o in objs:

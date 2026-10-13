@@ -30,7 +30,8 @@ import furniture as F  # noqa: E402
 import assets as A  # noqa: E402
 from geo import Builder, P  # noqa: E402
 from export_house import (select, realize, unparent_keep, game_materials, scale_uv0, split_special,  # noqa: E402
-                          weld_shells, lightmap_uv, bake, denoise, encode, hook_lightmap, mat_names, K, TEX, log)
+                          weld_shells, lightmap_uv, bake, denoise, encode, hook_lightmap, mat_names, K, TEX, log,
+                          reusable, mark_baked, report_unexported)
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 ROOM = next((a.split('=')[1] for a in ARGS if a.startswith('--room=')), 'gaming')
@@ -646,6 +647,9 @@ def export(h, put, meta, outdoor):
                 veg.append(o)
             else:
                 groups['interior'].append(o)
+    report_unexported(groups['room'] + groups['interior'] + veg + kept)
+    if os.environ.get('EXPORT_REPORT_ONLY'):
+        return  # (a quick check of what would be exported, no bake)
     for k in groups:
         groups[k] = [realize(o) for o in groups[k]]
     for o in groups['interior'] + veg:
@@ -701,10 +705,10 @@ def export(h, put, meta, outdoor):
     info = {'K': K, 'atlases': {}, **{k: v for k, v in meta.items() if k != 'keep'}}
     for k, size in (('room', 2048), ('interior', 2048)):
         objs = groups[k]
-        lightmap_uv(objs, size)
+        lightmap_uv(objs, size, uniform=k != 'interior')
         name = f'lm_{ROOM}_{k}'
         done = os.path.join(TEX, name + '.png')
-        if os.environ.get('BAKE_REUSE') and os.path.exists(done):
+        if reusable(done, objs):
             lm = bpy.data.images.load(done)
             lm.name = name
             lm.colorspace_settings.name = 'Non-Color'
@@ -712,6 +716,7 @@ def export(h, put, meta, outdoor):
             img = bpy.data.images.new(name + '_f', size, size, float_buffer=True)
             bake(objs, img)
             lm = encode(denoise(img), name)
+            mark_baked(done, objs)
         hook_lightmap(objs, k, lm)
         info['atlases'][k] = size
         for o in objs:

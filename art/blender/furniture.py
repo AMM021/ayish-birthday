@@ -120,6 +120,10 @@ class Piece:
         other.root.location = P(x, z, y)
         other.root.rotation_euler = (0, 0, -math.radians(face_local - 90))
         other.kind = 'decor'
+        # its meshes are this piece's too: the export (and the checks) walk
+        # a piece's parts — attached pillows were baked (their shadow on
+        # the sofa) but never exported
+        self.parts += [o for o in other.parts if o not in self.parts]
         return other
 
 
@@ -182,6 +186,11 @@ def curved_sofa(coll, M, cx, cz, r_front, a0, a1, depth=1.0, name='sofa_curved',
         # face the pillow toward the room (toward the arc centre)
         pl.root.rotation_euler = (math.radians(-12), 0, -math.radians((a + 180) - 90))
         pl.root.rotation_mode = 'ZXY'
+        # the sofa's own: they move with it (layout lifts it to its floor)
+        # and are exported with it (loose, they were baked — their shadow
+        # on the seat — but never exported)
+        pl.root.parent = s.root
+        s.parts += pl.parts
     s.root.location = (0, 0, 0)
     s.seat_top = seat_top
     return s

@@ -184,10 +184,12 @@ class House:
         self.doors.append(dict(name=name, obj=leaf, kind='hinge', pivot=pivots[swing], pivots=pivots, angle=swing * angle, width=L))
         return leaf
 
-    def doorway(self, name, a, c, y, h, depth, center=None, swing=1, leaf=True, mat='oak'):
+    def doorway(self, name, a, c, y, h, depth, center=None, swing=1, leaf=True, mat='oak', back=0.003):
         """Oak lining on the jambs and head of a doorway between jamb points
         a → c (wall centre line), plus a hinged leaf inside it. For a curved
-        wall pass its `center`: the jambs there are radial."""
+        wall pass its `center`: the jambs there are radial. `back`: how far
+        the lining reaches behind the jamb points into the wall (0 where the
+        lining stands inside a wider opening)."""
         (x0, z0), (x1, z1) = a, c
         L = math.hypot(x1 - x0, z1 - z0)
         ux, uz = (x1 - x0) / L, (z1 - z0) / L
@@ -204,8 +206,17 @@ class House:
             jx, jz = jamb_dir(px, pz)
             e = depth / 2 + 0.008  # proud of the wall faces by 8 mm, like a real lining
             q = (px + ux * w * s, pz + uz * w * s)
-            quad = [(px - jx * e, pz - jz * e), (px + jx * e, pz + jz * e), (q[0] + jx * e, q[1] + jz * e), (q[0] - jx * e, q[1] - jz * e)]
-            b.prism(quad, y, y + h)
+            # its back reaches 3 mm into the wall: flush with the opening's
+            # own face the two fought, and the wall's (dark, it is covered)
+            # showed through as a black line
+            bx, bz = px - ux * back * s, pz - uz * back * s
+            quad = [(bx - jx * e, bz - jz * e), (bx + jx * e, bz + jz * e), (q[0] + jx * e, q[1] + jz * e), (q[0] - jx * e, q[1] - jz * e)]
+            # that back face split where the wall's faces cut it: the 8 mm
+            # that stand proud get their own light (one face through the
+            # wall bakes black inside it, and that bleeds out)
+            d = depth / 2
+            outline = [quad[0], (bx - jx * d, bz - jz * d), (bx + jx * d, bz + jz * d)] + quad[1:]
+            b.prism(outline, y, y + h)
             quads.append(quad)
         # the head spans between the jambs' inner faces (no overlap with them)
         ja, jb = quads[0][3], quads[0][2]
@@ -563,6 +574,7 @@ class House:
             g0, g1 = self.landing[k]
             end = g0 if g0 > g1 else g0 + 360  # the long way round, once
             self.glazing(f'gallery_rail_{k}', self.arc_pts(tx, tz, 2.5, g1, end, 6), y, y + 1.05, mullion=1.0)
+            self.fence(self.arc_pts(tx, tz, 2.5, g1, end, 6), y)  # her jump (~1 m) must not clear the glass
         # ground floor inside the tower (stone)
         b = Builder()
         b.prism(geo.circle_pts(tx, tz, rc - 0.15, 96), -0.35, FFL[0])
@@ -693,6 +705,7 @@ class House:
         self.add(b, 'stair_landing', M['oak'])
         rail_pts = [polar(tx, tz, 2.5, land2 + 46)] + [polar(tx, tz, rin + 0.04, land2 + 46 - 46 * k / 8) for k in range(9)]
         self.glazing('landing_rail', rail_pts, FFL[2], FFL[2] + 1.05, mullion=1.0, trim=(0.065, 0.0))
+        self.fence(rail_pts, FFL[2])
         # balusters + a round brass rail on both edges (open at the landings)
         rail = Builder()
         def in_landing(i):
@@ -720,6 +733,25 @@ class House:
             if len(run) > 1:
                 self._helix_rail(hr, run, r)
         self.add(hr, 'stair_handrail', M['brass'], solid=False)
+        # the rails are drawn only: invisible walls follow them up the helix
+        # (from just above the floor, open where the flight meets a floor),
+        # so she can never step or jump off the stair into the stairwell
+        for r, outer in ((rout - 0.02, True), (rin + 0.02, False)):
+            b = Builder()
+            bm = b.bm
+            for i in range(3, n):
+                if outer and in_landing(i):
+                    continue
+                aa, ab = a0 + i * step_deg, a0 + (i + 1) * step_deg
+                ya, yb = FFL[0] + i * rise, FFL[0] + (i + 1) * rise
+                v = [bm.verts.new(P(*polar(tx, tz, rr, a), y)) for a, yy in ((aa, ya), (ab, yb))
+                     for rr in (r - 0.025, r + 0.025) for y in (yy - 0.5, yy + 2.4)]
+                # v: [a_in_lo, a_in_hi, a_out_lo, a_out_hi, b_in_lo, b_in_hi, b_out_lo, b_out_hi]
+                for f in ((0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (1, 3, 7, 5), (0, 4, 6, 2)):
+                    bm.faces.new([v[k] for k in f])
+            o = b.obj('fence_' + str(len(self.fences)), None, self.coll)
+            o.hide_render = True
+            self.fences.append(o)
         self.stair_info = dict(a0=a0, step_deg=step_deg, n=n)
 
     def _helix_rail(self, b, idx, r):
@@ -1008,7 +1040,9 @@ class House:
             vx, vz = cxp - q[0], czp - q[1]
             L = math.hypot(vx, vz)
             return (q[0] + vx / L * d, q[1] + vz / L * d)
-        self.doorway('bedroom_door', inward(pa, 0.08), inward(pc, 0.08), y, 2.4, 0.3, swing=1)
+        # (set in from the opening's faces, and 1 mm under the opening's own
+        # lining, which it would otherwise touch face to face)
+        self.doorway('bedroom_door', inward(pa, 0.08), inward(pc, 0.08), y, 2.399, 0.3, swing=1, back=0.0)
         gpts = [outline[i] for i in glass_idx]
         c_, s_ = math.cos(math.radians(p['rot'])), math.sin(math.radians(p['rot']))
         vtx = (p['cx'] - p['rz'] * s_, p['cz'] + p['rz'] * c_)      # the south vertex

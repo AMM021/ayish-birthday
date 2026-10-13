@@ -153,6 +153,59 @@ Detailed implementation specs. Grep by `##` heading.
   - *His turn* (REVEAL): he stands with his back to her while she gets up,
     then turns round to her (clip `turn`, 2 s: head first, then shoulders,
     hips last, his feet stepping round on leg IK) and only then calls her.
+- **Owner feedback, 2026-10-13:**
+  - *The heart (STARS) read oddly* (two outlines, one on the water and one
+    in the air, parallax between them; a lumpy curve; the bridge cutting
+    across it). Now there is one outline, in the sky: the classic heart
+    curve (x = sin³t, y = (13 cos t − 5 cos 2t − 2 cos 3t − cos 4t) / 16),
+    measured by length; each lit star glides from its platform to its
+    place on it (star i at (i + 1)/10 of the way round from the notch) and
+    gold orbs fill the pieces between. The platforms and stretches below
+    are unchanged. The bridge of light runs from the ninth star to the top
+    notch and straight down the middle to the portal; the orb leads her
+    along it. The rise after the ninth star looks down from higher up so
+    the whole heart is in view.
+  - *Learning the moves (STARS)*: the first stretch that needs a move
+    (stones: jump; the low gates: crouch; the first wide gap: run + jump)
+    shows that move's keys (the approved controls hint's own parts: "Space
+    to jump", "C to crouch", "Shift to run · Space to jump") until she is
+    across; they light up gold where the move is needed. The orb's spoken
+    tip for each (TEXT.md STARS `Teach jump|crouch|run`) plays once per
+    stretch, again after a missed gap — once the owner has approved them.
+  - *Longer level introductions*: each level plays TEXT.md `ROOM: X —
+    intro` (numbered beats, Enter between) when that section exists, else
+    its one `Intro` line.
+  - *Doors thrown off their hinges on a second visit* to the house (the
+    reveal replayed, a dev jump): the house was used straight from the
+    loader's cache and its doors re-rigged each time; each visit now
+    builds from a fresh copy.
+  - *The gaming room dark in the reveal*: a lightmap baked for an older
+    UV layout had been reused (`BAKE_REUSE`). A reused lightmap now needs
+    a matching fingerprint of the layout (`<lightmap>.png.uv`), else it is
+    baked again. While re-baking, dark rims showed on thin things (shelf
+    fronts, chair edges, door linings): Blender's bake margin left the gaps
+    between lightmap islands black and the denoiser smeared that black into
+    the islands' edges. The bake now starts from a transparent image with
+    no margin of its own, and `dilate()` fills every uncovered texel from
+    its lit neighbours (16 texels deep) before denoising. Furniture atlases
+    are unwrapped as before 2026-10-12 (each piece at its own scale, no
+    one-density pass); walls and floors keep one density, with islands
+    thinner than 4 texels widened. Door linings reach 3 mm into the wall
+    and their face against it is split at the wall's faces.
+  - *Pillows on sofas and beds were never exported* (pieces attached to
+    furniture were baked — their shadow showed as a black patch on the
+    sofa — but left out of the file): `Piece.attach` makes the attached
+    piece's meshes part of the parent's; the living room's curved sofa
+    parents its pillows (they also sat 15 cm into the seat). A check found
+    the same for the studio's 135 toy cars and the library's ladder rail
+    (now with brass brackets to the bookcases): every export now logs
+    `NOT EXPORTED n` — rendered meshes that the bake sees but the file
+    would leave out (must be 0; `EXPORT_REPORT_ONLY=1` stops right after
+    it, for a quick check).
+  - *The spiral stair*: its brass rails were drawn only; invisible walls
+    now follow both rails up the helix (open where it meets a floor), and
+    the glass rails of the galleries and the top landing get the 2.6 m
+    fences the balconies have (her jump, ~1 m, could clear 1.05 m glass).
 
 ## v2 redesign (2026-10-10) — read first; overrides older sections
 

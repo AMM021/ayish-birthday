@@ -148,6 +148,12 @@ def furnish(M, coll):
         put[f'lib_shelves{i}'] = ('library', sh)
     rail = F.Piece('lib_rail', coll, 'decor', solid=False)
     rail.tube([(pol(LIB_R - 0.13, a)[0], y0 + 2.95, pol(LIB_R - 0.13, a)[1]) for a in [219.5 + i * 1.5 for i in range(int((256.8 - 219.5) / 1.5) + 1)]], 0.018, M['brass'], 'rail')
+    # brass brackets hold it to each bookcase (both ends and the middle)
+    for k, (a0, a1) in enumerate(((219.5, 227.0), (231.0, 238.0), (242.0, 249.0), (253.0, 256.8))):
+        for a in (a0 + 0.35, (a0 + a1) / 2, a1 - 0.35):
+            rail.prism([pol(LIB_R - 0.14, a - 0.06), pol(LIB_R + 0.006, a - 0.06), pol(LIB_R + 0.006, a + 0.06), pol(LIB_R - 0.14, a + 0.06)],
+                       y0 + 2.94, y0 + 2.965, M['brass'], f'bracket{k}_{a:.1f}')
+    put['lib_rail'] = ('library', rail)
     lad = F.rolling_ladder(coll, M, 2.95, 'lib_ladder')
     x, z = pol(LIB_R - 0.7, 234.5)
     lad.place(x, z, y0, toward(234.5))
@@ -268,6 +274,7 @@ def furnish(M, coll):
             x, z = pol(17.33, a)
             c = F.toy_car(coll, M, cars[n % len(cars)], f'car{n}')
             c.place(x, z, y1 + 0.95 + k * 0.32 + 0.026, toward(a))
+            put[f'studio_car{n}'] = ('studio', c)  # (unlisted, they were baked but never exported)
             n += 1
             a += math.degrees(0.12 / 17.17)
     x, z = pol(16.55, 286.5)
