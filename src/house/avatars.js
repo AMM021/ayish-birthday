@@ -14,6 +14,11 @@ const FILES = { ayish: 'models/avatars/ayish.glb', him: 'models/avatars/him.glb'
 const CUTOUT = /hair|eyebrow|eyelash|glasses/i;
 const FADE = 0.35;
 
+// warm(): download both ahead without opening them (see assets.warm)
+export function warm() {
+  assets.warm(Object.values(FILES));
+}
+
 export function preload() {
   return Promise.all(Object.keys(FILES).map((k) => assets.model(FILES[k])));
 }

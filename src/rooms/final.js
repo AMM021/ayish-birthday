@@ -420,6 +420,7 @@ export default {
   name: 'final',
 
   async enter() {
+    avatars.warm(); // (the bytes come in now; they are opened when the letter shows)
     await Promise.all([gamingRoom.preload(), kit.preload()]);
     buildScene();
     portal = group.userData.portal;
