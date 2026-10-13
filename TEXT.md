@@ -52,6 +52,13 @@ E: that's all four. H. O. M. E.
 E (then): he's through there.
 go on. i'll be right behind you.
 
+## ROOM: TORII — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+1. this is the first room. somewhere in here is the first of the four pieces he lost — the first letter of the way back to him.
+
+2. the gates remember an order. they'll light up one by one. watch closely, then walk through them in the same order.
+
+3. three rounds, each a little longer. if you get it wrong, they'll show you again. take your time.
+
 ## ROOM: TORII — orb lines
 Intro: watch the gates. walk through them in the same order.
 Success 1: see? natural. you've always been good at finding your way.
@@ -59,6 +66,13 @@ Success 2: two for two. he'd be showing off about you right now.
 Wrong: no worries. try again.
 Complete: okay that was perfect. portal's open.
 Hint (60s): watch them again. i'll flash the first one for you.
+
+## ROOM: COMPILE — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+1. the second piece is tangled up in his code. when the void took him, the program that brings him home broke in four places.
+
+2. come to his desk. i'll read you each broken line, and you type the missing word. one word each — and only you know them.
+
+3. fix all four, then run it the way he always does. let's see what he was making.
 
 ## ROOM: COMPILE — orb lines (fix the code: she types one word per blank; each right answer lights a lantern)
 Intro: his code broke in a few places. i'll ask, you fill in the blank. one word each.
@@ -94,6 +108,13 @@ Body lines (revealed per fragment, in order):
 // cause: I got too excited building this and skipped a line.
 // worth it. it brought her here.
 
+## ROOM: STARS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+1. the third piece is up there. these stars used to make a shape — his favourite one. now they're scattered over the water.
+
+2. light them in order: walk, hop and duck along the stones from one star to the next. the water won't hold you — fall in, and you'll be back at the last star you lit.
+
+3. some gaps are too wide to walk. i'll show you the keys the first time you need them.
+
 ## ROOM: STARS — orb lines
 Intro: these stars know a shape. follow them.
 Star 1: that's one. they remember you.
@@ -104,6 +125,13 @@ Star 8: one more, love.
 Wrong: not yet. start again, gently.
 Complete: that's us. always has been.
 Hint (60s): the shape is already there. you just have to wake it up.
+
+## ROOM: PETALS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+1. the last piece. after this one, there's nothing left between you and him.
+
+2. this one's the hardest. stay in my light, all the way to the end. if you're out of it for too long, we start again. the petals like to play.
+
+3. the trail runs through the forest. stay on the path, stay in my light, and don't stop to chase the petals.
 
 ## ROOM: PETALS — orb lines
 Intro: this one's the hardest. stay in my light, all the way to the end. if you're out of it for too long, we start again. the petals like to play.

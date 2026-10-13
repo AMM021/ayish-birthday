@@ -146,7 +146,8 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 - [ ] Decide on the Vite chunk-size warning (three.js alone is ~500 kB; the deploy skill wants a clean build, SPECS fixes vite.config).
 - [x] Approved by the owner (2026-10-12) and in TEXT.md: the new lines drafted 2026-10-12: the orb's right-answer lines (TORII rounds, COMPILE words, STARS milestones), PETALS' "stay in my light" instruction and progress lines, his longer goodbye in the house, the compliments.
 - [ ] Approve the pause menu's labels (TEXT.md → "PAUSE MENU": paused, continue, music, sound effects, mouse sensitivity, fullscreen; proposed 2026-10-13).
-- [ ] Approve the drafted longer level introductions and STARS' move tips (shown to the owner 2026-10-13; they go into TEXT.md as `ROOM: X — intro` and STARS `Teach jump|crouch|run`).
+- [x] The longer level introductions approved by the owner (2026-10-13) and in TEXT.md (`ROOM: X — intro`).
+- [ ] Approve STARS' drafted move tips (TEXT.md STARS `Teach jump|crouch|run`; until then the keys show without the orb's spoken tip).
 - [ ] Deploy to Netlify (needs the owner's Netlify login).
 
 ## Build gate / acceptance criteria
