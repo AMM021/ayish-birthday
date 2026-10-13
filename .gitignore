@@ -13,3 +13,4 @@ tests/*.jpg
 tests/*.log
 tests/snap/
 tests/e2e/node_modules/
+tests/goodbye/
