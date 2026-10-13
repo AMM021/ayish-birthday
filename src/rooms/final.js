@@ -9,6 +9,7 @@ import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as overlay from '../ui/overlay.js';
 import * as portalObj from '../objects/portal.js';
+import { PHOTOS } from '../house/photos.js';
 import * as bouquet from '../objects/bouquet.js';
 import * as kit from '../objects/kit.js';
 import { orb } from '../objects/orb.js';
@@ -26,14 +27,8 @@ import * as nature from '../objects/nature.js';
 // room in the dream house. On her laptop: the letter. Then "turn around."
 // and the reveal.
 
-// Personal photos: any number, discovered at build time, natural order.
-const PHOTO_MODULES = import.meta.glob('../assets/pics/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', {
-  eager: true,
-  query: '?url',
-  import: 'default'
-});
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-const PHOTOS = Object.keys(PHOTO_MODULES).sort(collator.compare).map((k) => PHOTO_MODULES[k]);
+// Personal photos: any number, discovered at build time, natural order
+// (house/photos.js: which frame shows which).
 
 // The void set sits far from the gaming room (which is at the origin), so
 // each can be shown on its own; only one is ever visible.

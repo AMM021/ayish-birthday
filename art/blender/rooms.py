@@ -223,13 +223,19 @@ def speaker(coll, M, name):
     return s
 
 
-def frame(coll, M, w, h, canvas, name, keep_photo=False):
-    """A slim oak frame hanging on a wall (front toward local +z)."""
+def frame(coll, M, w, h, canvas, name, keep_photo=False, photos=()):
+    """A slim oak frame hanging on a wall (front toward local +z).
+    keep_photo: the whole canvas is a photo slot (the gaming room's);
+    photos: roles of portrait photos on a white mat (F.photo_slots)."""
     f = F.Piece(name, coll, 'decor', solid=False)
     d = 0.025
     for (x, y, ww, hh) in ((0, 0, w, 0.03), (0, h - 0.03, w, 0.03), (-w / 2 + 0.015, 0.03, 0.03, h - 0.06), (w / 2 - 0.015, 0.03, 0.03, h - 0.06)):
         f.box(ww, hh, d, x, d / 2, y, M['oak'], name='rail')
-    f.box(w - 0.06, h - 0.06, 0.006, 0, 0.004, 0.03, M[canvas], name='photo' if keep_photo else 'canvas')
+    if photos:
+        f.box(w - 0.06, h - 0.06, 0.006, 0, 0.004, 0.03, M['linen_white'], name='mat')
+        F.photo_slots(f, M, w - 0.06, h - 0.06, 0.03, 0.007, photos)
+    else:
+        f.box(w - 0.06, h - 0.06, 0.006, 0, 0.004, 0.03, M[canvas], name='photo' if keep_photo else 'canvas')
     return f
 
 
@@ -435,7 +441,7 @@ def build_threshold(M, arch, coll):
     put['doormat'] = (R, F.rug(coll, M, 1.0, 0.6, 'fab_lav', 'doormat').place(1.2, z0 + 0.45, 0.0, 90))
     put['runner'] = (R, F.rug(coll, M, 1.0, 1.9, 'fab_blush', 'runner').place(1.2, z0 + 1.8, 0.0, 90))
     put['hall_rug'] = (R, F.rug(coll, M, 1.9, 1.9, 'fab_lav', 'hall_rug', True).place(1.0, -0.1, 0.0))
-    put['bench_art'] = (R, frame(coll, M, 0.9, 0.6, 'canvas_blush', 'bench_art').place(-0.8, z0, 1.25, 90))
+    put['bench_art'] = (R, frame(coll, M, 0.9, 0.6, 'canvas_blush', 'bench_art', photos=('photo_t0', 'photo_t1')).place(-0.8, z0, 1.25, 90))
     cs = F.Piece('coat_stand', coll)
     cs.cyl(0.2, 0.025, 0, 0, 0.0, M['walnut'], segs=32, bevel=0.006, name='base')
     cs.cyl(0.022, 1.75, 0, 0, 0.025, M['oak'], segs=16, name='pole')
@@ -476,16 +482,16 @@ def build_threshold(M, arch, coll):
     put['side_vase'] = (R, A.piece('ceramic_vase_03', coll, 'side_vase', height=0.3, kind='decor', solid=False).place(1.3, z1 - 0.22, 0.62))
     put['side_pot'] = (R, A.piece('potted_plant_04', coll, 'side_pot', height=0.32, kind='decor', solid=False).place(2.4, z1 - 0.24, 0.62))
     put['side_books'] = (R, A.piece('book_encyclopedia_set_01', coll, 'side_books', height=0.22, kind='decor', solid=False).place(1.85, z1 - 0.22, 0.62, 270))
-    put['back_art'] = (R, frame(coll, M, 1.1, 0.7, 'canvas_lav', 'back_art').place(1.85, z1, 1.25, 270))
+    put['back_art'] = (R, frame(coll, M, 1.1, 0.7, 'canvas_lav', 'back_art', photos=('photo_t2', 'photo_t3')).place(1.85, z1, 1.25, 270))
 
     # the console on the right wall: a lamp, a vase, art above it
     put['console'] = (R, F.cabinet(coll, M, 1.3, 0.8, 0.4, 'console', 'oak', 'walnut', 2).place(x1 - 0.2, -0.6, 0.0, 180))
     put['console_lamp'] = (R, F.akari_lamp(coll, M, 'table', 'console_lamp').place(x1 - 0.2, -1.0, 0.8))
     put['console_vase'] = (R, A.piece('ceramic_vase_01', coll, 'console_vase', height=0.3, kind='decor', solid=False).place(x1 - 0.2, -0.25, 0.8))
-    put['console_art'] = (R, frame(coll, M, 0.7, 0.5, 'canvas_sky', 'console_art').place(x1, -0.6, 1.35, 180))
+    put['console_art'] = (R, frame(coll, M, 0.7, 0.5, 'canvas_sky', 'console_art', photos=('photo_t4', 'photo_t5')).place(x1, -0.6, 1.35, 180))
     # frames on the left wall (beyond the extra door)
     for i, (z, y, w_, h_, c) in enumerate(((1.4, 1.45, 0.42, 0.52, 'canvas_lav'), (2.15, 1.6, 0.34, 0.42, 'canvas_blush'), (2.8, 1.38, 0.42, 0.52, 'canvas_sky'))):
-        put[f'art{i}'] = (R, frame(coll, M, w_, h_, c, f'art{i}').place(x0, z, y, 0))
+        put[f'art{i}'] = (R, frame(coll, M, w_, h_, c, f'art{i}', photos=(f'photo_t{6 + i}',)).place(x0, z, y, 0))
     put['pendant'] = (R, F.akari_lamp(coll, M, 'pendant', 'pendant').place(1.0, -0.1, H - 0.62))
     put['pendant2'] = (R, F.akari_lamp(coll, M, 'pendant', 'pendant2').place(-0.9, 2.2, H - 0.62))
 
@@ -641,7 +647,7 @@ def export(h, put, meta, outdoor):
         for o in piece.parts:
             if o.type not in ('MESH', 'CURVE'):
                 continue
-            if o.name in keep_names:
+            if o.name in keep_names or o.get('keep_role'):
                 kept.append(o)
             elif room == 'outside':
                 veg.append(o)
@@ -728,9 +734,10 @@ def export(h, put, meta, outdoor):
     for o in veg:
         o['kind'] = 'veg'
     for o in kept:
+        role = o.get('keep_role') or meta['keep'][o.name]
         o['kind'] = 'keep'
-        o['role'] = meta['keep'][o.name]
-        o.name = meta['keep'][o.name]
+        o['role'] = role
+        o.name = role
     # 4. the game shows map × lightmap: drop what it would not use
     shown = [o for k in groups for o in groups[k]] + [o for s in special.values() for o in s] + veg + kept
     for m in {m for o in shown for m in o.data.materials if m}:

@@ -205,7 +205,7 @@ def furnish(M, coll):
     put['genkan_plant'] = ('genkan_stone', A.piece('potted_plant_04', coll, 'genkan_plant', height=0.6, kind='plant').place(-1.5, -8.6, 0.0))
     put['genkan_lamp'] = ('genkan_stone', F.akari_lamp(coll, M, 'floor', 'genkan_lamp').place(1.4, -8.7, 0.0))
     x, z, f = against_wall(-1.655, -5.0, y0 + 1.6, 180, 1.0, 0.0, gap=0.004)
-    put['genkan_art'] = ('genkan', F.wall_art(coll, M, 'genkan_art', 1.0, 0.65).place(x, z, y0 + 1.35, f))
+    put['genkan_art'] = ('genkan', F.wall_art(coll, M, 'genkan_art', 1.0, 0.65, photos=('photo_h2', 'photo_h3')).place(x, z, y0 + 1.35, f))
     put['genkan_runner'] = ('genkan', F.rug(coll, M, 1.0, 2.6, 'linen_lav', 'genkan_runner').place(0.0, -5.2, y0, 90))
     put['genkan_vase'] = ('genkan', A.piece('ceramic_vase_01', coll, 'genkan_vase', height=0.3, kind='decor', solid=False).place(-1.655, -5.35, y0 + 0.9))
     # the WC: toilet on the straight north wall, basin on the south wall
@@ -230,7 +230,7 @@ def furnish(M, coll):
     put['fruit'] = ('kitchen_dining', A.piece('wooden_bowl_01', coll, 'fruit', kind='decor', solid=False).place(9.6, -1.9, y0 + 0.91))
     put['island_vase'] = ('kitchen_dining', A.piece('ceramic_vase_03', coll, 'island_vase', height=0.36, kind='decor', solid=False).place(8.4, -1.95, y0 + 0.91))
     x, z, f = against_wall(6.9, -3.4, y0 + 1.6, 270, 1.1, 0.0, gap=0.004)
-    put['kitchen_art'] = ('kitchen_dining', F.wall_art(coll, M, 'kitchen_art', 1.1, 0.7).place(x, z, y0 + 1.3, f))
+    put['kitchen_art'] = ('kitchen_dining', F.wall_art(coll, M, 'kitchen_art', 1.1, 0.7, photos=('photo_h4', 'photo_h5')).place(x, z, y0 + 1.3, f))
     put['island_plant'] = ('kitchen_dining', A.piece('potted_plant_04', coll, 'island_plant', height=0.32, kind='decor', solid=False).place(10.2, -1.85, y0 + 0.91))
     put['laundry'] = ('laundry', F.cabinet(coll, M, 1.5, 0.92, 0.62, 'laundry', 'linen_white', 'marble', 2).place(8.25, -6.955, y0, 90))
     # a proper utility room: a shelf with folded towels above the machines,
@@ -300,7 +300,7 @@ def furnish(M, coll):
     x, z = pol(14.9, 271.5)  # (off the way in from the stair, which runs past r 13)
     put['studio_arm'] = ('studio', A.piece('modern_arm_chair_01', coll, 'studio_arm').place(x, z, y1, face_point(x, z, *pol(14.7, 277.5))))
     x, z, f = against_wall(*pol(16.0, 286.5), y1 + 1.5, 286.5, 1.2, 0.0, gap=0.004)
-    put['studio_art'] = ('studio', F.wall_art(coll, M, 'studio_art', 1.2, 0.75).place(x, z, y1 + 1.2, f))
+    put['studio_art'] = ('studio', F.wall_art(coll, M, 'studio_art', 1.2, 0.75, photos=('photo_h0', 'photo_h1')).place(x, z, y1 + 1.2, f))
     x, z = pol(16.6, 257.6)
     put['studio_plant3'] = ('studio', A.potted('calathea_orbifolia_01', coll, M, 'studio_plant3', 0.85, ['_a'], 0.42, 'clay').place(x, z, y1))
 
@@ -394,7 +394,8 @@ def furnish(M, coll):
     fw, fh, fd = 1.3, 0.75, 0.03
     for (x_, y_, ww, hh) in ((0, 0, fw, 0.035), (0, fh - 0.035, fw, 0.035), (-fw / 2 + 0.0175, 0.035, 0.035, fh - 0.07), (fw / 2 - 0.0175, 0.035, 0.035, fh - 0.07)):
         art.box(ww, hh, fd, x_, fd / 2, y_, M['oak'], name='rail')
-    art.box(fw - 0.07, fh - 0.07, 0.006, 0, 0.004, 0.035, M['washi'], name='print')
+    art.box(fw - 0.07, fh - 0.07, 0.006, 0, 0.004, 0.035, M['linen_white'], name='mat')
+    F.photo_slots(art, M, fw - 0.07, fh - 0.07, 0.035, 0.007, ('photo_h6', 'photo_h7'))
     put['bed_art'] = ('bedroom', art.place(ax_, az_, y2 + 1.42, af_))
     # the wardrobe on the north-east wall, the dresser on the north-west
     wx, wz, wf = against_wall(pcx + 3.6, pcz - 2.6, y2 + 1.2, math.degrees(math.atan2(-2.6, 3.6)), 1.8, 0.3)

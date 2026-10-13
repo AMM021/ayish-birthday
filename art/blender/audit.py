@@ -432,7 +432,8 @@ def run(house, put, rooms, garden=None):
             continue
         best = None
         base_angle = abs(d['angle']) if d['kind'] == 'hinge' else d.get('angle')
-        for sign in ((1, -1) if d['kind'] == 'hinge' else (1,)):
+        first = d.get('prefer', 1)
+        for sign in ((first, -first) if d['kind'] == 'hinge' else (1,)):
             if d['kind'] == 'hinge':
                 d['pivot'] = d['pivots'][sign]
                 d['angle'] = base_angle

@@ -207,6 +207,20 @@ Detailed implementation specs. Grep by `##` heading.
     the glass rails of the galleries and the top landing get the 2.6 m
     fences the balconies have (her jump, ~1 m, could clear 1.05 m glass).
 
+## Their photos in the frames (owner, 2026-10-13: "put them in other photo frames around the house and all the photo frames you can see in the game")
+
+Every frame in the game shows their photos (src/assets/pics/, any number,
+natural name order; `src/house/photos.js` decides which goes where): the
+letter turns through all of them; the gaming room's desk frame and two
+wall frames take the first three; the entry hall's six frames (photo_t0–8)
+the next nine; the house's four prints (studio, genkan, kitchen, over the
+bed: photo_h0–7) count back from the end of the list, so the newest added
+hang there and no photo repeats within a room. The photos are portrait
+(3:4), so a landscape frame holds two side by side on a white mat
+(`furniture.photo_slots`): nothing is cropped and no frame changed size or
+place. Each photo surface is exported unbaked (kind `keep`, its role) and
+filled in the game (`baked.showPhoto`, object-fit cover).
+
 ## The neighbourhood (owner, 2026-10-13: "a whole modern neighbourhood and a city around the house… she has to feel like she's in Japan… not a flat world"; walkable front street chosen)
 
 Built in Blender (`art/blender/town.py`, run by `build.py` with the house

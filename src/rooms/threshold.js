@@ -4,6 +4,7 @@ import * as world from '../world/world.js';
 import * as P from '../house/props.js';
 import * as M from '../house/models.js';
 import * as baked from '../house/baked.js';
+import { fillFrames } from '../house/photos.js';
 import { enableBloom } from '../world/layers.js';
 
 const KIT = ['rugDoormat', 'coatRackStanding', 'benchCushion', 'pottedPlant', 'rugRectangle', 'loungeSofaLong', 'pillow', 'bear',
@@ -48,6 +49,7 @@ const OPENING = { z0: -1.35, z1: -0.25, h: 2.25 };
 function buildBaked(r) {
   group.add(r.root);
   r.glow.forEach((o) => enableBloom(o, 1.35));
+  fillFrames(r.kept); // their photos in the hall's frames
   solid = [r.colliders];
   // a faint lavender glow round the door's frame (it pulses once she has
   // read the note)

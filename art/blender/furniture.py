@@ -11,6 +11,7 @@ import bmesh
 import bpy
 from mathutils import Matrix, Vector
 import geo
+import mats
 from geo import P, polar
 
 SOFT = 0.06  # default cushion edge radius
@@ -244,14 +245,41 @@ def round_table(coll, M, diameter=1.6, h=0.74, name='table_round'):
     return t
 
 
-def wall_art(coll, M, name='art', w=1.0, h=0.7, paper='washi'):
+def photo_slots(p, M, iw, ih, y0, zf, roles):
+    """Their photos in a frame: len(roles) portrait prints (3:4, as the
+    photos are) side by side on the mat, centred in the inner area iw × ih
+    whose bottom is at y0, a hair in front of the mat (its front at local
+    depth zf). Each print is kept apart for the game to fill
+    (custom property keep_role → its role)."""
+    n = len(roles)
+    gap = 0.035
+    ph = ih * 0.84
+    pw = ph * 0.75
+    if n * pw + (n + 1) * gap > iw:
+        pw = (iw - (n + 1) * gap) / n
+        ph = pw / 0.75
+    total = n * pw + (n - 1) * gap
+    mat = M.get('photo') or mats.emissive('photo', '#f5eee0', 1.0)
+    out = []
+    for k, role in enumerate(roles):
+        x = -total / 2 + pw / 2 + k * (pw + gap)
+        o = p.box(pw, ph, 0.003, x, zf + 0.0015 + 0.0005, y0 + (ih - ph) / 2, mat, name=f'photo{k}')
+        o['keep_role'] = role
+        out.append(o)
+    return out
+
+
+def wall_art(coll, M, name='art', w=1.0, h=0.7, paper='washi', photos=()):
     """A framed print for a wall: oak frame, the print a little inset. Its
-    back is at local z = 0 (hang it with against_wall(..., back=0))."""
+    back is at local z = 0 (hang it with against_wall(..., back=0)).
+    `photos`: roles of their photos on a white mat instead of the print."""
     art = Piece(name, coll, 'decor', solid=False)
     fd = 0.03
     for (x_, y_, ww, hh) in ((0, 0, w, 0.035), (0, h - 0.035, w, 0.035), (-w / 2 + 0.0175, 0.035, 0.035, h - 0.07), (w / 2 - 0.0175, 0.035, 0.035, h - 0.07)):
         art.box(ww, hh, fd, x_, fd / 2, y_, M['oak'], name='rail')
-    art.box(w - 0.07, h - 0.07, 0.006, 0, 0.004, 0.035, M[paper], name='print')
+    art.box(w - 0.07, h - 0.07, 0.006, 0, 0.004, 0.035, M['linen_white' if photos else paper], name='mat' if photos else 'print')
+    if photos:
+        photo_slots(art, M, w - 0.07, h - 0.07, 0.035, 0.007, photos)
     return art
 
 

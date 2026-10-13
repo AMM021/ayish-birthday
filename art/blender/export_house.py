@@ -23,6 +23,7 @@ import json
 import math
 import bpy
 import bmesh
+import mats
 import numpy as np
 from mathutils import Vector, Matrix
 
@@ -52,6 +53,25 @@ def select(objs, active=None):
     for o in objs:
         o.select_set(True)
     bpy.context.view_layer.objects.active = active or objs[0]
+
+
+def front_uv(o):
+    """UVs 0–1 across the faces that look toward the piece's front (mesh
+    −Y = plan +z), so a photo fills them once."""
+    me = o.data
+    if not me.uv_layers:
+        me.uv_layers.new(name='UVMap')
+    uv = me.uv_layers[0]
+    front = [p for p in me.polygons if p.normal.y < -0.5]
+    if not front:
+        return
+    xs = [me.vertices[i].co.x for p in front for i in p.vertices]
+    zs = [me.vertices[i].co.z for p in front for i in p.vertices]
+    x0, x1, z0, z1 = min(xs), max(xs), min(zs), max(zs)
+    for p in front:
+        for li, vi in zip(p.loop_indices, p.vertices):
+            co = me.vertices[vi].co
+            uv.data[li].uv = ((co.x - x0) / max(1e-6, x1 - x0), (co.z - z0) / max(1e-6, z1 - z0))
 
 
 def realize(o):
@@ -649,6 +669,7 @@ def export(h, put, gd, skip=None):
                 o['own'] = True
     groups = {k: [] for k, _ in ATLASES}
     veg = []
+    kept = []  # their photos in the frames: not baked, the game fills each
     for o in h.objs:
         if o.type == 'MESH' and o.name not in door_names:
             groups['house'].append(o)
@@ -657,7 +678,9 @@ def export(h, put, gd, skip=None):
         for o in piece.parts:
             if o.type not in ('MESH', 'CURVE'):
                 continue
-            if piece.kind == 'plant' and outdoor:
+            if o.get('keep_role'):
+                kept.append(o)
+            elif piece.kind == 'plant' and outdoor:
                 veg.append(o)
             else:
                 groups['garden' if outdoor else 'interior'].append(o)
@@ -670,9 +693,15 @@ def export(h, put, gd, skip=None):
             veg.append(o)
         else:
             groups['garden'].append(o)
-    report_unexported([o for k in groups for o in groups[k]] + veg, door_names, skip=skip)
+    report_unexported([o for k in groups for o in groups[k]] + veg + kept, door_names, skip=skip)
     if os.environ.get('EXPORT_REPORT_ONLY'):
         return  # (a quick check of what would be exported, no bake)
+    photo_mat = bpy.data.materials.get('photo') or mats.emissive('photo', '#f5eee0', 1.0)
+    for o in kept:
+        front_uv(o)  # (UVs 0–1 across its face: one photo fills it)
+        o.data.materials.clear()
+        o.data.materials.append(photo_mat)
+    kept = [(o['keep_role'], realize(o)) for o in kept]
     doors = []
     for d in h.doors:
         doors.append((d, realize(d['obj'])))
@@ -752,6 +781,11 @@ def export(h, put, gd, skip=None):
         o['kind'] = 'glow'
     for o in veg:
         o['kind'] = 'veg'
+    for role, o in kept:
+        o['kind'] = 'keep'
+        o['role'] = role
+        o.name = role
+    kept = [o for _, o in kept]
     for d, o in door_objs:
         info = {k: v for k, v in d.items() if k in ('kind', 'pivot', 'angle', 'dir', 'dist', 'width')}
         info['name'] = o.name
@@ -781,7 +815,7 @@ def export(h, put, gd, skip=None):
                     for l in list(inp.links):
                         nt.links.remove(l)
     # 8. write the files
-    shown = [o for k in groups for o in groups[k]] + [o for s in special.values() for o in s] + veg
+    shown = [o for k in groups for o in groups[k]] + [o for s in special.values() for o in s] + veg + kept
     select(shown)
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, 'house.glb'), export_format='GLB', use_selection=True,
                               export_extras=True, export_image_format='WEBP', export_image_quality=90,

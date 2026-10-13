@@ -155,10 +155,12 @@ class House:
                 continue
             self._window((x0 + ux * o['t0'], z0 + uz * o['t0']), (x0 + ux * o['t1'], z0 + uz * o['t1']), y + o['y0'], y + o['y1'])
 
-    def hinged_door(self, name, a, c, y, h=2.3, swing=1, mat='oak', angle=95):
+    def hinged_door(self, name, a, c, y, h=2.3, swing=1, mat='oak', angle=95, away_from=None):
         """A flush door leaf filling a doorway between jamb points a → c (on
         the wall centre line), hinged at a. `swing` ±1 picks the side it
-        opens to. Also a slim oak lining on the jambs and head."""
+        opens to. Also a slim oak lining on the jambs and head. With
+        `away_from` (a plan point) the audit tries the side away from it
+        first, so the leaf opens into the room, not over that point."""
         (x0, z0), (x1, z1) = a, c
         L = math.hypot(x1 - x0, z1 - z0)
         ux, uz = (x1 - x0) / L, (z1 - z0) / L
@@ -181,10 +183,14 @@ class House:
         # turns the leaf toward +n), so the leaf folds flat beside the jamb
         hp = (x0 + ux * gap, z0 + uz * gap)
         pivots = {1: (hp[0] + nx * t, hp[1] + nz * t), -1: (hp[0] - nx * t, hp[1] - nz * t)}
-        self.doors.append(dict(name=name, obj=leaf, kind='hinge', pivot=pivots[swing], pivots=pivots, angle=swing * angle, width=L))
+        prefer = 1
+        if away_from is not None:
+            mx, mz = (x0 + x1) / 2 - away_from[0], (z0 + z1) / 2 - away_from[1]
+            prefer = 1 if nx * mx + nz * mz > 0 else -1
+        self.doors.append(dict(name=name, obj=leaf, kind='hinge', pivot=pivots[swing], pivots=pivots, angle=swing * angle, width=L, prefer=prefer))
         return leaf
 
-    def doorway(self, name, a, c, y, h, depth, center=None, swing=1, leaf=True, mat='oak', back=0.003):
+    def doorway(self, name, a, c, y, h, depth, center=None, swing=1, leaf=True, mat='oak', back=0.003, away_from=None):
         """Oak lining on the jambs and head of a doorway between jamb points
         a → c (wall centre line), plus a hinged leaf inside it. For a curved
         wall pass its `center`: the jambs there are radial. `back`: how far
@@ -226,7 +232,7 @@ class House:
         if leaf:
             ia = (x0 + ux * w, z0 + uz * w)
             ic = (x1 - ux * w, z1 - uz * w)
-            return self.hinged_door(name, ia if swing > 0 else ic, ic if swing > 0 else ia, y, h - w, swing=1, mat=mat)
+            return self.hinged_door(name, ia if swing > 0 else ic, ic if swing > 0 else ia, y, h - w, swing=1, mat=mat, away_from=away_from)
 
     # --- helpers ------------------------------------------------------------
     def glazing(self, name, path_pts, y0, y1, mullion=1.6, frame=True, doors=(), center=None, inside=1, trim=(0.0, 0.0)):
@@ -548,10 +554,11 @@ class House:
         geo.arc_wall(b, tx, tz, rc, 0, 360, base, FFL[2] + 3.25 - base, 0.3, openings=ops_all, step=0.25)
         self.tower_wall = self.add(b, 'tower_wall', M['earth'], top=[(M['stone'], lambda x, z: True)])
         self.moon_door(MOON, FFL[2], rc)
-        # oak doors to the studio and the bathroom (1F); the others are open
+        # oak doors to the studio and the bathroom (1F); the others are open.
+        # They open into their rooms, never over the stair landing.
         for nm, ang, w, h in (('studio_door', 180, 1.4, 2.3), ('bath_door', 357, 1.4, 2.3)):
             half = math.degrees(w / 2 / rc)
-            self.doorway(nm, polar(tx, tz, rc, ang - half), polar(tx, tz, rc, ang + half), FFL[1], h, 0.3, center=TOWER, swing=1)
+            self.doorway(nm, polar(tx, tz, rc, ang - half), polar(tx, tz, rc, ang + half), FFL[1], h, 0.3, center=TOWER, swing=1, away_from=TOWER)
         # glass crown + roof ring with an oculus (skylight) over the tree
         top = FFL[2] + 3.25
         self.glazing('tower_crown', geo.circle_pts(tx, tz, rc, 48) + [geo.circle_pts(tx, tz, rc, 48)[0]], top, top + 1.1, mullion=1.0)

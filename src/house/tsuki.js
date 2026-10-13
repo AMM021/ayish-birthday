@@ -3,6 +3,7 @@ import { REDUCED_MOTION } from '../core/config.js';
 import * as assets from '../core/assets.js';
 import { enableBloom } from '../world/layers.js';
 import * as baked from './baked.js';
+import { fillFrames } from './photos.js';
 
 // Tsuki House and its garden, as baked in Blender (art/blender/build.py
 // -- --export → public/models/house/). Baked surfaces carry their light in
@@ -46,7 +47,8 @@ export async function build(group) {
   const colRoot = colSrc.clone(true);
   const doorNodes = [];
   // one game material per source material (they are shared across meshes)
-  const { glow: glowMeshes } = baked.convert(root, info.K);
+  const { glow: glowMeshes, kept } = baked.convert(root, info.K);
+  fillFrames(kept); // their photos in the frames round the house
   // the doors: a pivot per leaf (hinge and orbit turn, slides translate)
   root.traverse((o) => {
     const raw = o.userData.door;
