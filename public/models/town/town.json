@@ -1,0 +1,9 @@
+{
+ "K": 4.0,
+ "atlases": {
+  "town": 4096,
+  "homes": 2048,
+  "town_ground": 2048,
+  "props": 2048
+ }
+}

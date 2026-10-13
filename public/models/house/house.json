@@ -150,6 +150,26 @@
    "angle": -95,
    "width": 1.3422992409314267,
    "name": "bath_door"
+  },
+  {
+   "kind": "hinge",
+   "pivot": [
+    -1.354,
+    -21.698
+   ],
+   "angle": 95,
+   "width": 1.36,
+   "name": "gate_door_l"
+  },
+  {
+   "kind": "hinge",
+   "pivot": [
+    1.354,
+    -21.698
+   ],
+   "angle": -95,
+   "width": 1.36,
+   "name": "gate_door_r"
   }
  ],
  "atlases": {

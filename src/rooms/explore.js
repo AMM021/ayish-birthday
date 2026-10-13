@@ -10,10 +10,12 @@ import * as sakura from '../objects/sakura.js';
 import * as farewell from '../objects/farewell.js';
 import * as tsuki from '../house/tsuki.js';
 import * as city from '../house/city.js';
+import * as townMod from '../house/town.js';
 import * as koi from '../house/koi.js';
 import * as note from '../house/note.js';
 import * as avatars from '../house/avatars.js';
 import { ringWall } from '../world/physics.js';
+import { renderer } from '../core/renderer.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
@@ -32,6 +34,8 @@ const NEAR_HIM = 2.2;
 
 let group = null;
 let house = null;
+let town = null; // the neighbourhood outside the gate
+let scenery = null; // the valley city, the river, the train, the mountains
 let him = null;
 let call = null;
 let petals = null;
@@ -70,10 +74,37 @@ async function placeHim() {
   const block = ringWall(him.root.position, 0.38, 2.0, 16);
   block.position.y = seat.y + 1.0;
   group.add(block);
-  world.setColliders([house.colliders, block]);
+  world.setColliders([house.colliders, town?.colliders, block].filter(Boolean));
   call = new THREE.Object3D();
   call.position.copy(seat).add(new THREE.Vector3(0, 1.62, 0));
   group.add(call);
+}
+
+// Everything she will see, ready on the GPU before she sees it: every
+// texture uploaded and every shader compiled while the screen is still
+// faded (else turning to the street for the first time stutters as the
+// town's lightmaps and materials arrive).
+function warmGPU(root) {
+  if (!renderer) return;
+  root.traverse((o) => {
+    for (const m of [].concat(o.material || [])) {
+      for (const k of ['map', 'lightMap', 'emissiveMap', 'alphaMap', 'aoMap']) {
+        if (m[k]?.isTexture) renderer.initTexture(m[k]);
+      }
+    }
+  });
+  renderer.compile(world.scene, world.camera);
+  // and every mesh's buffers: draw the world once each way round (the
+  // screen is black behind the transition), then put the camera back
+  const cam = world.camera;
+  const q = cam.quaternion.clone();
+  for (let k = 0; k < 4; k++) {
+    cam.rotation.set(-0.15, (k * Math.PI) / 2, 0, 'YXZ');
+    cam.updateMatrixWorld(true);
+    renderer.render(world.scene, cam);
+  }
+  cam.quaternion.copy(q);
+  cam.updateMatrixWorld(true);
 }
 
 async function hisLine() {
@@ -142,8 +173,10 @@ export default {
     group = world.getGroup('explore');
     house = await tsuki.build(group);
     world.clearBounds();
-    if (house) world.setColliders([house.colliders]);
-    group.add(city.create());
+    town = house ? await townMod.build(group) : null;
+    if (house) world.setColliders([house.colliders, town?.colliders].filter(Boolean));
+    scenery = city.create();
+    group.add(scenery.group);
     fish = koi.create();
     group.add(fish.group);
     petals = sakura.create(220, { x: [-34, 30], y: [0, 14], z: [-20, 34] }, { wind: new THREE.Vector3(0.35, 0, -0.2), fall: 0.5, size: 1.3 });
@@ -171,6 +204,7 @@ export default {
       const at = house ? house.spawn : new THREE.Vector3(-6, 0, 21.5);
       world.setPlayer(new THREE.Vector3(at.x, at.y + STAND_HEIGHT, at.z), 0, 0.02);
     }
+    warmGPU(group); // (from where she will stand)
     audio.play('hub', { volume: 0.3 });
     if (!save.load().seenGoodbye) {
       orb.setVisible(true);
@@ -188,6 +222,7 @@ export default {
   update(dt) {
     petals?.update(dt);
     fish?.update(dt);
+    scenery?.update(dt);
     farewell.update(dt);
     him?.update(dt);
     if (!house) return;
@@ -235,6 +270,8 @@ export default {
     world.disposeGroup('explore');
     group = null;
     house = null;
+    town = null;
+    scenery = null;
     petals = null;
     fish = null;
   }

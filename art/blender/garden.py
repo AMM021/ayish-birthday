@@ -12,6 +12,7 @@ import bmesh
 import bpy
 from mathutils import Vector, Matrix
 import geo
+import mats
 from geo import Builder, P, polar
 import assets as A
 import furniture as F
@@ -146,27 +147,11 @@ class Garden:
     def ground(self):
         M = self.M
         x0, z0, x1, z1 = SITE
-        # the plateau (grass), then a long slope down toward the city
+        # the plateau (grass); beyond its edges the town's terrain takes over
+        # (art/blender/town.py)
         b = Builder()
-        b.prism([(x0 - 60, z0 - 60), (x1 + 60, z0 - 60), (x1 + 60, z1), (x0 - 60, z1)], -0.6, GROUND)
+        b.prism([(x0 - 0.6, z0 - 0.4), (x1 + 0.6, z0 - 0.4), (x1 + 0.6, z1 + 0.6), (x0 - 0.6, z1 + 0.6)], -0.6, GROUND)
         g = self.add(b, 'ground', M['grass'], solid=True)
-        bm = bmesh.new()
-        far = 220.0
-        rows = [(z1, GROUND), (z1 + 2.0, GROUND - 0.6), (z1 + 9.0, -6.0), (z1 + 30.0, -22.0), (z1 + far, -40.0)]
-        verts = []
-        for z, y in rows:
-            verts.append([bm.verts.new(P(x, z, y)) for x in (x0 - 220, x0 - 60, x1 + 60, x1 + 220)])
-        for i in range(len(rows) - 1):
-            for k in range(3):
-                bm.faces.new((verts[i][k], verts[i][k + 1], verts[i + 1][k + 1], verts[i + 1][k]))
-        geo.box_uv(bm, 1.0)
-        me = bpy.data.meshes.new('slope')
-        bm.to_mesh(me)
-        bm.free()
-        me.materials.append(M['grass'])
-        o = bpy.data.objects.new('slope', me)
-        self.coll.objects.link(o)
-        self.objs.append(o)
         # the pond and the pool are cut out of the ground
         pond = geo.ellipse_pts(POND2['cx'], POND2['cz'], POND2['rx'], POND2['rz'], 0, 96)
         px0, pz0, px1, pz1 = POOL
@@ -255,12 +240,15 @@ class Garden:
         M = self.M
         x0, z0, x1, z1 = SITE
         H, T = 2.3, 0.32
+        GW, GT, GH = 2.6, 0.5, 3.35   # the gate: half-width, thickness, height
         b = Builder()
-        geo.line_wall(b, x0, z0, x1, z0, 0.0, H, T, openings=[{'t0': -x0 - 1.5, 't1': -x0 + 1.5, 'y0': -1, 'y1': 3.0}], foot=0.4)
+        geo.line_wall(b, x0, z0, x1, z0, 0.0, H, T, openings=[{'t0': -x0 - GW, 't1': -x0 + GW, 'y0': -1, 'y1': 4.0}], foot=0.4)
         wall = self.add(b, 'garden_wall', M['plaster'], solid=True)
-        # the moon gate: the square cut filled back in, minus a round opening
+        # the gate (the house's entrance from the street): a taller, deeper
+        # wall with a small tiled roof, its round opening closed by two oak
+        # doors on the garden side that open as she comes near
         b = Builder()
-        geo.line_wall(b, -1.5, z0, 1.5, z0, 0.0, H, T, foot=0.4)
+        geo.line_wall(b, -GW, z0, GW, z0, 0.0, GH, GT, foot=0.4)
         ring = self.add(b, 'moon_gate', M['plaster'], solid=True)
         cyl = Builder()
         bmesh.ops.create_cone(cyl.bm, cap_ends=True, segments=72, radius1=1.3, radius2=1.3, depth=1.0)
@@ -269,11 +257,51 @@ class Garden:
         co = cyl.obj('_moon_cut', None, self.coll)
         self.difference(ring, co)
         bpy.data.objects.remove(co)
-        # a timber cap along the top
+        # a timber cap along the top (either side of the gate)
         b = Builder()
-        b.box(x0 - 0.05, z0 - 0.26, x1 + 0.05, z0 + 0.26, H, H + 0.09)
+        b.box(x0 - 0.05, z0 - 0.26, -GW, z0 + 0.26, H, H + 0.09)
+        b.box(GW, z0 - 0.26, x1 + 0.05, z0 + 0.26, H, H + 0.09)
         self.add(b, 'garden_wall_cap', M['charred'], solid=True)
-        self.fence_along([(-1.6, z0 - 0.35), (1.6, z0 - 0.35)], h=2.4)  # the gate looks out; it does not lead out
+        # the gate's little roof: dark tiles on two slopes, a ridge
+        tile = mats.pbr('roof_tile', 'RoofingTiles013A', tile=1.2)
+        rb = Builder()
+        bm = rb.bm
+        for za, zb, ya, yb in ((z0 - 0.85, z0, GH - 0.05, GH + 0.55), (z0, z0 + 0.85, GH + 0.55, GH - 0.05)):
+            v = [bm.verts.new(P(*p)) for p in ((-GW - 0.45, za, ya - 0.1), (GW + 0.45, za, ya - 0.1), (GW + 0.45, zb, yb - 0.1), (-GW - 0.45, zb, yb - 0.1),
+                                                (-GW - 0.45, za, ya), (GW + 0.45, za, ya), (GW + 0.45, zb, yb), (-GW - 0.45, zb, yb))]
+            for f in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
+                bm.faces.new([v[k] for k in f])
+        self.add(rb, 'gate_roof', tile, solid=False)
+        rd = Builder()
+        rd.box(-GW - 0.5, z0 - 0.12, GW + 0.5, z0 + 0.12, GH + 0.5, GH + 0.68)
+        self.add(rd, 'gate_ridge', M['charred'], solid=False)
+        gb = Builder()  # the gable ends under the roof
+        gbm = gb.bm
+        for x in (-GW, GW):
+            tri = [gbm.verts.new(P(x, z0 - GT / 2, GH)), gbm.verts.new(P(x, z0 + GT / 2, GH)), gbm.verts.new(P(x, z0, GH + 0.5))]
+            gbm.faces.new(tri if x > 0 else tri[::-1])
+        self.add(gb, 'gate_gable', M['plaster'], solid=False)
+        # the doors (house doors: they open as she comes near, into the garden)
+        zi = z0 + GT / 2 + 0.03
+        # (both swing to the garden: their hinges are on opposite sides, so
+        # the same `swing` turns each the garden's way; they clear the
+        # stepping stones by a few cm)
+        self.house.hinged_door('gate_door_l', (-1.36, zi), (0.0, zi), 0.06, 2.58, swing=-1, mat='oak')
+        self.house.hinged_door('gate_door_r', (1.36, zi), (0.0, zi), 0.06, 2.58, swing=-1, mat='oak')
+        # the street side: a nameplate (no name on it), an intercom, a
+        # letterbox, a lamp either side
+        zo = z0 - GT / 2
+        sb = Builder()
+        sb.box(1.62, zo - 0.03, 2.22, zo, 1.45, 1.7)
+        self.add(sb, 'gate_nameplate', M['charred'], solid=False)
+        ib = Builder()
+        ib.box(1.82, zo - 0.04, 2.02, zo, 1.1, 1.3)
+        ib.box(-2.25, zo - 0.22, -1.65, zo, 0.9, 1.25)
+        self.add(ib, 'gate_intercom', M['metal_black'], solid=False)
+        lb = Builder()
+        for x in (-2.15, 2.15):
+            lb.box(x - 0.11, zo - 0.2, x + 0.11, zo - 0.02, 2.25, 2.62)
+        self.add(lb, 'gate_lamps', M['washi_glow'], solid=False)
         # stepping stones from the gate to the front door
         stones = Builder()
         z = z0 + 1.0
@@ -691,10 +719,27 @@ class Garden:
         self.add(culms, 'bamboo', M['bamboo'])
         for mat, b in leaves.items():
             self.add(b, 'bamboo_' + mat, M[mat])
-        # the low wall at the edge of the view
+        # the low wall at the edge of the view, a glass rail on it
         b = Builder()
         geo.line_wall(b, x0, z1, x1, z1, GROUND, 0.5, 0.4, foot=0.4)
         self.add(b, 'view_wall', M['stone'], solid=True)
+        self.house.glazing('view_rail', [(x0 + 0.2, z1), (x1 - 0.2, z1)], GROUND + 0.56, GROUND + 1.66, mullion=2.4)
+        # the site's east and west edges: a block wall with a cedar board
+        # fence above (2.2 m; the bamboo is planting in front of it), posts
+        cedar = mats.pbr('cedar', 'Wood051', tile=1.0, tint='#b48a66')
+        blk = Builder()
+        brd = Builder()
+        pst = Builder()
+        for x in (x0, x1):
+            geo.line_wall(blk, x, z0 + 0.16, x, z1 - 0.2, GROUND - 0.3, 1.3, 0.2, foot=0.0)
+            geo.line_wall(brd, x, z0 + 0.16, x, z1 - 0.2, GROUND + 1.0, 1.2, 0.06)
+            z = z0 + 0.16
+            while z < z1 - 0.2:
+                pst.box(x - 0.06, z - 0.06, x + 0.06, z + 0.06, GROUND + 1.0, GROUND + 2.25)
+                z += 1.8
+        self.add(blk, 'site_wall_block', M['stone'], solid=True)
+        self.add(brd, 'site_wall_boards', cedar, solid=True)
+        self.add(pst, 'site_wall_posts', M['charred'], solid=False)
         # site fences: nobody walks off the plateau or into the bamboo
         self.fence_along([(x0 + 1.6, z0 + 0.3), (x0 + 1.6, z1 - 0.3), (x1 - 1.6, z1 - 0.3), (x1 - 1.6, z0 + 0.3)], h=2.0)
 

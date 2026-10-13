@@ -295,7 +295,13 @@ def widen_thin_islands(objs, size, min_px=4.0):
     return widened
 
 
-def report_unexported(shown, extra_names=()):
+def _parents(o):
+    while o.parent is not None:
+        o = o.parent
+        yield o
+
+
+def report_unexported(shown, extra_names=(), within=None, skip=None):
     """Everything the bake renders must be exported too: a mesh left out
     still casts its light and shadow into the lightmaps (loose pillows
     showed only as black patches on the sofas). Logs any such mesh."""
@@ -315,7 +321,9 @@ def report_unexported(shown, extra_names=()):
             return False
         return any(not c.hide_render for c in o.users_collection)
     missing = [o.name for o in bpy.context.view_layer.objects
-               if o.type in ('MESH', 'CURVE') and rendered(o) and not covered(o)]
+               if o.type in ('MESH', 'CURVE') and rendered(o) and not covered(o)
+               and (within is None or within in o.users_collection or any(within in p.users_collection for p in _parents(o)))
+               and not (skip is not None and (skip in o.users_collection or any(skip in p.users_collection for p in _parents(o))))]
     import re
     kinds = {}
     for n in missing:
@@ -573,7 +581,7 @@ def hook_lightmap(objs, atlas, lm_img):
 
 
 # --- the export ------------------------------------------------------------------------------
-def export(h, put, gd):
+def export(h, put, gd, skip=None):
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(TEX, exist_ok=True)
     sc = bpy.context.scene
@@ -662,7 +670,7 @@ def export(h, put, gd):
             veg.append(o)
         else:
             groups['garden'].append(o)
-    report_unexported([o for k in groups for o in groups[k]] + veg, door_names)
+    report_unexported([o for k in groups for o in groups[k]] + veg, door_names, skip=skip)
     if os.environ.get('EXPORT_REPORT_ONLY'):
         return  # (a quick check of what would be exported, no bake)
     doors = []

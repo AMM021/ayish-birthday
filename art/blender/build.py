@@ -141,6 +141,16 @@ VIEWS = {
     'living': ((-6.2, 1.6, 1.8), (-12.5, 1.0, -2.8)),
     'living_fire': ((-9.6, 1.6, 0.6), (-4.6, 1.0, -4.3)),
     'library': ((-17.0, 1.6, 4.4), (-19.5, 1.6, -3.0)),
+    # the neighbourhood (art/blender/town.py)
+    'gate_in': ((2.7, 1.4, -9.8), (0.0, 1.6, -22.0)),
+    'gate_out': ((2.4, 1.6, -27.0), (0.0, 1.5, -22.0)),
+    'street_west': ((-6.0, 1.6, -25.6), (-60.0, 3.0, -27.5)),
+    'street_east': ((6.0, 1.6, -25.6), (60.0, 2.5, -27.0)),
+    'shrine_foot': ((-84.0, 3.0, -24.0), (-88.0, 5.5, -44.0)),
+    'shrine_yard': ((-88.0, 8.3, -46.0), (-88.0, 8.0, -60.0)),
+    'park': ((58.0, 1.7, -25.0), (82.0, 1.4, -30.0)),
+    'town_aerial': ((70.0, 70.0, 70.0), (-10.0, 0.0, -25.0)),
+    'view_south': ((0.0, 1.7, 30.0), (0.0, -12.0, 160.0)),
     'library_ladder': ((-14.2, 2.0, 3.6), (-17.6, 2.6, -1.4)),
     'library_shoji': ((-15.5, 1.6, 3.0), (-11.0, 1.4, -2.5)),
     'sunroom': ((-17.6, 1.6, 3.6), (-21.0, 1.0, 8.0)),
@@ -232,6 +242,11 @@ def main():
     put = layout.furnish(M, furn)
     gd = garden.Garden(M, geo.collection('garden'), h).build()
     put.update(gd.put)
+    tw = None
+    if '--town' in ARGS or '--town-export' in ARGS:
+        import town
+        tw = town.Town(M, geo.collection('town'), h, gd).build()
+        print('TOWN', {k: len(v) for k, v in (('near', tw.near), ('homes', tw.homes), ('ground', tw.ground), ('far', tw.far), ('glow', tw.glow))}, 'pieces', len(tw.put))
     interior_lights(put, h)
     problems = check.run(put, layout.rooms())
     print('PLACEMENT CHECK:', len(problems), 'problem(s)')
@@ -254,7 +269,10 @@ def main():
         render(sc)
     print('objects', len(bpy.data.objects), 'solids', len(h.solids))
     if '--export' in ARGS:
-        export_house.export(h, put, gd)
+        export_house.export(h, put, gd, skip=tw.coll if tw else None)
+    if '--town-export' in ARGS:
+        import town
+        town.export(tw)
 
 
 main()

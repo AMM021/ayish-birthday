@@ -31,6 +31,7 @@ export default {
     audio.play('hub', { fade: 2000, volume: 0.18 });
     overlay.show('endcard', { lines: TEXT.endcard });
     tsuki.preload(); // the finished world downloads while the card is read
+    import('../house/town.js').then((m) => m.warm()); // (opened in EXPLORE, after the house)
     // after the card has been read, she wakes in the finished world
     timer = setTimeout(() => machine.go('EXPLORE', { fadeOut: 1600, hold: 400, fadeIn: 1400 }), END_HOLD);
   },

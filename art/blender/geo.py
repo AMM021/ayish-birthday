@@ -183,11 +183,14 @@ class Builder:
     def box(self, x0, z0, x1, z1, y0, y1):
         self.prism([(x0, z0), (x1, z0), (x1, z1), (x0, z1)], y0, y1)
 
-    def obj(self, name, mat=None, coll=None, uv=1.0):
+    def obj(self, name, mat=None, coll=None, uv=1.0, recalc=True):
         bm = self.bm
         # every prism stays its own closed shell (no merging with its
-        # neighbours), so outward normals are certain
-        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        # neighbours), so outward normals are certain; an open surface (a
+        # road, a terrain) has no outside: it keeps the winding it was built
+        # with (recalc=False), or the guess may turn it face down
+        if recalc:
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         box_uv(bm, uv)
         wrap_uv(bm, self.wraps, uv)
         wrap_lm(bm, self.wraps)

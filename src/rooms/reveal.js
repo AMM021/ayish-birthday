@@ -199,6 +199,7 @@ export default {
     // the finished world downloads during the hug, unopened (END opens it,
     // behind the end card); the avatars are in by now, so it never slows them
     import('../house/tsuki.js').then((m) => m.warm());
+    import('../house/town.js').then((m) => m.warm());
     // she gets up from the chair, facing him
     from = world.camera.position.clone();
     fromYaw = world.player.yaw;
