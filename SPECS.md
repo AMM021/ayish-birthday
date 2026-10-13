@@ -578,7 +578,7 @@ crossfades from current track over 1200ms. `mute()`, `unmute()`,
 begins). The `M` key toggles mute; a small speaker icon in
 `ui/prompts.js` shows the muted/blocked state.
 Volumes (owner, 2026-10-13: the music drowned the sound effects): each
-track plays at its own level × the music setting (default 60 %); the
+track plays at its own level × the music setting (default 40 %); the
 synthesized cues go through one gain bus at 2× their old level × the
 sound-effects setting (default 80 %). Both are set in the pause menu and
 kept in `core/settings.js`.

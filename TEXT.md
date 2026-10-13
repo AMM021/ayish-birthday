@@ -125,6 +125,9 @@ Star 8: one more, love.
 Wrong: not yet. start again, gently.
 Complete: that's us. always has been.
 Hint (60s): the shape is already there. you just have to wake it up.
+Teach jump: little hops, love. space to jump from stone to stone.
+Teach crouch: these gates are low. hold c and duck under.
+Teach run: this gap's too wide to walk. hold shift to run, then jump right at the edge.
 
 ## ROOM: PETALS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
 1. the last piece. after this one, there's nothing left between you and him.
@@ -288,7 +291,7 @@ was always him, talking to you through me.
 39. i love you, ayish. that's it. that's the compliment.
 40. you, me, a house like this one day. i can't wait.
 
-## PAUSE MENU (Esc, or the small pause button beside the speaker; proposed 2026-10-13, awaiting the owner's approval)
+## PAUSE MENU (Esc, or the small pause button beside the speaker; approved 2026-10-13)
 Title: paused
 Continue: continue
 Music: music

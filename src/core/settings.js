@@ -4,7 +4,7 @@
 
 const KEY = 'ayish.settings';
 const RANGES = {
-  music: [0, 1, 0.6],   // × each track's own level (the music sat over the effects at full)
+  music: [0, 1, 0.4],   // × each track's own level (owner, 2026-10-13: 40% lets the effects through)
   sfx: [0, 1, 0.8],     // × the effects bus (audio.js)
   sens: [0.3, 2.5, 1.0] // × LOOK_SENS
 };
