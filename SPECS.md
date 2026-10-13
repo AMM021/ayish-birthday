@@ -207,6 +207,51 @@ Detailed implementation specs. Grep by `##` heading.
     the glass rails of the galleries and the top landing get the 2.6 m
     fences the balconies have (her jump, ~1 m, could clear 1.05 m glass).
 
+## The neighbourhood (owner, 2026-10-13: "a whole modern neighbourhood and a city around the house… she has to feel like she's in Japan… not a flat world"; walkable front street chosen)
+
+Built in Blender (`art/blender/town.py`, run by `build.py` with the house
+so the bake sees both) and exported to `public/models/town/` (`town.glb`,
+`town_colliders.glb`, `town.json`); EXPLORE loads it after the house.
+Plan coordinates as the house (x east, z south, y up; the plateau at 0).
+
+- **The gate** (garden, house.glb): the moon gate becomes the house's
+  entrance — a taller gate wall with a small tiled roof, the round
+  opening filled by two oak lattice doors on the garden side that open as
+  she comes near (house doors) and close behind her; on the street side a
+  nameplate (no text), an intercom, a letterbox, two lamps. The invisible
+  fence behind it goes.
+- **Secure boundary**: the bamboo stays as planting, but the site's east
+  and west edges get a real wall (block base, cedar board fence above,
+  2.2 m); the view edge in the south gets a glass balustrade on the low
+  stone wall.
+- **The street (walkable)**: a residential lane along the north wall
+  (asphalt, white edge lines, concrete gutter covers both sides, manholes),
+  rising gently westward. Concrete utility poles with crossarms,
+  transformers and sagging wires, LED street lights on the poles, a curve
+  mirror at each end. East end: a small park (sakura, benches, a swing, a
+  clock post, vending machines at its gate). West end: a red torii and
+  stone steps with lanterns up to a small shrine yard (hall, offering box,
+  sacred tree with its rope, water basin, cedars). Walls, hedges, closed
+  gates and a few invisible fences keep her on the lane, in the park and
+  in the shrine yard.
+- **The neighbours**: modern Japanese houses on terraced lots with stone
+  retaining walls — rows across the lane stepping up the hill, lots beside
+  the garden, more stepping down the slopes either side of the view —
+  boxy two-storey houses, shed and gable metal roofs, siding and plaster,
+  balconies with laundry poles, air-con units, carports with covered cars,
+  block walls and hedges, letterboxes; some windows warm-lit for the
+  sunset.
+- **The land**: terrain that rises to wooded hills (cedar and pine) north,
+  east and west, and falls south to the valley; nothing flat to the
+  horizon.
+- **Scenery in the game** (`src/house/city.js`, live-lit, instanced): the
+  valley city (towers with lit windows), a river with a bridge, a train
+  that runs along the valley, a ring of hazy mountains with one snowy peak
+  in the sunset.
+- **Light**: the near street, walls and houses are baked into their own
+  lightmaps; the far houses and forests are lit live (Lambert), trees and
+  repeated props instanced.
+
 ## v2 redesign (2026-10-10) — read first; overrides older sections
 
 - **Player:** walking (see PROJECT.md → Locked Decisions). `world.js` drives

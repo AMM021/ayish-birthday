@@ -33,6 +33,13 @@ def _import(model_id):
         lite = os.path.join(LITE, model_id, f'{model_id}.gltf')
         if os.path.exists(lite):
             path = lite  # the game-weight version (art/blender/lite.py)
+        else:
+            # a scanned model of a gigabyte filled 12 GB of memory and took
+            # the editor down with it (2026-10-13): without a lite version,
+            # refuse anything that heavy (make one with lite.py first)
+            heavy = sum(os.path.getsize(os.path.join(CACHE, model_id, f)) for f in os.listdir(os.path.join(CACHE, model_id)) if f.endswith('.bin'))
+            if heavy > 60e6:
+                raise RuntimeError(f'{model_id}: {heavy / 1e6:.0f} MB of geometry and no lite version — too heavy to load')
         before = set(bpy.data.objects)
         bpy.ops.import_scene.gltf(filepath=path)
         _imported[model_id] = [o for o in bpy.data.objects if o not in before]

@@ -20,13 +20,20 @@ export const MODELS = [
   'flower_heliophila', 'periwinkle_plant', 'flower_gazania', 'flower_ursinia', 'flower_empodium', 'celandine_01', 'dandelion_01',
   'dead_tree_trunk_02', 'tree_stump_01', 'dry_branches_medium_01', 'bark_debris_01', 'root_cluster_01',
   'rock_moss_set_02', 'stone_01', 'namaqualand_stones_01', 'grass_medium_02', 'shrub_03', 'shrub_04', 'island_tree_03',
-  'throw_pillows_01'
+  'throw_pillows_01',
+  // the neighbourhood outside the gate (art/blender/town.py)
+  'street_lamp_01', 'street_lamp_02', 'modular_electricity_poles', 'utility_box_01', 'utility_box_02',
+  'water_manhole_cover', 'metal_trash_can', 'painted_wooden_bench',  // (pine_tree_01 / pine_sapling_medium: 0.9 / 0.25 GB scans — never)
+  'covered_car', 'planter_box_02', 'rock_face_01'
 ];
 export const HDRI = 'kloppenheim_06_puresky';
 export const MATERIALS = [
   'WoodFloor051', 'Plaster003', 'Wood092', 'Wood049', 'Wood051', 'Plaster001', 'Concrete044D', 'Concrete034', 'Fabric030', 'Fabric061',
   'Leather037', 'Marble012', 'Travertine009', 'Tiles107', 'Gravel023', 'Gravel043', 'PavingStones146', 'Grass004',
-  'Ground037', 'Rock064', 'Terrazzo013', 'Bark007', 'Bark012'
+  'Ground037', 'Rock064', 'Terrazzo013', 'Bark007', 'Bark012',
+  // the neighbourhood
+  'Asphalt033', 'Road007', 'RoofingTiles006', 'RoofingTiles013A', 'CorrugatedSteel007A', 'WoodSiding008',
+  'WoodSiding013', 'Bricks097', 'Rock030', 'PaintedPlaster006', 'Tiles143'
 ];
 
 async function get(url) {
