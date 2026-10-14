@@ -7,9 +7,11 @@
 
 ## Vision
 
-A single-page browser 3D experience, designed first for a laptop with keyboard + mouse. It opens directly at the passcode gate (no timer lock). She walks through four Japanese-themed light-purple levels guided by a glowing orb, earning one fragment per level: H, O, M, E. At the laptop in the void she types the four fragments in, lands in his work/gaming room, reads the handwritten letter and turns around: he is there, home. He calls her over, she walks into his arms, and while they hug his words appear as text. Then a soft end card, and then wakes in the finished world: a garden and a three-story house to explore.
+A single-page browser 3D experience, designed first for a laptop, played with the keyboard alone (the mouse is optional). It opens directly at the passcode gate (no timer lock). She walks through four Japanese-themed light-purple levels guided by a glowing orb, earning one fragment per level: H, O, M, E. At the laptop in the void she types the four fragments in, lands in his work/gaming room, reads the handwritten letter and turns around: he is there, home. He calls her over, she walks into his arms, and while they hug his words appear as text. Then a soft end card, and then wakes in the finished world: a garden and a three-story house to explore.
 
 Tone: dreamy, playful, romantic, warm, cute. Light purple, never eerie. Not scary. Not static.
+Calm (owner, 2026-10-14): the levels never overstimulate. Nothing to fail, no
+timers, no restarts. She can wander freely and things go her way.
 Philosophy: she shouldn't just click and read. She should walk through
 something. The effort is the gift.
 
@@ -33,20 +35,28 @@ The orb is his last act of love.
 
 - Passcode: `1010`
 - No timer lock: the experience opens straight on the passcode screen
-- Device: laptop, keyboard + mouse, pointer lock
-- Movement: walking with gravity — WASD on the ground, Shift to run, Space
-  to jump, C to crouch (held), mouse look. Floors and walls are solid
-  (capsule vs. a static BVH per room); she can never pass through the
-  ground. No flying. (Jump and crouch: owner, 2026-10-11; C, not Ctrl,
-  because Ctrl+W closes the tab.)
-- Levels: 4 challenges, strictly linear: TORII → COMPILE → STARS → PETALS →
+- Device: laptop, keyboard only (the mouse is optional: click to look,
+  pointer lock)
+- Movement: walking with gravity. ↑/↓ walk, ←/→ turn (owner, 2026-10-14);
+  WASD also works. Shift to run, Space to jump, C to crouch (held); no level
+  needs them. Floors and walls are solid (capsule vs. a static BVH per room);
+  she can never pass through the ground. No flying. (Jump and crouch: owner,
+  2026-10-11; C, not Ctrl, because Ctrl+W closes the tab.)
+- Levels: 4 levels, strictly linear: TORII → COMPILE → STARS → PETALS →
   FINAL. Each level's portal leads to the next; there is no way back and no
-  replay. Each level grants a fragment (H, O, M, E), shown top-left.
+  replay. Each level grants a fragment (H, O, M, E), shown top-left. All
+  calm (owner, 2026-10-14): nothing to fail, no timers, no restarts.
+- TORII is "wake the garden": no gates (they scared her). Any five of twelve
+  sleeping flower buds open as she walks near them.
 - The void past the door (state HUB) is a small island where the orb
   introduces itself; its one portal leads to TORII.
 - COMPILE is "fix the code": four one-word blanks, then `npm run dev`, then
   the void blooms into the garden with a glimpse of the house.
-- PETALS is "stay in the light" and is the hardest level.
+- STARS is "the stargazing spot": she wanders the lakeshore, sits on the
+  bench (Enter) and watches the nine stars rise into a heart in the sky.
+- PETALS is "the forest stroll": the orb's light walks the trail at her
+  pace and waits for her; nothing in her way. (It is no longer "the
+  hardest".)
 - FINAL: at the laptop she presses H, O, M, E (each types its code block),
   then lands in his work/gaming room for the letter → "turn around." → he is
   there → "come here my princess" → she walks to him → the hug (third
@@ -146,7 +156,7 @@ WIFES_BIRTHDAY/
     ├── main.js
     ├── core/{renderer,composer,clock,input,assets,audio,save,settings,config,hints}.js
     ├── world/{world,layers,transitions,physics}.js   # physics: colliders (three-mesh-bvh)
-    ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet}.js
+    ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet,bud}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end,explore}.js
     ├── state/{machine,states}.js
     ├── house/{props,models,structure,gamingRoom,avatars,tsuki,town,city}.js   # gaming room (Kenney kit), the avatars, Tsuki House loader (doors), the neighbourhood outside the gate, the valley/train/mountains
@@ -275,7 +285,8 @@ Cut if behind: Petal Storm visual complexity, orb color shifts, koi/shoji/wave a
 - localStorage blocked → in-memory only, warn once in console.
 - Reduced motion (`prefers-reduced-motion`) → disable petal drift,
   slow portal pulse, no bloom animation, no star twinkle or shooting
-  stars, typewriter 2× faster.
+  stars, typewriter 2× faster; buds open at once without a petal puff, the
+  waiting stars hold still, the bench view is instant.
 - Favicon → inline SVG data URI in index.html (no file, so it can never be missing).
 - Page title → "Something is waiting…"
 - Robots → `<meta name="robots" content="noindex">` (discourages indexing; does NOT make the public site private). A client-side passcode is a surprise gate, not security; anyone with the URL can inspect or bypass front-end code.

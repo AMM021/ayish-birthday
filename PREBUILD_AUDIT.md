@@ -132,6 +132,17 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 
 47. **Their photos everywhere (owner, 2026-10-13).** Six more photos (the beach) converted (800 px WebP, metadata stripped, originals kept in ~/Pictures/birthday-originals); every frame in the game now shows a photo: the gaming room's three, the entry hall's six frames (nine photos), the house's four prints (eight photos, the newest first); landscape frames hold two portrait photos on a white mat, so nothing is cropped and no frame moved. SPECS → Their photos in the frames. Found while checking: the audit picks a door's swing by trying one side first, so a re-export could flip the tower's studio and bath doors to swing over the stair landing; they now name the side to try first (`away_from=TOWER`) and always open into their rooms.
 
+## Owner decisions — 2026-10-14 (calm levels, keyboard only)
+
+48. **The levels were overstimulating and the TORII gates scared her (owner, 2026-10-14: "make the levels a lot more easier… really really easy and comfortable and relaxing… a calm game").** Level 2 (COMPILE) stays as it is. The others have nothing to fail, no timers, no restarts, and need no jumping, crouching or running:
+    - **TORII → wake the garden:** no gates. Twelve sleeping flower buds on the meadow island; any bud she walks near opens. Any five, in any order, give the H.
+    - **STARS → the stargazing spot:** no parkour. A walkable twilight shore round the lake, with a soft wall at the water and nowhere to fall. She sits on a stone bench by the water with Enter, and the nine stars rise one by one into a heart standing in the sky while she watches. That gives the M.
+    - **PETALS → the forest stroll:** the orb's light walks the trail at her pace. It waits when she stops and comes back when she falls far behind. No out-of-light timer, no restart, no gusts. Trunks lie beside the trail, the arbours stand high over it, boulders sit at its edges and the brooks have footbridges. Fewer petals, drifting slower.
+    - **Controls:** the arrow keys steer: ↑/↓ walk, ←/→ turn. The view levels itself, or settles on the laptop and on him in FINAL and REVEAL. WASD still works, and the mouse is optional (click to look).
+    - **Calm pass:** softer chimes, and the portal's flash is now a slow soft fade.
+
+    The owner approved the new copy as drafted and it is in TEXT.md: the controls hint, the TORII/STARS/PETALS intro beats 2–3, and the TORII, STARS and PETALS orb lines. "PETALS is the hardest level" is retired. These decisions supersede decisions 28 and 32–34 (the TORII camera lift, STARS parkour, PETALS obstacles and the WASD controls hint). SPECS → v4 calm levels.
+
 ## Human decisions still open
 
 - [x] Passcode `1010` confirmed.
@@ -149,7 +160,8 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
 - [x] Approved by the owner (2026-10-12) and in TEXT.md: the new lines drafted 2026-10-12: the orb's right-answer lines (TORII rounds, COMPILE words, STARS milestones), PETALS' "stay in my light" instruction and progress lines, his longer goodbye in the house, the compliments.
 - [x] The pause menu's labels approved by the owner (2026-10-13).
 - [x] The longer level introductions approved by the owner (2026-10-13) and in TEXT.md (`ROOM: X — intro`).
-- [x] STARS' move tips approved by the owner (2026-10-13) and in TEXT.md.
+- [x] STARS' move tips approved by the owner (2026-10-13) and in TEXT.md (retired 2026-10-14 with the parkour).
+- [x] The calm levels' copy approved by the owner (2026-10-14) and in TEXT.md.
 - [ ] Deploy to Netlify (needs the owner's Netlify login).
 
 ## Build gate / acceptance criteria

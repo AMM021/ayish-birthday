@@ -2,6 +2,40 @@
 
 Detailed implementation specs. Grep by `##` heading.
 
+## v4 calm levels (owner 2026-10-14) — read first; overrides the TORII, STARS and PETALS level sections below
+
+The owner's report: the levels overstimulated her, and the TORII gates scared her. COMPILE is unchanged. TORII, STARS and PETALS have nothing to fail, no timers and no restarts, and need no jump, crouch or run. State names, `ROOM_ORDER` ids and the save shape do not change.
+
+- **Controls (`world.js`, `input.js`):**
+  - ↑/↓ walk (as W/S do) and ←/→ turn. Turning runs at `TURN_SPEED` 1.9 rad/s, eased in over 0.15 s, only while the room allows looking, and it needs no pointer lock.
+  - While she walks or turns with the keys and the mouse is not captured, the pitch eases (1.2 rad/s) to −0.05. When a room's `world.setLookFocus(v)` point is within 14 m and ±60° ahead, it eases toward that point instead. FINAL focuses the laptop on her walk to the desk; REVEAL focuses his face while she walks to him. The machine clears the focus on every state change.
+  - WASD and the mouse still work. The "click to look around" hint only shows alongside the controls hint.
+- **TORII — wake the garden (`objects/bud.js`):**
+  - The meadow island with its grove, meadow and isles stays. The gates, rounds, playback and the camera lift are gone.
+  - Twelve buds stand at `BUD_SPOTS`, all round her start and clear of the way to the portal. Each is a stem with sepals, six outer petals and five inner ones, 1.2–1.4 m tall. A closed bud breathes a faint glow; it has a solid stem box.
+  - A bud opens when she comes within 2.5 m. The petals unfold over 1.2 s, a gold heart shows (bloom), a puff of 20 petals drifts up and one soft pentatonic note plays. Under reduced motion it opens instantly with no puff.
+  - Bloom lines play at counts 1 and 3. At five: the Complete line, the H, the portal (at z 10) and the orb leads there. The other buds still open.
+  - The 60 s hint floats the orb over the closed bud nearest her. `hintTargets()` returns the closed buds.
+- **STARS — the stargazing spot:**
+  - A lake (r 36) and a walkable shore to r 48, with invisible ring walls named `edge` at the waterline and at the trees.
+  - Solid tree trunks and stone-lantern posts. A planar-tiled pebble beach, meadow and ferns.
+  - The nine stars float low over the water in front of the bench and bob gently (still under reduced motion).
+  - The stone bench sits on the beach at (0, 38.2), facing the lake. Within 1.8 m the coach prompt shows TEXT `Sit prompt`; Enter sits her down (never while a story bubble waits).
+  - Seated: the camera eases to the seat over 2.5 s (instant under reduced motion), looking up at the sky heart. The heart stands upright over the lake (centre (0, 13.5, 8), scale 8.5). One star rises every 1.6 s (2.4 s each) to its slot; gold beads fill in between, and the Star lines play.
+  - After the ninth: the outline swells softly, the Complete line plays, the M is granted and the portal opens on the shore beside the bench. Once the story lines are done she stands up (1.5 s later) facing the portal, and the orb leads her there.
+  - `hintTargets()` returns the bench; the 60 s hint floats the orb over it.
+- **PETALS — the forest stroll:**
+  - The light (r 3.0, no warning tint) walks the trail at `PACE` 2.6 m/s while she is within 6 m. It slows to a stop as she falls back to 10 m. Beyond 20 m it walks back toward her until she is within 6 m again, and plays the Lost line once each time. While she is ahead of it, it goes 1.5× faster.
+  - No out-of-light timer, no restart, no gusts. Hints only count while she is away from the light.
+  - `TRAIL_COURSE`:
+    - Trunks lie beside the trail, behind its edge, with a stump and a branch.
+    - Wisteria arbours have their beam at `ARCH_Y` 2.3 m.
+    - Boulders sit at the trail's edges.
+    - The three brooks (1.8, 2.3 and 4.4 m) have plank footbridges as wide as the trail (under its edge walls).
+  - Falling petals 700 → 350, with slower wind and fall; fallen petals 3200 → 1200. The no-kit avenue fallback is a plain walk (`COURSE` is empty).
+- **Calm pass:** `audio.chime` defaults to gain 0.06 (was 0.08), and the levels' chimes use 0.045. `transitions.portalFlash` is a soft swell to 0.7 opacity, never under 900 ms.
+- **Tests:** `tests/e2e/controls.mjs`, `v3torii.mjs` (garden), `v3stars.mjs` (bench), `v3petals.mjs` (stroll, walked with the arrow keys), `rmstars.mjs` (reduced motion), `v2flow.mjs`.
+
 ## v3 (2026-10-11) — read first; overrides v2 and older sections
 
 - **EXPLORE (2026-10-12): Tsuki House.** The finished world is the house and
@@ -1197,11 +1231,11 @@ conversationally. See SETUP.md.
 5. HUB: orb intro plays as 4 Enter-paced beats, second bubble fires
    near the torii, only TORII is open at first, bouquet visible, sealed
    door shows its note and reads its line
-6. TORII: three rounds; no crossings accepted during flash playback; wrong gate resets only current round; correct gate counts once; hints never overlap sequence playback; portal works
+6. TORII (v4, the garden): any five of the twelve buds, in any order, open as she comes near and give the H; each opens once; the others still open afterwards; portal works
 7. COMPILE: 5 lanterns light (and visibly glow), fragments fly, HUD
    card fills, resolution comment shows, compile anim plays
-8. STARS: nine distinct positions; flying straight through a star at full speed always counts it; stars activate by proximity; from the spawn point they read as a symmetric heart; star 1 and 9 do not overlap; wrong star resets; each trigger counts once; standing inside a star after a reset does not re-trigger it; heart glows
-9. PETALS: corridor and all targets fit within room bounds; orb pauses/returns at thresholds; hint timers pause during story dialogue; end opens portal and returns to HUB
+8. STARS (v4, the bench): she cannot reach the water or leave the shore; "Enter to sit" shows only by the bench; Enter sits her down; nine stars rise into an upright heart; the M is saved; she stands up and the portal leads on
+9. PETALS (v4, the stroll): walked end to end with the arrow keys, nothing on the trail stops her; the light waits when she stops and comes back when she is far behind; nothing ever starts over; the end opens the portal to FINAL
 10. HUB: portal in front of door 5 now open → FINAL
 11. FINAL: bouquet visible on table, letter types fully, skip works,
     polaroids float, orb says "turn around"
