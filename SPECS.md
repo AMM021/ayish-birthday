@@ -33,6 +33,7 @@ The owner's report: the levels overstimulated her, and the TORII gates scared he
     - Boulders sit at the trail's edges.
     - The three brooks (1.8, 2.3 and 4.4 m) have plank footbridges as wide as the trail (under its edge walls).
   - Falling petals 700 → 350, with slower wind and fall; fallen petals 3200 → 1200. The no-kit avenue fallback is a plain walk (`COURSE` is empty).
+- **No torii gates anywhere (owner, 2026-10-14):** `objects/arch.js`, a flower arch, replaces them: two slim timber posts at ±2.3 m and a round timber crown (top 5.3 m) wrapped in 240 instanced blossoms (softPink, blush, lavender) with wisteria racemes hanging from the crown, all non-glowing. It frames the HUB portal (colliders at the posts) and stands far and low on the passcode screen. `objects/torii.js` is gone.
 - **Calm pass:** `audio.chime` defaults to gain 0.06 (was 0.08), and the levels' chimes use 0.045. `transitions.portalFlash` is a soft swell to 0.7 opacity, never under 900 ms.
 - **Tests:** `tests/e2e/controls.mjs`, `v3torii.mjs` (garden), `v3stars.mjs` (bench), `v3petals.mjs` (stroll, walked with the arrow keys), `rmstars.mjs` (reduced motion), `v2flow.mjs`.
 

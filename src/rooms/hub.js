@@ -7,7 +7,7 @@ import * as transitions from '../world/transitions.js';
 import * as machine from '../state/machine.js';
 import * as dialogue from '../ui/dialogue.js';
 import * as fragments from '../ui/fragments.js';
-import * as toriiObj from '../objects/torii.js';
+import * as archObj from '../objects/arch.js';
 import * as portalObj from '../objects/portal.js';
 import * as sakura from '../objects/sakura.js';
 import * as bouquet from '../objects/bouquet.js';
@@ -18,7 +18,7 @@ import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
 // The void past the door: a small light-purple island floating in a soft
-// sky. The orb introduces itself; one portal (framed by a torii gate)
+// sky. The orb introduces itself; one portal (framed by a flower arch)
 // leads to the first level. Levels only go forward from here.
 
 const ISLAND_R = 16;
@@ -180,12 +180,12 @@ function buildIsland() {
   });
   isles = nature.isles(group, { rMin: 45, rMax: 100, count: 12, yMin: -6, yMax: -1, seed: 5 });
 
-  // the gate framing the portal
-  const gate = toriiObj.create();
-  gate.group.position.set(PORTAL_POS.x, 0, PORTAL_POS.z - 0.3);
-  group.add(gate.group);
-  for (const x of [-2.2, 2.2]) {
-    const p = physics.solidBox(0.5, 4, 0.5);
+  // the flower arch framing the portal (2026-10-14: no more torii gates)
+  const arch = archObj.create();
+  arch.group.position.set(PORTAL_POS.x, 0, PORTAL_POS.z - 0.3);
+  group.add(arch.group);
+  for (const x of [-2.3, 2.3]) {
+    const p = physics.solidBox(0.35, 4, 0.35);
     p.position.set(PORTAL_POS.x + x, 2, PORTAL_POS.z - 0.3);
     group.add(p);
     solid.push(p);

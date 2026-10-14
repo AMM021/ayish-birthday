@@ -7,18 +7,18 @@ import * as input from '../core/input.js';
 import * as transitions from '../world/transitions.js';
 import * as typewriter from '../ui/typewriter.js';
 import * as machine from '../state/machine.js';
-import * as torii from '../objects/torii.js';
+import * as archObj from '../objects/arch.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
-// First screen: sky backdrop, a dim distant torii, four digit boxes.
+// First screen: sky backdrop, a distant flower arch, four digit boxes.
 
 let root = null;
 let boxes = [];
 let offAction = null;
 let busy = false;
 let wrongEl = null;
-let gate = null;
+let arch = null;
 let t = 0;
 
 function code() {
@@ -80,11 +80,11 @@ export default {
     world.setPlayer(new THREE.Vector3(0, 1.6, 0), 0, 0.05);
     orb?.setVisible(false);
 
-    gate = torii.create({ dim: true });
+    arch = archObj.create();
     // far off and low, beneath the digit boxes (never behind the words)
-    gate.group.position.set(0, -17, -50);
-    gate.group.scale.setScalar(2.0);
-    group.add(gate.group);
+    arch.group.position.set(0, -17, -50);
+    arch.group.scale.setScalar(2.0);
+    group.add(arch.group);
 
     root = document.createElement('div');
     root.className = 'passcode';

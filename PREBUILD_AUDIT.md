@@ -140,6 +140,7 @@ The owner played v0.6 and asked for a redesign. These items override decisions 1
     - **PETALS → the forest stroll:** the orb's light walks the trail at her pace. It waits when she stops and comes back when she falls far behind. No out-of-light timer, no restart, no gusts. Trunks lie beside the trail, the arbours stand high over it, boulders sit at its edges and the brooks have footbridges. Fewer petals, drifting slower.
     - **Controls:** the arrow keys steer: ↑/↓ walk, ←/→ turn. The view levels itself, or settles on the laptop and on him in FINAL and REVEAL. WASD still works, and the mouse is optional (click to look).
     - **Calm pass:** softer chimes, and the portal's flash is now a slow soft fade.
+    - **No torii gates anywhere:** a flower arch (blossom and wisteria) now frames the HUB portal and stands on the passcode screen.
 
     The owner approved the new copy as drafted and it is in TEXT.md: the controls hint, the TORII/STARS/PETALS intro beats 2–3, and the TORII, STARS and PETALS orb lines. "PETALS is the hardest level" is retired. These decisions supersede decisions 28 and 32–34 (the TORII camera lift, STARS parkour, PETALS obstacles and the WASD controls hint). SPECS → v4 calm levels.
 

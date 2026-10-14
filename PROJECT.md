@@ -156,7 +156,7 @@ WIFES_BIRTHDAY/
     ├── main.js
     ├── core/{renderer,composer,clock,input,assets,audio,save,settings,config,hints}.js
     ├── world/{world,layers,transitions,physics}.js   # physics: colliders (three-mesh-bvh)
-    ├── objects/{orb,torii,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet,bud}.js
+    ├── objects/{orb,arch,lantern,portal,sakura,starfield,nebula,skydome,tree,fragment,bouquet,bud}.js
     ├── rooms/{passcode,threshold,hub,torii,compile,stars,petals,final,reveal,end,explore}.js
     ├── state/{machine,states}.js
     ├── house/{props,models,structure,gamingRoom,avatars,tsuki,town,city}.js   # gaming room (Kenney kit), the avatars, Tsuki House loader (doors), the neighbourhood outside the gate, the valley/train/mountains
