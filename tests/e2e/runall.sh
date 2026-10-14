@@ -6,11 +6,11 @@ run() { local name="$1"; shift; echo "=== $name"; env BASE=$B "$@" 2>&1 | tail -
 TAIL=9 run passcode GPU=1 timeout 300 node passcode.mjs
 TAIL=6 run pause GPU=1 timeout 300 node pause.mjs
 TAIL=10 run intros GPU=1 timeout 600 node intros.mjs
-TAIL=3 run coach GPU=1 timeout 300 node coach.mjs
-TAIL=3 run torii GPU=1 timeout 600 node v3torii.mjs
+TAIL=2 run controls GPU=1 timeout 300 node controls.mjs
+TAIL=2 run torii GPU=1 timeout 600 node v3torii.mjs
 TAIL=6 run compile GPU=1 timeout 600 node v2compile.mjs
-echo "=== stars (software renderer)"; env BASE=$B timeout 1200 node v3stars.mjs 2>&1 | grep -E "next 9|falls"
-echo "=== petals"; env BASE=$B GPU=1 timeout 900 node v3petals.mjs 2>&1 | grep -E "done|restarts"
+TAIL=2 run stars GPU=1 timeout 600 node v3stars.mjs
+TAIL=2 run petals GPU=1 timeout 900 node v3petals.mjs
 TAIL=4 run final_laptop_letter GPU=1 timeout 600 node v2home.mjs
 TAIL=4 run reveal GPU=1 timeout 600 node v3reveal.mjs
 TAIL=3 run goodbye GPU=1 timeout 600 node goodbye.mjs

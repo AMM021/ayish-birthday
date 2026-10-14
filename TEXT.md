@@ -52,20 +52,19 @@ E: that's all four. H. O. M. E.
 E (then): he's through there.
 go on. i'll be right behind you.
 
-## ROOM: TORII — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+## ROOM: TORII — intro (beats, one bubble each, Enter to continue; approved 2026-10-13, beats 2–3 rewritten for the garden 2026-10-14)
 1. this is the first room. somewhere in here is the first of the four pieces he lost — the first letter of the way back to him.
 
-2. the gates remember an order. they'll light up one by one. watch closely, then walk through them in the same order.
+2. the flowers here are still asleep. walk up to any of them and they'll wake up for you.
 
-3. three rounds, each a little longer. if you get it wrong, they'll show you again. take your time.
+3. no order, no hurry. wake a few, and the piece will find you.
 
-## ROOM: TORII — orb lines
-Intro: watch the gates. walk through them in the same order.
-Success 1: see? natural. you've always been good at finding your way.
-Success 2: two for two. he'd be showing off about you right now.
-Wrong: no worries. try again.
-Complete: okay that was perfect. portal's open.
-Hint (60s): watch them again. i'll flash the first one for you.
+## ROOM: TORII — orb lines (wake the garden, approved 2026-10-14)
+Intro: the flowers are sleeping. walk near one and say hello.
+Bloom 1: there. it was waiting for you.
+Bloom 3: they like you. they always do.
+Complete: that's the first piece. the portal's open whenever you're ready.
+Hint (60s): there's one sleeping just over here.
 
 ## ROOM: COMPILE — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
 1. the second piece is tangled up in his code. when the void took him, the program that brings him home broke in four places.
@@ -108,43 +107,38 @@ Body lines (revealed per fragment, in order):
 // cause: I got too excited building this and skipped a line.
 // worth it. it brought her here.
 
-## ROOM: STARS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+## ROOM: STARS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13, beats 2–3 rewritten for the stargazing spot 2026-10-14)
 1. the third piece is up there. these stars used to make a shape — his favourite one. now they're scattered over the water.
 
-2. light them in order: walk, hop and duck along the stones from one star to the next. the water won't hold you — fall in, and you'll be back at the last star you lit.
+2. there's a little bench by the lake. walk wherever you like, and when you're ready, sit down with me.
 
-3. some gaps are too wide to walk. i'll show you the keys the first time you need them.
+3. you don't have to do anything else. just watch.
 
-## ROOM: STARS — orb lines
+## ROOM: STARS — orb lines (stargazing spot, 2026-10-14)
 Intro: these stars know a shape. follow them.
 Star 1: that's one. they remember you.
 Star 3: keep going. it's coming back.
 Star 5: halfway. can you see it yet?
 Star 7: almost. two more.
 Star 8: one more, love.
-Wrong: not yet. start again, gently.
 Complete: that's us. always has been.
-Hint (60s): the shape is already there. you just have to wake it up.
-Teach jump: little hops, love. space to jump from stone to stone.
-Teach crouch: these gates are low. hold c and duck under.
-Teach run: this gap's too wide to walk. hold shift to run, then jump right at the edge.
+Sit prompt: Enter to sit
+Hint (60s): the bench is just by the water. sit with me when you're ready.
 
-## ROOM: PETALS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13)
+## ROOM: PETALS — intro (beats, one bubble each, Enter to continue; approved 2026-10-13, beats 2–3 rewritten for the forest stroll 2026-10-14)
 1. the last piece. after this one, there's nothing left between you and him.
 
-2. this one's the hardest. stay in my light, all the way to the end. if you're out of it for too long, we start again. the petals like to play.
+2. this one's just a walk. follow my light down the trail — i'll wait for you whenever you stop.
 
-3. the trail runs through the forest. stay on the path, stay in my light, and don't stop to chase the petals.
+3. the trail runs through the forest. take your time, look around. the petals like to play.
 
-## ROOM: PETALS — orb lines
-Intro: this one's the hardest. stay in my light, all the way to the end. if you're out of it for too long, we start again. the petals like to play.
+## ROOM: PETALS — orb lines (forest stroll, 2026-10-14)
+Intro: just a walk this time. follow my light, i'll wait for you.
 Quarter: that's it. just like that.
 Half: halfway, love. don't let go.
 Three quarters: nearly there. stay with me.
-Out: back into the light, love. quickly.
 Lost (pause): here, take my hand.
 Complete: almost there. hold on.
-Restart: too far, love. again — from the start.
 Hint (60s): here. take my light. follow it.
 
 ## OUT OF BOUNDS — orb line (ambient)
@@ -301,5 +295,5 @@ Fullscreen: fullscreen
 
 ## UI hints (small, non-blocking)
 Look hint: click to look around
-Controls hint: W A S D to walk · Shift to run · Space to jump · C to crouch · mouse to look
+Controls hint: ↑ ↓ to walk · ← → to turn · Shift to run · Space to jump · C to crouch · mouse to look, if you like
 Keyboard-first notice (if touch-only device detected): this experience is designed for a laptop with a keyboard and mouse. Please open it on a laptop for the intended experience.

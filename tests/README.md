@@ -10,8 +10,11 @@ exists only with `?dev=true`.
     npx vite build --outDir tests/snap && (cd tests/snap && python3 -I -m http.server 5400)
     tests/e2e/runall.sh > tests/runall.log 2>&1     # everything, ~40 min
 
-- `GPU=1` uses the laptop's real GPU (most tests need it); STARS' bot
-  (`v3stars.mjs`) runs on the software renderer only.
+- `GPU=1` uses the laptop's real GPU (the tests need it).
+- The level bots (calm levels, 2026-10-14): `controls.mjs` (arrow keys, no
+  mouse), `v3torii.mjs` (the garden), `v3stars.mjs` (the bench),
+  `v3petals.mjs` (the stroll, walked with the arrow keys); each ends with a
+  `RESULT PASS|FAIL n/m` line.
 - `BASE=` picks the server (default in `lib.mjs`); `perf.mjs` uses :5300.
 - Screenshots and logs land in `tests/` (ignored by git).
 

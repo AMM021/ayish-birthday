@@ -167,7 +167,9 @@ export const TEXT = {
   // H · O · M · E: the line after each level ("E" has a second bubble)
   fragments: { H: frags.H, O: frags.O, M: frags.M, E: frags.E, Ethen: frags['E (then)'] },
   torii: {
-    intro: torii.Intro, introLines: intro('TORII', torii.Intro), success: [torii['Success 1'], torii['Success 2']], wrong: torii.Wrong,
+    intro: torii.Intro, introLines: intro('TORII', torii.Intro),
+    // (the buds she has woken, counting from 1 → its line, where there is one)
+    bloom: { 1: torii['Bloom 1'], 3: torii['Bloom 3'] },
     complete: torii.Complete, hint: torii['Hint (60s)']
   },
   compile: {
@@ -181,11 +183,10 @@ export const TEXT = {
   issue: issueCard(),
   resolution: section('COMPILE — resolution comment').map((l) => l.trim()).filter((l) => l.startsWith('//')).join('\n'),
   // (the star she has just lit, counting from 1 → its line, where there is one)
-  stars: { intro: stars.Intro, introLines: intro('STARS', stars.Intro), wrong: stars.Wrong, complete: stars.Complete, hint: stars['Hint (60s)'],
-    lit: Object.fromEntries([1, 3, 5, 7, 8].map((n) => [n, stars[`Star ${n}`]])),
-    // the orb's tip the first time a move is needed (optional until approved)
-    teach: { jump: stars['Teach jump'], crouch: stars['Teach crouch'], run: stars['Teach run'] } },
-  petals: { intro: petals.Intro, introLines: intro('PETALS', petals.Intro), lost: petals['Lost (pause)'], out: petals.Out, complete: petals.Complete, restart: petals.Restart, hint: petals['Hint (60s)'],
+  stars: { intro: stars.Intro, introLines: intro('STARS', stars.Intro), complete: stars.Complete, hint: stars['Hint (60s)'],
+    sitPrompt: stars['Sit prompt'],
+    lit: Object.fromEntries([1, 3, 5, 7, 8].map((n) => [n, stars[`Star ${n}`]])) },
+  petals: { intro: petals.Intro, introLines: intro('PETALS', petals.Intro), lost: petals['Lost (pause)'], complete: petals.Complete, hint: petals['Hint (60s)'],
     // along the way: [fraction of the light's path, line]
     progress: [[0.25, petals.Quarter], [0.5, petals.Half], [0.75, petals['Three quarters']]] },
   outOfBounds: body('OUT OF BOUNDS — orb line (ambient)'),
@@ -202,9 +203,6 @@ export const TEXT = {
   compliments: optionalNumbered('HOUSE — his compliments'),
   lookHint: ui['Look hint'],
   controlsHint: ui['Controls hint'],
-  // its parts ('Space to jump', 'C to crouch', 'Shift to run', …) for the
-  // move-by-move coach in STARS
-  controlKeys: Object.fromEntries((ui['Controls hint'] || '').split('·').map((p) => p.trim()).filter(Boolean).map((p) => [p.split(' to ')[1] || p, p])),
   touchNotice: ui['Keyboard-first notice (if touch-only device detected)'],
   pause: { title: pause.Title, continue: pause.Continue, music: pause.Music, sfx: pause['Sound effects'], mouse: pause.Mouse, fullscreen: pause.Fullscreen }
 };

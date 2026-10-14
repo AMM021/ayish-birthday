@@ -18,35 +18,28 @@ import * as assets from '../core/assets.js';
 import { orb } from '../objects/orb.js';
 import { TEXT } from '../ui/text.js';
 
-// PETALS — stay in the light (the last, hardest level). The orb drifts
-// down a narrow trail through a blossom forest (with the kit; a wide
-// avenue without it) and casts a circle of light on the path. She
-// has to keep walking inside it while gusts of petals push the light (and
-// her) around, and the avenue is in the way: fallen branches to jump,
-// low wisteria trellises to duck under, streams to leap and rocks to walk
-// round. The light eases a little just past each obstacle. Outside the
-// light for too long → it gently starts over.
+// PETALS — the forest stroll (calm levels, owner 2026-10-14). The orb
+// walks down a narrow trail through a blossom forest (with the kit; a wide
+// avenue without it) and casts a soft circle of light on the path. It goes
+// at her pace: on while she is near, waiting when she falls behind, coming
+// back for her when she is far. No timer, nothing to start over, no gusts;
+// the fallen trunks, boulders and arbours stand beside or high over the
+// trail, and the brooks have footbridges.
 
 const HALF_LEN = 46;
 const HALF_W = 10;
 const START_Z = 40;
 const END_Z = -40;
-const LIGHT_R0 = 3.0; // circle radius at the start …
-const LIGHT_R1 = 2.4; // … and at the end
-const SPEED0 = 2.6; // light speed at the start (walking is 4.2) …
-const SPEED1 = 3.6; // … and at the end
-const OUT_LIMIT = 4.0; // seconds outside the light before a restart
+const LIGHT_R = 3.0; // the circle of light
+const PACE = 2.6; // the light's walk (hers is 4.2)
+const NEAR = 6; // she is with it: it walks on
+const WAIT = 10; // she has fallen behind: it waits
+const FAR = 20; // further still: it comes back for her
+const CATCH_UP = 1.5; // × PACE while she walks ahead of it
 const ORB_Y = 2.6;
-const GUST_PUSH = 1.5; // m/s sideways on her while a gust blows
-const EASE_ZONE = [1, 4]; // light slows from 1 m before to 4 m past an obstacle
-const EASE_MULT = 0.78;
-// obstacles along the light's path (fraction k of the path)
-const COURSE = [
-  [0.1, 'log'], [0.18, 'trellis'], [0.27, 'stream', 1.8], [0.36, 'rocks'],
-  [0.45, 'log'], [0.49, 'trellis'], [0.57, 'stream', 2.3], [0.65, 'trellis'],
-  [0.73, 'stones'], [0.81, 'log'], [0.88, 'trellis'], [0.95, 'log']
-];
-const STREAM_DEPTH = 0.8; // she can jump back out if she falls in
+// (the avenue without the kit is a plain walk)
+const COURSE = [];
+const STREAM_DEPTH = 0.8;
 
 let group = null;
 let portal = null;
@@ -58,14 +51,10 @@ let pathLen = 0;
 let solid = [];
 let obstacles = []; // { kind, z, w } (z along the avenue)
 const challenge = { done: false, progress: 0, total: 1 };
-let mode = 'wait'; // wait | ready | lead | restart | done
+let mode = 'wait'; // wait | ready | lead | done
 let s = 0; // distance along the path
-let outT = 0;
-let lostSaid = false;
-let outSaid = false; // this attempt's first step out of the light has had its line
-let progressSaid = 0; // how many of the along-the-way lines this attempt
-let gust = null; // { t, dur, dir, off, amp }
-let nextGust = 0;
+let lostSaid = false; // the Lost line, once each time she falls far behind
+let progressSaid = 0; // how many of the along-the-way lines
 let leaving = false;
 let t = 0;
 const tmp = new THREE.Vector3();
@@ -126,7 +115,6 @@ function buildAvenue() {
     top = z1;
   }
   piece(top, -HALF_LEN - 1, 0, 1);
-  buildObstacles(groundMat);
 
   // blossom trees on both sides of the avenue
   for (let i = 0; i < 14; i++) {
@@ -194,17 +182,17 @@ function buildAvenue() {
 // A narrow trail winds through a blossom forest; the light walks it. The
 // forest keeps her on it: dense ferns, grasses, cosmos and lavender along
 // both edges (invisible walls behind them), sakura and stone lanterns
-// further back. What is in the way belongs there: a trunk fallen across
-// the trail, a wisteria arbour or a leaning trunk to duck under, brooks
-// to leap (one with stepping stones), boulders to weave between.
+// further back. Nothing is in her way: trunks fallen beside the trail,
+// wisteria arbours high over it, boulders at its edges, footbridges over
+// the brooks.
 const TRAIL_HALF = 2.0; // the trail is 4 m wide
 const FOREST_HALF = 18;
 const TRAIL_COURSE = [
   [0.08, 'log'], [0.16, 'arch'], [0.25, 'stream', 1.8], [0.34, 'rocks'],
-  [0.43, 'leaning'], [0.5, 'log'], [0.58, 'stream', 2.3], [0.66, 'arch'],
-  [0.74, 'stones'], [0.82, 'log'], [0.89, 'leaning'], [0.95, 'log']
+  [0.45, 'log'], [0.58, 'stream', 2.3], [0.66, 'arch'],
+  [0.74, 'stream', 4.4], [0.82, 'log'], [0.89, 'arch']
 ];
-const DUCK_KINDS = ['trellis', 'arch', 'leaning'];
+const ARCH_Y = 2.3; // the arbour's beam: well over her head
 const FOREST_BANDS = 6; // the forest's plantings, split along the trail for culling
 let trailMode = false;
 let trail = null; // the whole trail's curve (beyond the light's path at both ends)
@@ -259,7 +247,7 @@ function buildTrail() {
   const rnd = seeded(29);
   obstacles = TRAIL_COURSE.map(([k, kind, w]) => {
     const p = path.getPointAt(k);
-    return { kind, k, z: p.z, x: p.x, w: w || (kind === 'stones' ? 4.4 : 0) };
+    return { kind, k, z: p.z, x: p.x, w: w || 0 };
   });
   const channels = obstacles.filter((o) => o.w).map((o) => [o.z + o.w / 2, o.z - o.w / 2]).sort((a, b) => b[0] - a[0]);
   const inChannel = (z, pad = 0) => channels.some(([a, b]) => z < a + pad && z > b - pad);
@@ -371,104 +359,53 @@ function beam(a, b, y, radius) {
 }
 
 function buildTrailObstacles(rnd) {
-  const across = (f, ang = 0) => f.n.clone().applyAxisAngle(THREE.Object3D.DEFAULT_UP, ang);
   for (const o of obstacles) {
     const f = frameAt(o.k);
     if (o.kind === 'log') {
-      // a trunk fallen across the trail, its ends deep in the undergrowth,
-      // the stump it broke from on one side, branches by it (0.56 m: a jump)
-      const dir = across(f, (rnd() - 0.5) * 0.4);
-      const half = TRAIL_HALF + 1.0;
-      const a = f.p.clone().addScaledVector(dir, -half);
-      const b = f.p.clone().addScaledVector(dir, half);
-      beam(a, b, 0, 0.28);
-      const col = physics.solidBox(half * 2, 0.56, 0.56);
-      col.position.set(f.p.x, 0.28, f.p.z);
-      col.rotation.y = -Math.atan2(dir.z, dir.x);
-      group.add(col);
-      solid.push(col);
+      // a trunk fallen beside the trail, along it, behind the undergrowth's
+      // edge; the stump it broke from and a branch or two by it
       const side = rnd() < 0.5 ? -1 : 1;
+      const c = f.p.clone().addScaledVector(f.n, side * (TRAIL_HALF + 1.3));
+      const dir = f.t.clone().applyAxisAngle(THREE.Object3D.DEFAULT_UP, (rnd() - 0.5) * 0.3);
+      beam(c.clone().addScaledVector(dir, -1.8), c.clone().addScaledVector(dir, 1.8), 0, 0.28);
       const st = kit.get('stump', { height: 0.55, rotY: rnd() * 6 });
-      st.position.copy(f.p).addScaledVector(dir, side * (half + 0.8)); // its roots clear of the trunk's end
+      st.position.copy(c).addScaledVector(dir, 2.6);
       group.add(st);
-      for (const k of [-1, 1]) {
-        const br = kit.get('branch', { height: 0.3, rotY: rnd() * 6 });
-        br.position.copy(f.p).addScaledVector(dir, -side * (TRAIL_HALF + 0.6)).addScaledVector(f.t, k * 0.8);
-        group.add(br);
-      }
+      const br = kit.get('branch', { height: 0.3, rotY: rnd() * 6 });
+      br.position.copy(f.p).addScaledVector(f.n, -side * (TRAIL_HALF + 0.9));
+      group.add(br);
     } else if (o.kind === 'arch') {
-      // a wisteria arbour: two rustic posts in the undergrowth, a beam at
-      // 1.3–1.8 m (she crouches under it), racemes hanging from it
-      const dir = across(f);
+      // a wisteria arbour: two rustic posts in the undergrowth, its beam
+      // high over the trail (she walks under it), racemes hanging from it
+      const dir = f.n;
       const half = TRAIL_HALF + 0.45;
+      const postH = ARCH_Y + 0.6;
       for (const sgn of [-1, 1]) {
         const p = f.p.clone().addScaledVector(dir, sgn * half);
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 1.9, 12), barkMat());
-        post.position.set(p.x, 0.95, p.z);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, postH, 12), barkMat());
+        post.position.set(p.x, postH / 2, p.z);
         post.userData.noCollide = true;
         group.add(post);
-        const pc = physics.solidBox(0.35, 1.9, 0.35);
-        pc.position.set(p.x, 0.95, p.z);
+        const pc = physics.solidBox(0.35, postH, 0.35);
+        pc.position.set(p.x, postH / 2, p.z);
         group.add(pc);
         solid.push(pc);
       }
-      beam(f.p.clone().addScaledVector(dir, -(half + 0.3)), f.p.clone().addScaledVector(dir, half + 0.3), 1.3, 0.25);
-      const col = physics.solidBox(half * 2 + 0.6, 0.5, 0.5);
-      col.position.set(f.p.x, 1.55, f.p.z);
-      col.rotation.y = -Math.atan2(dir.z, dir.x);
-      group.add(col);
-      solid.push(col);
-      hangWisteria(f.p, dir, half + 0.2, 1.3, rnd);
-    } else if (o.kind === 'leaning') {
-      // a trunk fallen against a boulder, leaning across the trail: its
-      // underside 1.3 m over the trail (crouch), resting on the rock on one
-      // side, buried in a bank of ferns on the other
-      const dir = across(f, (rnd() - 0.5) * 0.25);
-      const half = TRAIL_HALF + 1.4;
-      const sgn = rnd() < 0.5 ? -1 : 1;
-      const a = f.p.clone().addScaledVector(dir, -half * sgn);
-      const b = f.p.clone().addScaledVector(dir, half * sgn);
-      const lg = beam(a, b, 1.3, 0.3);
-      lg.rotation.z = 0.07 * sgn; // a gentle lean
-      const col = physics.solidBox(half * 2, 0.5, 0.6);
-      col.position.set(f.p.x, 1.58, f.p.z);
-      col.rotation.y = -Math.atan2(dir.z, dir.x);
-      group.add(col);
-      solid.push(col);
-      const rock = kit.get('boulder', { height: 1.35, rotY: rnd() * 6 });
-      rock.position.copy(f.p).addScaledVector(dir, (TRAIL_HALF + 1.1) * sgn);
-      group.add(rock);
-      const st = kit.get('stump', { height: 1.25, rotY: rnd() * 6 });
-      st.position.copy(f.p).addScaledVector(dir, -(TRAIL_HALF + 1.2) * sgn);
-      group.add(st);
-    } else if (o.kind === 'stones') {
-      // stepping stones across the wide brook, where the trail crosses it
-      o.stones = [];
-      for (const dx of [-1.3, 0, 1.3]) {
-        const x = o.x + dx;
-        o.stones.push(x);
-        const st = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, STREAM_DEPTH + 0.05, 10), new THREE.MeshBasicMaterial());
-        st.position.set(x, -STREAM_DEPTH / 2 + 0.02, o.z);
-        st.visible = false;
-        group.add(st);
-        solid.push(st);
-        const rk = kit.get('rock1', { scale: 1, rotY: x });
-        rk.scale.set(0.98, 1.45, 1.5);
-        rk.position.set(x, -STREAM_DEPTH - 0.03, o.z);
-        group.add(rk);
-      }
+      beam(f.p.clone().addScaledVector(dir, -(half + 0.3)), f.p.clone().addScaledVector(dir, half + 0.3), ARCH_Y, 0.25);
+      hangWisteria(f.p, dir, half + 0.2, ARCH_Y, rnd);
+    } else if (o.kind === 'stream') {
+      // a footbridge of weathered planks where the trail crosses the brook
+      // (as wide as the trail, under its walls: she cannot step off it)
+      const len = o.w / Math.max(0.5, Math.abs(f.t.z)) + 0.9;
+      const deck = new THREE.Mesh(new THREE.BoxGeometry((TRAIL_HALF + 0.5) * 2, 0.14, len), barkMat());
+      deck.position.set(f.p.x, 0.0, f.p.z);
+      deck.rotation.y = Math.atan2(f.t.x, f.t.z);
+      group.add(deck);
+      solid.push(deck);
     } else if (o.kind === 'rocks') {
-      // boulders in the trail: weave between them (gaps ≥ 1.5 m)
-      o.rocks = [];
-      for (const [lat, along, r, h] of [[-0.85, -1.3, 0.6, 1.5], [0.9, 1.7, 0.62, 1.8]]) {
+      // boulders at the trail's edges
+      for (const [lat, along, r, h] of [[-(TRAIL_HALF + 0.9), -1.3, 0.6, 1.5], [TRAIL_HALF + 1.0, 1.7, 0.62, 1.8]]) {
         const c = f.p.clone().addScaledVector(f.n, lat).addScaledVector(f.t, along);
-        o.rocks.push([c.x, c.z, r]);
-        const col = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 12), new THREE.MeshBasicMaterial());
-        col.position.set(c.x, h / 2, c.z);
-        col.visible = false;
-        group.add(col);
-        solid.push(col);
-        // (the boulder model: its bulk sits on the ground)
         const rk = kit.get('boulder', { scale: 1, rotY: lat * 3 + along });
         rk.scale.set((2 * r * 1.12) / 1.28, h / 1.0, (2 * r * 1.12) / 1.83);
         rk.position.set(c.x, 0, c.z);
@@ -626,7 +563,7 @@ function buildForest(rnd, S, inChannel) {
   plant('sakura_lite', 60, TRAIL_HALF + 5, FOREST_HALF + 4, 0.65, 0.95, { bias: 1 });
   // petals fallen on the trail and under the trees
   const petalTex = assets.get('petal');
-  const P = 3200;
+  const P = 1200;
   const petalsOnGround = new THREE.InstancedMesh(
     new THREE.PlaneGeometry(0.07, 0.07),
     new THREE.MeshLambertMaterial({ map: petalTex, color: PALETTE.blush, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, depthWrite: false }),
@@ -666,18 +603,15 @@ function buildForest(rnd, S, inChannel) {
 // what both forms of the level share: the petals, the light, the portal
 function buildShared() {
   // petals streaming toward her
-  petals = sakura.create(700, { x: [-HALF_W, HALF_W], y: [0, 10], z: [-HALF_LEN, HALF_LEN] }, {
-    wind: new THREE.Vector3(0, 0, 3.5), fall: 0.35, size: 1.4
+  petals = sakura.create(350, { x: [-HALF_W, HALF_W], y: [0, 10], z: [-HALF_LEN, HALF_LEN] }, {
+    wind: new THREE.Vector3(0, 0, 1.4), fall: 0.22, size: 1.4
   });
   group.add(petals.mesh);
 
-  // the light circle: a soft disc, its rim bright enough to bloom; it
-  // warms toward pink while she is outside it
+  // the light circle: a soft disc, its rim bright enough to bloom
   poolMat = new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: new THREE.Color(PALETTE.gold) },
-      uWarn: { value: new THREE.Color(PALETTE.softPink) },
-      uK: { value: 0 },
       uTime: { value: 0 }
     },
     vertexShader: /* glsl */ `
@@ -686,17 +620,14 @@ function buildShared() {
     `,
     fragmentShader: /* glsl */ `
       uniform vec3 uColor;
-      uniform vec3 uWarn;
-      uniform float uK;
       uniform float uTime;
       varying vec2 vUv;
       void main() {
         float r = length(vUv - 0.5) * 2.0;
         float edge = smoothstep(1.0, 0.86, r);
         float ring = smoothstep(0.8, 0.93, r) * edge;
-        vec3 c = mix(uColor, uWarn, uK);
-        float a = edge * 0.32 + ring * (0.9 + 0.1 * sin(uTime * (3.0 + uK * 9.0)));
-        gl_FragColor = vec4(c * (1.2 + ring * 0.8), a);
+        float a = edge * 0.32 + ring * (0.9 + 0.1 * sin(uTime * 1.5));
+        gl_FragColor = vec4(uColor * (1.2 + ring * 0.8), a);
       }
     `,
     transparent: true,
@@ -714,217 +645,40 @@ function buildShared() {
   group.add(portal.group);
 }
 
-// fallen branches, trellises, streams, rocks (all across or on the path)
-function buildObstacles(groundMat) {
-  const W = HALF_W * 2;
-  const wood = new THREE.MeshLambertMaterial({ color: PALETTE.walnut });
-  const blossom = new THREE.MeshLambertMaterial({ color: PALETTE.softPink, flatShading: true });
-  const water = new THREE.MeshPhongMaterial({ color: PALETTE.dusk, specular: PALETTE.lavender, shininess: 80, transparent: true, opacity: 0.85 });
-  const stone = new THREE.MeshLambertMaterial({ color: PALETTE.wisteria, flatShading: true });
-  const strandGeo = new THREE.ConeGeometry(0.11, 0.55, 6);
-  strandGeo.rotateX(Math.PI);
-  const puffGeo = new THREE.IcosahedronGeometry(0.28, 0);
-  for (const o of obstacles) {
-    if (o.kind === 'log' && kit.has('log')) {
-      // fallen logs across the avenue: real lengths (about 2.5 m each),
-      // staggered a little and at slight angles, a stump at each end; each
-      // log is solid and 0.56 m high (a jump)
-      const LOG_LEN = 2.5;
-      const n = Math.ceil(W / (LOG_LEN - 0.15));
-      const step = W / n;
-      for (let i = 0; i < n; i++) {
-        const x = -HALF_W + step * (i + 0.5);
-        const dz = (i % 2 ? 0.16 : -0.14) + ((i * 37) % 7 - 3) * 0.015;
-        const ang = ((i * 53) % 9 - 4) * 0.028;
-        const lg = kit.get(i % 3 === 2 ? 'log_short' : 'log', { scale: 1 });
-        const len = i % 3 === 2 ? 1.2 : 1.8;
-        lg.scale.set((step + 0.12) / len, 1.4, 1.4);
-        lg.position.set(x, 0, o.z + dz);
-        lg.rotation.y = ang + (i % 2 ? Math.PI : 0);
-        group.add(lg);
-        const col = physics.solidBox(step + 0.12, 0.56, 0.56);
-        col.position.set(x, 0.28, o.z + dz);
-        col.rotation.y = ang;
-        group.add(col);
-        solid.push(col);
-      }
-      // a stump either side (clear of the logs and of the trees along the
-      // edge), broken branches lying by them
-      for (const side of [-1, 1]) {
-        const st = kit.get('stump', { height: 0.5, rotY: side });
-        st.position.set(side * (HALF_W - 2.4), 0, o.z + 1.5 * side);
-        group.add(st);
-        const br = kit.get('branch', { height: 0.35, rotY: side * 1.3 });
-        br.position.set(side * 5.5, 0, o.z - 1.3 * side);
-        group.add(br);
-      }
-    } else if (o.kind === 'log') {
-      // a fallen blossom branch: a 0.62 m box to jump, drawn as a round log
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, W, 12), wood);
-      log.rotation.z = Math.PI / 2;
-      log.position.set(0, 0.31, o.z);
-      group.add(log);
-      const col = physics.solidBox(W, 0.62, 0.62);
-      col.position.set(0, 0.31, o.z);
-      group.add(col);
-      solid.push(col);
-      const puffs = new THREE.InstancedMesh(puffGeo, blossom, 40);
-      const m4 = new THREE.Matrix4();
-      for (let i = 0; i < 40; i++) {
-        m4.makeTranslation(-HALF_W + (i + 0.5) * (W / 40), 0.55 + (i % 3) * 0.08, o.z + ((i * 7) % 5 - 2) * 0.07);
-        puffs.setMatrixAt(i, m4);
-      }
-      group.add(puffs);
-    } else if (o.kind === 'trellis') {
-      // a low wisteria trellis: beam 1.3–1.8 m (crouch), strands hanging
-      const barkTex = kit.ground('earth', 1, 1);
-      const timber = barkTex ? new THREE.MeshLambertMaterial({ map: barkTex, color: PALETTE.bark }) : wood;
-      if (barkTex) barkTex.repeat.set(W / 1.2, 0.5);
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(W, 0.5, 0.4), timber);
-      beam.position.set(0, 1.55, o.z);
-      group.add(beam);
-      solid.push(beam);
-      for (const x of [-HALF_W + 0.3, -HALF_W / 2, 0, HALF_W / 2, HALF_W - 0.3]) {
-        if (x !== -HALF_W + 0.3 && x !== HALF_W - 0.3 && Math.abs(x - o.x) < 4.5) continue; // never in the light's way
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.8, 0.25), timber);
-        post.position.set(x, 0.9, o.z);
-        group.add(post);
-        solid.push(post);
-      }
-      // wisteria: racemes of small buds hanging from the beam, lavender at
-      // the top fading to white at the tip
-      const budGeo = new THREE.IcosahedronGeometry(0.035, 0);
-      const RACEMES = 90;
-      const PER = 9;
-      const buds = new THREE.InstancedMesh(budGeo, new THREE.MeshLambertMaterial({ color: PALETTE.neutral }), RACEMES * PER);
-      const m4 = new THREE.Matrix4();
-      const top = new THREE.Color(PALETTE.wisteria);
-      const tip = new THREE.Color(PALETTE.lilacHaze);
-      const c = new THREE.Color();
-      let k = 0;
-      for (let i = 0; i < RACEMES; i++) {
-        const x = -HALF_W + (i + 0.5) * (W / RACEMES) + ((i * 13) % 5 - 2) * 0.03;
-        const zz = o.z + ((i * 7) % 5 - 2) * 0.07;
-        const len = 0.28 + ((i * 11) % 5) * 0.04;
-        for (let j = 0; j < PER; j++) {
-          const t = j / (PER - 1);
-          const r = 1.15 - 0.55 * t;
-          m4.makeScale(r, r * 1.3, r).setPosition(x + Math.sin(j * 2.3) * 0.02 * (1 - t), 1.3 - t * len, zz + Math.cos(j * 2.3) * 0.02 * (1 - t));
-          buds.setMatrixAt(k, m4);
-          buds.setColorAt(k, c.copy(top).lerp(tip, t));
-          k++;
-        }
-      }
-      buds.userData.noCollide = true;
-      group.add(buds);
-    } else if (o.kind === 'stream' || o.kind === 'stones') {
-      const w = new THREE.Mesh(new THREE.PlaneGeometry(W + 2, o.w), water);
-      w.rotation.x = -Math.PI / 2;
-      w.position.set(0, -0.35, o.z);
-      group.add(w);
-      if (o.kind === 'stones') {
-        // stepping stones in a wide stream (two 1.5 m hops): one on the
-        // light's line, others either side
-        o.stones = [];
-        for (const x of [-5.2, -2.6, 0, 2.6, 5.2]) {
-          // (by the bank two could land on one spot: keep the first)
-          const sx = THREE.MathUtils.clamp(o.x + x, -HALF_W + 1, HALF_W - 1);
-          if (o.stones.some((q) => Math.abs(q - sx) < 1.8)) continue;
-          o.stones.push(sx);
-          const st = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, STREAM_DEPTH + 0.05, 10), stone);
-          st.position.set(THREE.MathUtils.clamp(o.x + x, -HALF_W + 1, HALF_W - 1), -STREAM_DEPTH / 2 + 0.02, o.z);
-          group.add(st);
-          solid.push(st);
-          const rk = kit.get('rock1', { scale: 1, rotY: x });
-          if (rk) {
-            st.visible = false;
-            rk.scale.set(0.98, 1.45, 1.5);
-            rk.position.set(st.position.x, -STREAM_DEPTH - 0.03, o.z);
-            group.add(rk);
-          }
-        }
-      }
-    } else if (o.kind === 'rocks') {
-      // standing stones on the light's line: a slalom (channels ≥ 1.5 m)
-      o.rocks = [];
-      for (const [dx, dz, r, h] of [[0, 1.5, 0.8, 2.2], [-2.9, -1.2, 0.7, 1.7], [2.9, -1.2, 0.7, 1.9], [0, -3.9, 0.8, 2.0]]) {
-        o.rocks.push([o.x + dx, o.z + dz, r]);
-        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), stone);
-        rock.scale.set(1, h / (2 * r), 1);
-        rock.position.set(o.x + dx, h / 2, o.z + dz);
-        group.add(rock);
-        solid.push(rock);
-        const rk = kit.get('boulder', { scale: 1, rotY: dx + dz });
-        if (rk) {
-          rock.visible = false;
-          rk.scale.set((2 * r * 1.12) / 1.28, h / 1.0, (2 * r * 1.12) / 1.83);
-          rk.position.set(o.x + dx, 0, o.z + dz);
-          group.add(rk);
-        }
-      }
-    }
-  }
-}
-
-function nearObstacle(z, m) {
-  return obstacles.some((o) => Math.abs(o.z - z) < m + (o.w || 0) / 2);
-}
-
-// near an obstacle the light waits a little for her
-function easeAt(z) {
-  for (const o of obstacles) {
-    const d = o.z - z; // > 0 once the light is past it (moving toward −z)
-    if (d > -EASE_ZONE[0] - (o.w || 0) / 2 && d < EASE_ZONE[1] + (o.w || 0) / 2) return EASE_MULT;
-  }
-  return 1;
-}
-
-const radiusAt = (k) => LIGHT_R0 + (LIGHT_R1 - LIGHT_R0) * k;
-const speedAt = (k) => SPEED0 + (SPEED1 - SPEED0) * k;
-
 function placeLight(sv) {
   const k = Math.min(1, sv / pathLen);
   path.getPointAt(k, light);
-  if (trailMode) {
-    if (gust) {
-      const tg = path.getTangentAt(k);
-      light.x += -tg.z * gust.off;
-      light.z += tg.x * gust.off;
-    }
-  } else {
-    if (gust) light.x += gust.off;
-    light.x = THREE.MathUtils.clamp(light.x, -HALF_W + 2, HALF_W - 2);
-  }
-  const r = radiusAt(k);
-  pool.scale.set(r, r, 1);
+  pool.scale.set(LIGHT_R, LIGHT_R, 1);
   pool.position.set(light.x, 0.03, light.z);
   return k;
 }
 
 function startOver() {
   s = 0;
-  outT = 0;
-  gust = null;
-  nextGust = 7;
+  returning = false;
   lostSaid = false;
-  outSaid = false;
   progressSaid = 0;
-  poolMat.uniforms.uK.value = 0;
   placeLight(0);
   orb.place(tmp.set(light.x, ORB_Y, light.z));
   orb.hold(tmp);
   mode = 'ready';
 }
 
-async function restart() {
-  mode = 'restart';
-  audio.softPulse();
-  orb.pulse();
-  dialogue.say(orb.anchor, TEXT.petals.restart, { mode: 'ambient' });
-  await transitions.fade(500, 300, 600);
-  if (leaving) return;
-  world.setPlayer(new THREE.Vector3(0, 1.6, START_Z + 3), 0, 0);
-  startOver();
+// How fast the light walks: on at its pace while she is with it, waiting
+// as she falls behind, back toward her when she is far, a little quicker
+// while she is ahead of it.
+const tg = new THREE.Vector3();
+let returning = false; // coming back for her, until she is near again
+function paceAt(k, p) {
+  const dx = light.x - p.x;
+  const dz = light.z - p.z;
+  path.getTangentAt(k, tg);
+  const d = Math.hypot(dx, dz);
+  if (d > FAR) returning = true;
+  else if (d < NEAR) returning = false;
+  if (dx * tg.x + dz * tg.z < 0) return PACE * CATCH_UP; // she is ahead
+  if (returning) return -PACE;
+  return PACE * THREE.MathUtils.clamp((WAIT - d) / (WAIT - NEAR), 0, 1);
 }
 
 function complete() {
@@ -935,7 +689,7 @@ function complete() {
   orb.hold(tmp.set(0, 3, END_Z - 1));
   portal.group.visible = true;
   portal.enable();
-  audio.chimeUp();
+  audio.chime([660, 880, 1175], 0.045);
   dialogue.say(orb.anchor, TEXT.petals.complete, { mode: 'story' });
   fragments.grant('petals');
 }
@@ -997,57 +751,26 @@ export default {
     if (mode === 'ready' || mode === 'lead') {
       pool.visible = true;
       const k = placeLight(s);
-      const inside = Math.hypot(p.x - light.x, p.z - light.z) < radiusAt(k);
+      const d = Math.hypot(p.x - light.x, p.z - light.z);
       if (mode === 'ready') {
         // the light waits until she steps into it
-        if (inside) {
+        if (d < LIGHT_R) {
           mode = 'lead';
           hints.reset();
         }
       } else {
-        s += speedAt(k) * easeAt(light.z) * dt;
+        s = Math.max(0, s + paceAt(k, p) * dt);
         challenge.progress = Math.min(0.99, s / pathLen);
-        // gusts: the light is blown sideways for a moment
-        nextGust -= dt;
-        // (never while she is getting over something)
-        if (!gust && nextGust <= 0 && k > 0.12 && !nearObstacle(light.z, 6)) {
-          gust = { t: 0, dur: 1.8, dir: light.x > 0 ? -1 : 1, off: 0, amp: trailMode ? 0.5 : 2.5 + k * 2.5 };
-          audio.softPulse();
+        if (d < NEAR) {
+          hints.reset(); // she is walking with it: no hints
+          lostSaid = false;
+        } else if (d > FAR && !lostSaid && !dialogue.isStoryActive()) {
+          lostSaid = true;
+          dialogue.say(orb.anchor, TEXT.petals.lost, { mode: 'ambient' });
         }
-        if (gust) {
-          gust.t += dt;
-          // on the trail the gust also carries the light ahead for a moment
-          if (trailMode) s += speedAt(k) * 0.55 * Math.sin(Math.min(1, gust.t / gust.dur) * Math.PI) * dt;
-          gust.off = gust.dir * gust.amp * Math.sin(Math.min(1, gust.t / gust.dur) * Math.PI);
-          // the wind leans on her too (against where the light goes)
-          world.player.velocity.x -= gust.dir * GUST_PUSH * Math.sin(Math.min(1, gust.t / gust.dur) * Math.PI) * dt * 6;
-          if (gust.t >= gust.dur) {
-            gust = null;
-            nextGust = 5 + Math.random() * 3 - k * 2;
-          }
-        }
-        if (inside) {
-          outT = Math.max(0, outT - dt * 2);
-          if (outT === 0) lostSaid = false;
-        } else {
-          outT += dt;
-          if (!lostSaid) {
-            lostSaid = true;
-            // the first time this attempt: "back into the light"; after that
-            // the gentler hand
-            dialogue.say(orb.anchor, outSaid ? TEXT.petals.lost : TEXT.petals.out, { mode: 'ambient' });
-            outSaid = true;
-          }
-          if (outT >= OUT_LIMIT) {
-            restart();
-            return;
-          }
-        }
-        poolMat.uniforms.uK.value = Math.min(1, outT / OUT_LIMIT);
-        // along the way, a word from the light now and then (never over her
-        // stepping out, never over story)
+        // along the way, a word from the light now and then (never over story)
         const along = TEXT.petals.progress[progressSaid];
-        if (along && s / pathLen >= along[0] && inside && !dialogue.isStoryActive()) {
+        if (along && s / pathLen >= along[0] && d < NEAR && !dialogue.isStoryActive()) {
           progressSaid++;
           dialogue.say(orb.anchor, along[1], { mode: 'ambient' });
         }
@@ -1063,7 +786,7 @@ export default {
   },
 
   hintsEligible() {
-    return mode === 'ready' && !challenge.done;
+    return (mode === 'ready' || mode === 'lead') && !challenge.done;
   },
 
   hintTargets() {
@@ -1071,7 +794,7 @@ export default {
   },
 
   _debug() {
-    return { mode, s, pathLen, outT, light: light.toArray(), done: challenge.done, portal: portal.enabled, gust: !!gust, obstacles, trail: trailMode, duck: DUCK_KINDS };
+    return { mode, s, pathLen, light: light.toArray(), done: challenge.done, portal: portal.enabled, obstacles, trail: trailMode };
   },
 
   devComplete() {
