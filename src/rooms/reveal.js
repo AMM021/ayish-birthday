@@ -111,12 +111,14 @@ async function hisCall() {
   phase = 'walk';
   t = 0;
   world.setControls({ move: true, look: true });
+  world.setLookFocus(new THREE.Vector3(SPOT.x, 1.5, SPOT.z)); // his face
   input.clearHeld();
 }
 
 async function hug() {
   phase = 'hugging';
   world.setControls({ move: false, look: false });
+  world.setLookFocus(null);
   await transitions.fadeOut(450, PALETTE.lilacHaze);
   if (phase !== 'hugging') return;
   avatars.hugPartner(him, her);

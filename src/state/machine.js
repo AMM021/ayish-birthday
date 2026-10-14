@@ -34,6 +34,7 @@ export async function go(name, { fadeOut = 400, hold = 200, fadeIn = 600 } = {})
     fragments.hide(); // rooms that show the H·O·M·E tiles turn them back on
     if (current) await current.exit(name);
     world.setStandHeight(); // her usual eye height unless the room says otherwise
+    world.setLookFocus(null); // (a room sets its own)
     const mod = (await STATES[name]()).default;
     current = mod;
     previousName = currentName;

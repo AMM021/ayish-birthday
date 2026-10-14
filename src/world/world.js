@@ -144,8 +144,9 @@ export function setFogEnabled(on) {
 export const isFogEnabled = () => fogEnabled;
 
 // --- player (walking) ------------------------------------------------------
-// She walks: WASD on the ground plane (from yaw only), Shift to run, Space
-// to jump, C (held) to crouch, mouse to look. Gravity pulls her onto whatever the room registered as solid
+// She walks: ↑/↓ (or W/S) on the ground plane (from yaw only), ←/→ to turn
+// (A/D step sideways), Shift to run, Space to jump, C (held) to crouch, and
+// the mouse to look if she likes (never needed). Gravity pulls her onto whatever the room registered as solid
 // (world/physics.js); she can never pass through floors or walls. Falling
 // far below her spawn puts her back at the spawn.
 export const player = {
@@ -235,6 +236,54 @@ function applyLook() {
   camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
 }
 
+// Keyboard steering: ←/→ turn at TURN_SPEED, eased in so it never jerks.
+// While she walks or turns with the keys (mouse not captured), the view
+// eases level, or toward the room's look focus when it is near and ahead.
+const TURN_SPEED = 1.9; // rad/s
+const TURN_EASE = 0.15; // s to full turning speed
+const LEVEL_PITCH = -0.05;
+const PITCH_RATE = 1.2; // rad/s
+const FOCUS_RANGE = 14;
+const FOCUS_CONE = Math.cos(Math.PI / 3);
+let turnVel = 0;
+let lookFocus = null;
+
+// A point worth looking at (the laptop, him); null clears. Pitch only.
+export function setLookFocus(v) {
+  lookFocus = v ? v.clone() : null;
+}
+
+function focusPitch() {
+  if (!lookFocus) return LEVEL_PITCH;
+  const dx = lookFocus.x - player.eye.x;
+  const dz = lookFocus.z - player.eye.z;
+  const d = Math.hypot(dx, dz);
+  if (d > FOCUS_RANGE || d < 0.3) return LEVEL_PITCH;
+  if ((-Math.sin(player.yaw) * dx - Math.cos(player.yaw) * dz) / d < FOCUS_CONE) return LEVEL_PITCH;
+  return Math.max(-0.6, Math.min(0.6, Math.atan2(lookFocus.y - player.eye.y, d)));
+}
+
+const isForward = () => input.isDown('KeyW') || input.isDown('ArrowUp');
+const isBack = () => input.isDown('KeyS') || input.isDown('ArrowDown');
+
+function steer(dt) {
+  if (!player.canLook) {
+    turnVel = 0;
+    return;
+  }
+  const turn = (input.isDown('ArrowLeft') ? 1 : 0) - (input.isDown('ArrowRight') ? 1 : 0);
+  turnVel += (turn * TURN_SPEED - turnVel) * Math.min(1, dt / TURN_EASE);
+  if (Math.abs(turnVel) < 1e-3) turnVel = 0;
+  player.yaw += turnVel * dt;
+  const keyed = turn !== 0 || (player.canMove && (isForward() || isBack() || input.isDown('KeyA') || input.isDown('KeyD')));
+  if (keyed && !input.isLocked()) {
+    const target = focusPitch();
+    const d = target - player.pitch;
+    player.pitch += Math.sign(d) * Math.min(Math.abs(d), PITCH_RATE * dt);
+  }
+  applyLook();
+}
+
 const fwd = new THREE.Vector3();
 const right = new THREE.Vector3();
 const wish = new THREE.Vector3();
@@ -263,6 +312,7 @@ function updatePlayer(dt) {
     player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch));
     applyLook();
   }
+  steer(dt);
 
   if (!player.canMove) {
     // A room may be animating the camera (seating, drift): follow it.
@@ -274,8 +324,8 @@ function updatePlayer(dt) {
   wish.set(0, 0, 0);
   fwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   right.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
-  if (input.isDown('KeyW')) wish.add(fwd);
-  if (input.isDown('KeyS')) wish.sub(fwd);
+  if (isForward()) wish.add(fwd);
+  if (isBack()) wish.sub(fwd);
   if (input.isDown('KeyD')) wish.add(right);
   if (input.isDown('KeyA')) wish.sub(right);
   const solid = physics.hasColliders();

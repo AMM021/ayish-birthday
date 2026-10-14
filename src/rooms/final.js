@@ -41,6 +41,7 @@ const SEATED_PITCH = -0.32;
 const SPAWN = new THREE.Vector3(-6.5, 1.6, 3.5).add(VOID);
 const SPAWN_YAW = Math.atan2(SPAWN.x - VOID.x, SPAWN.z - (VOID.z + 0.3));
 const ROOM_PITCH = -0.22;
+const LAPTOP_AT = new THREE.Vector3(0, 0.85, 0.2).add(VOID);
 
 let group = null;
 let portal = null;
@@ -442,6 +443,7 @@ export default {
     phase = 'approach';
     world.setPlayer(SPAWN, SPAWN_YAW, -0.12);
     world.setControls({ move: true, look: true });
+    world.setLookFocus(LAPTOP_AT); // as she walks up, the view settles on the desk
     orb.place();
     orb.guide([SPAWN.clone().setY(VOID.y), CHAIR.clone().setY(VOID.y)], { stop: 1.4 }); // to the desk, by her chair
   },
@@ -455,6 +457,7 @@ export default {
       if (d < SEAT_RADIUS && !dialogue.isStoryActive() && !machine.isTransitioning()) {
         phase = 'seating';
         world.setControls({ move: false, look: false });
+        world.setLookFocus(null);
         seatT = 0;
         seatFrom = p.clone();
         fromPitch = world.player.pitch;

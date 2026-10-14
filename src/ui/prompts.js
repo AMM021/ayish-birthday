@@ -49,7 +49,7 @@ export function initPrompts() {
   input.onLockChange(update);
 }
 
-// `again` shows it once more after it was dismissed (STARS: first jumps)
+// `again` shows it once more after it was dismissed
 export function showControls({ again = false } = {}) {
   if (controlsState === 'shown' || (controlsState === 'done' && !again)) return;
   controlsState = 'shown';
@@ -57,8 +57,8 @@ export function showControls({ again = false } = {}) {
   controls.classList.add('show');
 }
 
-// The keys for one move, while she learns it (STARS): '' or null hides it;
-// `now` lights it up as she reaches the spot where the move is needed.
+// A small key prompt (STARS: 'Enter to sit' by the bench): '' or null hides
+// it; `now` lights it up gold.
 export function setCoach(text, now = false) {
   if (!coach) return;
   if (text && coach.textContent !== text) coach.textContent = text;
@@ -66,10 +66,12 @@ export function setCoach(text, now = false) {
   coach.classList.toggle('now', !!text && now);
 }
 
-// Called every frame from main.js and on pointer-lock changes.
+// Called every frame from main.js and on pointer-lock changes. The mouse is
+// optional (the arrow keys steer), so the look hint only keeps the controls
+// hint company and goes with it.
 export function update() {
   if (!look) return;
-  const showLook = input.isLookAllowed() && !input.isLocked() && !overlay.isBlocking();
+  const showLook = controlsState === 'shown' && input.isLookAllowed() && !input.isLocked() && !overlay.isBlocking();
   look.classList.toggle('show', showLook);
   if (controlsState === 'shown' && player.moved - movedAtShow >= 3) {
     controlsState = 'done';
