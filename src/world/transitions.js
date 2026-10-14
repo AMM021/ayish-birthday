@@ -1,6 +1,6 @@
 import { PALETTE } from '../core/config.js';
 
-// Full-screen CSS fades and flashes. They run on timers, so they work
+// Full-screen CSS fades. They run on timers, so they work
 // while the render loop is paused.
 let veil = null;
 
@@ -42,8 +42,11 @@ export async function fade(out = 400, hold = 200, inn = 600) {
   await fadeIn(inn);
 }
 
+// (calm pass, 2026-10-14: no longer a flash — a slow, soft swell of
+// colour, never under 900 ms and never fully opaque)
 export async function portalFlash(color = PALETTE.moonlight, ms = 600) {
+  const d = Math.max(900, ms);
   getVeil().style.background = color;
-  await to(0.9, ms * 0.4);
-  await to(0, ms * 0.6);
+  await to(0.7, d * 0.5);
+  await to(0, d * 0.5);
 }

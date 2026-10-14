@@ -181,8 +181,9 @@ function tone(freq, start, dur, gain, type = 'sine') {
   o.stop(t0 + dur + 0.05);
 }
 
-export function chime(notes = [880]) {
-  notes.forEach((f, i) => tone(f, i * 0.12, 0.9, 0.08));
+// soft by default (calm pass, 2026-10-14: was 0.08)
+export function chime(notes = [880], gain = 0.06) {
+  notes.forEach((f, i) => tone(f, i * 0.12, 0.9, gain));
 }
 export const chimeUp = () => chime([660, 880, 1175]);
 export function tick(quiet = false) {
