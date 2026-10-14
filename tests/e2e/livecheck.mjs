@@ -1,0 +1,20 @@
+// the live site after a deploy: plain link → passcode, no dev hook; ?dev=true → dev hook; the calm levels are the ones served
+import puppeteer from 'puppeteer-core';
+const URL = 'https://ayishnme.netlify.app/';
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome-stable', headless: 'new', args: ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=gl', '--no-sandbox', '--window-size=1280,800'] });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const errs = [];
+let page = await browser.newPage(); await page.setViewport({ width: 1280, height: 800 });
+page.on('pageerror', (e) => errs.push(e.message));
+const res = await page.goto(URL, { waitUntil: 'load' }); await sleep(5000);
+console.log('plain:', res.status(), JSON.stringify(await page.evaluate(() => ({ title: document.title, passcode: !!document.querySelector('.passcode'), dev: !!document.querySelector('.devtools, #devtools, .dev-panel, [class*=dev]'), hook: !!window.__game, robots: document.querySelector('meta[name=robots]')?.content }))));
+await page.screenshot({ path: '../live_passcode.png' });
+page = await browser.newPage(); await page.setViewport({ width: 1280, height: 800 });
+page.on('pageerror', (e) => errs.push(e.message));
+await page.goto(URL + '?dev=true', { waitUntil: 'load' }); await sleep(5000);
+console.log('dev:', JSON.stringify(await page.evaluate(() => ({ hook: !!window.__game, state: window.__game?.machine?.currentName }))));
+await page.evaluate(() => { const s = window.__game.save; s.reset(); s.setUnlocked(); window.__game.machine.go('TORII'); });
+await sleep(9000);
+console.log('torii buds:', await page.evaluate(() => window.__game.machine.room()._debug?.().buds?.length));
+console.log('errors:', errs.length ? errs : 'none');
+await browser.close();
